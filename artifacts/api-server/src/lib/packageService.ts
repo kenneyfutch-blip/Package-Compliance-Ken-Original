@@ -138,6 +138,42 @@ function assignedRoleForFlags(flags: string[], engine: string): string {
 }
 
 /**
+ * Deterministic, non-overlapping layout for AI finding pins.
+ *
+ * The analysis model only sees the extracted copy, not the rendered artwork, so
+ * any bounding box it returns is a guess — in practice the boxes cluster on top
+ * of each other and drift into the empty margins off the product. Instead of
+ * trusting those coordinates we place pins on an even grid inside a safe central
+ * band of the artwork, so markers stay on the product, never overlap, and read
+ * as intentional. Order follows finding order, which drives the numbered labels.
+ */
+export function layoutPinPositions(count: number): { x: number; y: number }[] {
+  if (count <= 0) return [];
+  const xMin = 0.16;
+  const xMax = 0.84;
+  const yMin = 0.12;
+  const yMax = 0.88;
+  const cols = count <= 3 ? count : count <= 4 ? 2 : count <= 9 ? 3 : 4;
+  const rows = Math.ceil(count / cols);
+  const step = cols > 1 ? (xMax - xMin) / (cols - 1) : 0;
+  const positions: { x: number; y: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    const itemsInRow = Math.min(cols, count - r * cols);
+    // Center partial (final) rows within the full-column grid width so a short
+    // last row sits under the columns above instead of stretching to the edges.
+    const rowWidth = (itemsInRow - 1) * step;
+    const startX = xMin + (xMax - xMin - rowWidth) / 2;
+    const x = cols === 1 ? 0.5 : startX + c * step;
+    const y =
+      rows === 1 ? (yMin + yMax) / 2 : yMin + (yMax - yMin) * (r / (rows - 1));
+    positions.push({ x: +x.toFixed(4), y: +y.toFixed(4) });
+  }
+  return positions;
+}
+
+/**
  * Persist an analysis result: update the package, replace violations, and
  * regenerate AI annotations + review tasks (leaving human ones intact).
  */
@@ -220,14 +256,11 @@ export async function applyAnalysis(
     );
 
   if (insertedViolations.length > 0) {
-    let spread = 0;
+    const pinPositions = layoutPinPositions(insertedViolations.length);
     await db.insert(annotationsTable).values(
-      insertedViolations.map((v) => {
-        const hasBbox = v.bboxX !== null && v.bboxY !== null;
-        // Fallback layout for findings the model did not localize.
-        const fx = hasBbox ? v.bboxX! : 0.08 + (spread % 3) * 0.3;
-        const fy = hasBbox ? v.bboxY! : 0.12 + Math.floor(spread / 3) * 0.18;
-        if (!hasBbox) spread += 1;
+      insertedViolations.map((v, i) => {
+        const fx = pinPositions[i]!.x;
+        const fy = pinPositions[i]!.y;
         const cls = v.findingClass as
           | "issue"
           | "warning"
@@ -240,8 +273,11 @@ export async function applyAnalysis(
           page: v.page,
           x: fx,
           y: fy,
-          w: v.bboxW ?? null,
-          h: v.bboxH ?? null,
+          // AI findings render as numbered pin markers; the model's bbox w/h is
+          // a text-only guess and would draw detached boxes in PDF export, so we
+          // do not persist a size for these pins.
+          w: null,
+          h: null,
           color: findingClassColor(cls),
           author: "AI Compliance Engine",
           authorRole: "AI",
