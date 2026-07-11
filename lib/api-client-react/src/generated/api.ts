@@ -56,6 +56,7 @@ import type {
   ListPackagesParams,
   ListRegulationsParams,
   ListReviewAssignmentsParams,
+  ListSupplierSubmissionsParams,
   ListViolationsParams,
   Me,
   Notification,
@@ -80,9 +81,17 @@ import type {
   ReviewAssignmentDetail,
   ReviewMetricsSummary,
   RoleInfo,
+  SubmissionInput,
+  SubmissionReviewInput,
   Supplier,
+  SupplierContact,
+  SupplierContactInput,
   SupplierDetail,
   SupplierInput,
+  SupplierScorecard,
+  SupplierScorecardInput,
+  SupplierSubmission,
+  SupplierUpdateInput,
   SystemHealth,
   Team,
   TeamInput,
@@ -3671,6 +3680,522 @@ export function useGetSupplier<TData = Awaited<ReturnType<typeof getSupplier>>, 
 
 
 
+
+export const getUpdateSupplierUrl = (id: number,) => {
+
+
+
+
+  return `/api/suppliers/${id}`
+}
+
+/**
+ * @summary Update a supplier or transition its status
+ */
+export const updateSupplier = async (id: number,
+    supplierUpdateInput: SupplierUpdateInput, options?: RequestInit): Promise<Supplier> => {
+
+  return customFetch<Supplier>(getUpdateSupplierUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(supplierUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateSupplierMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSupplier>>, TError,{id: number;data: BodyType<SupplierUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSupplier>>, TError,{id: number;data: BodyType<SupplierUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateSupplier'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSupplier>>, {id: number;data: BodyType<SupplierUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSupplier(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSupplierMutationResult = NonNullable<Awaited<ReturnType<typeof updateSupplier>>>
+    export type UpdateSupplierMutationBody = BodyType<SupplierUpdateInput>
+    export type UpdateSupplierMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Update a supplier or transition its status
+ */
+export const useUpdateSupplier = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSupplier>>, TError,{id: number;data: BodyType<SupplierUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSupplier>>,
+        TError,
+        {id: number;data: BodyType<SupplierUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateSupplierMutationOptions(options));
+    }
+
+export const getAddSupplierContactUrl = (id: number,) => {
+
+
+
+
+  return `/api/suppliers/${id}/contacts`
+}
+
+/**
+ * @summary Add a contact to a supplier
+ */
+export const addSupplierContact = async (id: number,
+    supplierContactInput: SupplierContactInput, options?: RequestInit): Promise<SupplierContact> => {
+
+  return customFetch<SupplierContact>(getAddSupplierContactUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(supplierContactInput)
+  }
+);}
+
+
+
+
+
+export const getAddSupplierContactMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addSupplierContact>>, TError,{id: number;data: BodyType<SupplierContactInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addSupplierContact>>, TError,{id: number;data: BodyType<SupplierContactInput>}, TContext> => {
+
+const mutationKey = ['addSupplierContact'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addSupplierContact>>, {id: number;data: BodyType<SupplierContactInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addSupplierContact(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddSupplierContactMutationResult = NonNullable<Awaited<ReturnType<typeof addSupplierContact>>>
+    export type AddSupplierContactMutationBody = BodyType<SupplierContactInput>
+    export type AddSupplierContactMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a contact to a supplier
+ */
+export const useAddSupplierContact = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addSupplierContact>>, TError,{id: number;data: BodyType<SupplierContactInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addSupplierContact>>,
+        TError,
+        {id: number;data: BodyType<SupplierContactInput>},
+        TContext
+      > => {
+      return useMutation(getAddSupplierContactMutationOptions(options));
+    }
+
+export const getRemoveSupplierContactUrl = (id: number,
+    contactId: number,) => {
+
+
+
+
+  return `/api/suppliers/${id}/contacts/${contactId}`
+}
+
+/**
+ * @summary Remove a contact from a supplier
+ */
+export const removeSupplierContact = async (id: number,
+    contactId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRemoveSupplierContactUrl(id,contactId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRemoveSupplierContactMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeSupplierContact>>, TError,{id: number;contactId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeSupplierContact>>, TError,{id: number;contactId: number}, TContext> => {
+
+const mutationKey = ['removeSupplierContact'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeSupplierContact>>, {id: number;contactId: number}> = (props) => {
+          const {id,contactId} = props ?? {};
+
+          return  removeSupplierContact(id,contactId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemoveSupplierContactMutationResult = NonNullable<Awaited<ReturnType<typeof removeSupplierContact>>>
+
+    export type RemoveSupplierContactMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove a contact from a supplier
+ */
+export const useRemoveSupplierContact = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeSupplierContact>>, TError,{id: number;contactId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof removeSupplierContact>>,
+        TError,
+        {id: number;contactId: number},
+        TContext
+      > => {
+      return useMutation(getRemoveSupplierContactMutationOptions(options));
+    }
+
+export const getRecordSupplierScorecardUrl = (id: number,) => {
+
+
+
+
+  return `/api/suppliers/${id}/scorecards`
+}
+
+/**
+ * @summary Record a performance scorecard for a supplier
+ */
+export const recordSupplierScorecard = async (id: number,
+    supplierScorecardInput: SupplierScorecardInput, options?: RequestInit): Promise<SupplierScorecard> => {
+
+  return customFetch<SupplierScorecard>(getRecordSupplierScorecardUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(supplierScorecardInput)
+  }
+);}
+
+
+
+
+
+export const getRecordSupplierScorecardMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordSupplierScorecard>>, TError,{id: number;data: BodyType<SupplierScorecardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordSupplierScorecard>>, TError,{id: number;data: BodyType<SupplierScorecardInput>}, TContext> => {
+
+const mutationKey = ['recordSupplierScorecard'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordSupplierScorecard>>, {id: number;data: BodyType<SupplierScorecardInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  recordSupplierScorecard(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordSupplierScorecardMutationResult = NonNullable<Awaited<ReturnType<typeof recordSupplierScorecard>>>
+    export type RecordSupplierScorecardMutationBody = BodyType<SupplierScorecardInput>
+    export type RecordSupplierScorecardMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Record a performance scorecard for a supplier
+ */
+export const useRecordSupplierScorecard = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordSupplierScorecard>>, TError,{id: number;data: BodyType<SupplierScorecardInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordSupplierScorecard>>,
+        TError,
+        {id: number;data: BodyType<SupplierScorecardInput>},
+        TContext
+      > => {
+      return useMutation(getRecordSupplierScorecardMutationOptions(options));
+    }
+
+export const getListSupplierSubmissionsUrl = (params?: ListSupplierSubmissionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/supplier-submissions?${stringifiedParams}` : `/api/supplier-submissions`
+}
+
+/**
+ * @summary List supplier submissions (scoped to caller)
+ */
+export const listSupplierSubmissions = async (params?: ListSupplierSubmissionsParams, options?: RequestInit): Promise<SupplierSubmission[]> => {
+
+  return customFetch<SupplierSubmission[]>(getListSupplierSubmissionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSupplierSubmissionsQueryKey = (params?: ListSupplierSubmissionsParams,) => {
+    return [
+    `/api/supplier-submissions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSupplierSubmissionsQueryOptions = <TData = Awaited<ReturnType<typeof listSupplierSubmissions>>, TError = ErrorType<unknown>>(params?: ListSupplierSubmissionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSupplierSubmissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSupplierSubmissionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSupplierSubmissions>>> = ({ signal }) => listSupplierSubmissions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSupplierSubmissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSupplierSubmissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listSupplierSubmissions>>>
+export type ListSupplierSubmissionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List supplier submissions (scoped to caller)
+ */
+
+export function useListSupplierSubmissions<TData = Awaited<ReturnType<typeof listSupplierSubmissions>>, TError = ErrorType<unknown>>(
+ params?: ListSupplierSubmissionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSupplierSubmissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSupplierSubmissionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSupplierSubmissionUrl = () => {
+
+
+
+
+  return `/api/supplier-submissions`
+}
+
+/**
+ * @summary Submit packaging for review
+ */
+export const createSupplierSubmission = async (submissionInput: SubmissionInput, options?: RequestInit): Promise<SupplierSubmission> => {
+
+  return customFetch<SupplierSubmission>(getCreateSupplierSubmissionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(submissionInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSupplierSubmissionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSupplierSubmission>>, TError,{data: BodyType<SubmissionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSupplierSubmission>>, TError,{data: BodyType<SubmissionInput>}, TContext> => {
+
+const mutationKey = ['createSupplierSubmission'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSupplierSubmission>>, {data: BodyType<SubmissionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSupplierSubmission(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSupplierSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof createSupplierSubmission>>>
+    export type CreateSupplierSubmissionMutationBody = BodyType<SubmissionInput>
+    export type CreateSupplierSubmissionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Submit packaging for review
+ */
+export const useCreateSupplierSubmission = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSupplierSubmission>>, TError,{data: BodyType<SubmissionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSupplierSubmission>>,
+        TError,
+        {data: BodyType<SubmissionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSupplierSubmissionMutationOptions(options));
+    }
+
+export const getReviewSupplierSubmissionUrl = (id: number,) => {
+
+
+
+
+  return `/api/supplier-submissions/${id}`
+}
+
+/**
+ * @summary Record a review decision on a submission
+ */
+export const reviewSupplierSubmission = async (id: number,
+    submissionReviewInput: SubmissionReviewInput, options?: RequestInit): Promise<SupplierSubmission> => {
+
+  return customFetch<SupplierSubmission>(getReviewSupplierSubmissionUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(submissionReviewInput)
+  }
+);}
+
+
+
+
+
+export const getReviewSupplierSubmissionMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewSupplierSubmission>>, TError,{id: number;data: BodyType<SubmissionReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewSupplierSubmission>>, TError,{id: number;data: BodyType<SubmissionReviewInput>}, TContext> => {
+
+const mutationKey = ['reviewSupplierSubmission'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewSupplierSubmission>>, {id: number;data: BodyType<SubmissionReviewInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reviewSupplierSubmission(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewSupplierSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof reviewSupplierSubmission>>>
+    export type ReviewSupplierSubmissionMutationBody = BodyType<SubmissionReviewInput>
+    export type ReviewSupplierSubmissionMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Record a review decision on a submission
+ */
+export const useReviewSupplierSubmission = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewSupplierSubmission>>, TError,{id: number;data: BodyType<SubmissionReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewSupplierSubmission>>,
+        TError,
+        {id: number;data: BodyType<SubmissionReviewInput>},
+        TContext
+      > => {
+      return useMutation(getReviewSupplierSubmissionMutationOptions(options));
+    }
 
 export const getListAuditEventsUrl = (params?: ListAuditEventsParams,) => {
   const normalizedParams = new URLSearchParams();

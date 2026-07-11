@@ -1154,6 +1154,179 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateSupplier
+      tags: [suppliers]
+      summary: Update a supplier or transition its status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierUpdateInput"
+      responses:
+        "200":
+          description: Updated supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /suppliers/{id}/contacts:
+    post:
+      operationId: addSupplierContact
+      tags: [suppliers]
+      summary: Add a contact to a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierContactInput"
+      responses:
+        "201":
+          description: Created contact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierContact"
+
+  /suppliers/{id}/contacts/{contactId}:
+    delete:
+      operationId: removeSupplierContact
+      tags: [suppliers]
+      summary: Remove a contact from a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Contact removed
+
+  /suppliers/{id}/scorecards:
+    post:
+      operationId: recordSupplierScorecard
+      tags: [suppliers]
+      summary: Record a performance scorecard for a supplier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierScorecardInput"
+      responses:
+        "201":
+          description: Recorded scorecard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierScorecard"
+
+  /supplier-submissions:
+    get:
+      operationId: listSupplierSubmissions
+      tags: [suppliers]
+      summary: List supplier submissions (scoped to caller)
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: supplierId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of submissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SupplierSubmission"
+    post:
+      operationId: createSupplierSubmission
+      tags: [suppliers]
+      summary: Submit packaging for review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmissionInput"
+      responses:
+        "201":
+          description: Created submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierSubmission"
+
+  /supplier-submissions/{id}:
+    patch:
+      operationId: reviewSupplierSubmission
+      tags: [suppliers]
+      summary: Record a review decision on a submission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmissionReviewInput"
+      responses:
+        "200":
+          description: Reviewed submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierSubmission"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 
   /audit:
     get:
@@ -3409,6 +3582,8 @@ components:
           type: ["string", "null"]
         riskLevel:
           type: string
+        status:
+          type: string
         contactEmail:
           type: ["string", "null"]
         country:
@@ -3417,6 +3592,13 @@ components:
           type: integer
         packagesReviewed:
           type: integer
+        externalSource:
+          type: ["string", "null"]
+        externalId:
+          type: ["string", "null"]
+        externalSyncedAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time
@@ -3424,8 +3606,151 @@ components:
         - id
         - name
         - riskLevel
+        - status
         - complianceScore
         - packagesReviewed
+        - createdAt
+
+    SupplierContact:
+      type: object
+      properties:
+        id:
+          type: integer
+        supplierId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        title:
+          type: ["string", "null"]
+        isPrimary:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - supplierId
+        - name
+        - isPrimary
+        - createdAt
+
+    SupplierSubmission:
+      type: object
+      properties:
+        id:
+          type: integer
+        supplierId:
+          type: integer
+        supplierName:
+          type: ["string", "null"]
+        packageId:
+          type: ["integer", "null"]
+        submittedByUserId:
+          type: ["integer", "null"]
+        submittedByName:
+          type: string
+        title:
+          type: string
+        category:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        artworkUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+        reviewerUserId:
+          type: ["integer", "null"]
+        reviewerName:
+          type: ["string", "null"]
+        reviewNotes:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - supplierId
+        - submittedByName
+        - title
+        - status
+        - createdAt
+        - updatedAt
+
+    SupplierScorecard:
+      type: object
+      properties:
+        id:
+          type: integer
+        supplierId:
+          type: integer
+        period:
+          type: string
+        overallScore:
+          type: integer
+        qualityScore:
+          type: ["integer", "null"]
+        complianceScore:
+          type: ["integer", "null"]
+        timelinessScore:
+          type: ["integer", "null"]
+        submissionsCount:
+          type: integer
+        approvedCount:
+          type: integer
+        rejectedCount:
+          type: integer
+        notes:
+          type: ["string", "null"]
+        recordedByName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - supplierId
+        - period
+        - overallScore
+        - submissionsCount
+        - approvedCount
+        - rejectedCount
+        - recordedByName
+        - createdAt
+
+    SupplierStatusEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        supplierId:
+          type: integer
+        fromStatus:
+          type: ["string", "null"]
+        toStatus:
+          type: string
+        reason:
+          type: ["string", "null"]
+        actorName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - supplierId
+        - toStatus
+        - actorName
         - createdAt
 
     SupplierDetail:
@@ -3441,6 +3766,8 @@ components:
           type: ["string", "null"]
         riskLevel:
           type: string
+        status:
+          type: string
         contactEmail:
           type: ["string", "null"]
         country:
@@ -3449,6 +3776,13 @@ components:
           type: integer
         packagesReviewed:
           type: integer
+        externalSource:
+          type: ["string", "null"]
+        externalId:
+          type: ["string", "null"]
+        externalSyncedAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time
@@ -3456,14 +3790,35 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Package"
+        contacts:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplierContact"
+        submissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplierSubmission"
+        scorecards:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplierScorecard"
+        statusHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupplierStatusEvent"
       required:
         - id
         - name
         - riskLevel
+        - status
         - complianceScore
         - packagesReviewed
         - createdAt
         - packages
+        - contacts
+        - submissions
+        - scorecards
+        - statusHistory
 
     SupplierInput:
       type: object
@@ -3477,12 +3832,112 @@ components:
           type: string
         riskLevel:
           type: string
+        status:
+          type: string
         contactEmail:
           type: string
         country:
           type: string
+        externalSource:
+          type: string
+        externalId:
+          type: string
       required:
         - name
+
+    SupplierUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+        code:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        riskLevel:
+          type: string
+        status:
+          type: string
+        statusReason:
+          type: string
+        contactEmail:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        externalSource:
+          type: ["string", "null"]
+        externalId:
+          type: ["string", "null"]
+
+    SupplierContactInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+        phone:
+          type: string
+        title:
+          type: string
+        isPrimary:
+          type: boolean
+      required:
+        - name
+
+    SupplierScorecardInput:
+      type: object
+      properties:
+        period:
+          type: string
+          minLength: 1
+        overallScore:
+          type: integer
+        qualityScore:
+          type: integer
+        complianceScore:
+          type: integer
+        timelinessScore:
+          type: integer
+        submissionsCount:
+          type: integer
+        approvedCount:
+          type: integer
+        rejectedCount:
+          type: integer
+        notes:
+          type: string
+      required:
+        - period
+        - overallScore
+
+    SubmissionInput:
+      type: object
+      properties:
+        supplierId:
+          type: integer
+        title:
+          type: string
+          minLength: 1
+        category:
+          type: string
+        notes:
+          type: string
+        artworkUrl:
+          type: string
+      required:
+        - title
+
+    SubmissionReviewInput:
+      type: object
+      properties:
+        status:
+          type: string
+        reviewNotes:
+          type: string
+      required:
+        - status
 
     AuditEvent:
       type: object

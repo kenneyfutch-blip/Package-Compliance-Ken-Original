@@ -12,6 +12,9 @@ export interface SupplierInput {
   code?: string;
   category?: string;
   riskLevel?: string;
+  status?: string;
   contactEmail?: string;
   country?: string;
+  externalSource?: string;
+  externalId?: string;
 }

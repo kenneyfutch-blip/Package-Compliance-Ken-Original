@@ -1808,10 +1808,14 @@ export const ListSuppliersResponseItem = zod.object({
   "code": zod.string().nullish(),
   "category": zod.string().nullish(),
   "riskLevel": zod.string(),
+  "status": zod.string(),
   "contactEmail": zod.string().nullish(),
   "country": zod.string().nullish(),
   "complianceScore": zod.number(),
   "packagesReviewed": zod.number(),
+  "externalSource": zod.string().nullish(),
+  "externalId": zod.string().nullish(),
+  "externalSyncedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListSuppliersResponse = zod.array(ListSuppliersResponseItem)
@@ -1828,8 +1832,11 @@ export const CreateSupplierBody = zod.object({
   "code": zod.string().optional(),
   "category": zod.string().optional(),
   "riskLevel": zod.string().optional(),
+  "status": zod.string().optional(),
   "contactEmail": zod.string().optional(),
-  "country": zod.string().optional()
+  "country": zod.string().optional(),
+  "externalSource": zod.string().optional(),
+  "externalId": zod.string().optional()
 })
 
 export const CreateSupplierResponse = zod.object({
@@ -1838,10 +1845,14 @@ export const CreateSupplierResponse = zod.object({
   "code": zod.string().nullish(),
   "category": zod.string().nullish(),
   "riskLevel": zod.string(),
+  "status": zod.string(),
   "contactEmail": zod.string().nullish(),
   "country": zod.string().nullish(),
   "complianceScore": zod.number(),
   "packagesReviewed": zod.number(),
+  "externalSource": zod.string().nullish(),
+  "externalId": zod.string().nullish(),
+  "externalSyncedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1859,10 +1870,14 @@ export const GetSupplierResponse = zod.object({
   "code": zod.string().nullish(),
   "category": zod.string().nullish(),
   "riskLevel": zod.string(),
+  "status": zod.string(),
   "contactEmail": zod.string().nullish(),
   "country": zod.string().nullish(),
   "complianceScore": zod.number(),
   "packagesReviewed": zod.number(),
+  "externalSource": zod.string().nullish(),
+  "externalId": zod.string().nullish(),
+  "externalSyncedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "packages": zod.array(zod.object({
   "id": zod.number(),
@@ -1899,7 +1914,276 @@ export const GetSupplierResponse = zod.object({
   "analyzedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
+})),
+  "contacts": zod.array(zod.object({
+  "id": zod.number(),
+  "supplierId": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "title": zod.string().nullish(),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})),
+  "submissions": zod.array(zod.object({
+  "id": zod.number(),
+  "supplierId": zod.number(),
+  "supplierName": zod.string().nullish(),
+  "packageId": zod.number().nullish(),
+  "submittedByUserId": zod.number().nullish(),
+  "submittedByName": zod.string(),
+  "title": zod.string(),
+  "category": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "artworkUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "reviewerUserId": zod.number().nullish(),
+  "reviewerName": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "scorecards": zod.array(zod.object({
+  "id": zod.number(),
+  "supplierId": zod.number(),
+  "period": zod.string(),
+  "overallScore": zod.number(),
+  "qualityScore": zod.number().nullish(),
+  "complianceScore": zod.number().nullish(),
+  "timelinessScore": zod.number().nullish(),
+  "submissionsCount": zod.number(),
+  "approvedCount": zod.number(),
+  "rejectedCount": zod.number(),
+  "notes": zod.string().nullish(),
+  "recordedByName": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "statusHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "supplierId": zod.number(),
+  "fromStatus": zod.string().nullish(),
+  "toStatus": zod.string(),
+  "reason": zod.string().nullish(),
+  "actorName": zod.string(),
+  "createdAt": zod.coerce.date()
 }))
+})
+
+
+/**
+ * @summary Update a supplier or transition its status
+ */
+export const UpdateSupplierParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSupplierBody = zod.object({
+  "name": zod.string().optional(),
+  "code": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "riskLevel": zod.string().optional(),
+  "status": zod.string().optional(),
+  "statusReason": zod.string().optional(),
+  "contactEmail": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "externalSource": zod.string().nullish(),
+  "externalId": zod.string().nullish()
+})
+
+export const UpdateSupplierResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "code": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "riskLevel": zod.string(),
+  "status": zod.string(),
+  "contactEmail": zod.string().nullish(),
+  "country": zod.string().nullish(),
+  "complianceScore": zod.number(),
+  "packagesReviewed": zod.number(),
+  "externalSource": zod.string().nullish(),
+  "externalId": zod.string().nullish(),
+  "externalSyncedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Add a contact to a supplier
+ */
+export const AddSupplierContactParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const AddSupplierContactBody = zod.object({
+  "name": zod.string().min(1),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "title": zod.string().optional(),
+  "isPrimary": zod.boolean().optional()
+})
+
+export const AddSupplierContactResponse = zod.object({
+  "id": zod.number(),
+  "supplierId": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "phone": zod.string().nullish(),
+  "title": zod.string().nullish(),
+  "isPrimary": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Remove a contact from a supplier
+ */
+export const RemoveSupplierContactParams = zod.object({
+  "id": zod.coerce.number(),
+  "contactId": zod.coerce.number()
+})
+
+export const RemoveSupplierContactResponse = zod.void()
+
+
+/**
+ * @summary Record a performance scorecard for a supplier
+ */
+export const RecordSupplierScorecardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const RecordSupplierScorecardBody = zod.object({
+  "period": zod.string().min(1),
+  "overallScore": zod.number(),
+  "qualityScore": zod.number().optional(),
+  "complianceScore": zod.number().optional(),
+  "timelinessScore": zod.number().optional(),
+  "submissionsCount": zod.number().optional(),
+  "approvedCount": zod.number().optional(),
+  "rejectedCount": zod.number().optional(),
+  "notes": zod.string().optional()
+})
+
+export const RecordSupplierScorecardResponse = zod.object({
+  "id": zod.number(),
+  "supplierId": zod.number(),
+  "period": zod.string(),
+  "overallScore": zod.number(),
+  "qualityScore": zod.number().nullish(),
+  "complianceScore": zod.number().nullish(),
+  "timelinessScore": zod.number().nullish(),
+  "submissionsCount": zod.number(),
+  "approvedCount": zod.number(),
+  "rejectedCount": zod.number(),
+  "notes": zod.string().nullish(),
+  "recordedByName": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List supplier submissions (scoped to caller)
+ */
+export const ListSupplierSubmissionsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "supplierId": zod.coerce.number().optional()
+})
+
+export const ListSupplierSubmissionsResponseItem = zod.object({
+  "id": zod.number(),
+  "supplierId": zod.number(),
+  "supplierName": zod.string().nullish(),
+  "packageId": zod.number().nullish(),
+  "submittedByUserId": zod.number().nullish(),
+  "submittedByName": zod.string(),
+  "title": zod.string(),
+  "category": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "artworkUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "reviewerUserId": zod.number().nullish(),
+  "reviewerName": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListSupplierSubmissionsResponse = zod.array(ListSupplierSubmissionsResponseItem)
+
+
+/**
+ * @summary Submit packaging for review
+ */
+
+
+
+export const CreateSupplierSubmissionBody = zod.object({
+  "supplierId": zod.number().optional(),
+  "title": zod.string().min(1),
+  "category": zod.string().optional(),
+  "notes": zod.string().optional(),
+  "artworkUrl": zod.string().optional()
+})
+
+export const CreateSupplierSubmissionResponse = zod.object({
+  "id": zod.number(),
+  "supplierId": zod.number(),
+  "supplierName": zod.string().nullish(),
+  "packageId": zod.number().nullish(),
+  "submittedByUserId": zod.number().nullish(),
+  "submittedByName": zod.string(),
+  "title": zod.string(),
+  "category": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "artworkUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "reviewerUserId": zod.number().nullish(),
+  "reviewerName": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Record a review decision on a submission
+ */
+export const ReviewSupplierSubmissionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReviewSupplierSubmissionBody = zod.object({
+  "status": zod.string(),
+  "reviewNotes": zod.string().optional()
+})
+
+export const ReviewSupplierSubmissionResponse = zod.object({
+  "id": zod.number(),
+  "supplierId": zod.number(),
+  "supplierName": zod.string().nullish(),
+  "packageId": zod.number().nullish(),
+  "submittedByUserId": zod.number().nullish(),
+  "submittedByName": zod.string(),
+  "title": zod.string(),
+  "category": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "artworkUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "reviewerUserId": zod.number().nullish(),
+  "reviewerName": zod.string().nullish(),
+  "reviewNotes": zod.string().nullish(),
+  "reviewedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
 })
 
 

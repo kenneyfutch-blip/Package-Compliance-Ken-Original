@@ -22,6 +22,9 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: "proofs:decide", category: "proofs", description: "Approve or reject proofs" },
   { key: "suppliers:read", category: "suppliers", description: "View suppliers" },
   { key: "suppliers:write", category: "suppliers", description: "Create and edit suppliers" },
+  { key: "submissions:read", category: "suppliers", description: "View supplier submissions" },
+  { key: "submissions:write", category: "suppliers", description: "Submit packaging for review" },
+  { key: "submissions:review", category: "suppliers", description: "Review and decide on supplier submissions" },
   { key: "reports:read", category: "reports", description: "View reports" },
   { key: "reports:write", category: "reports", description: "Generate reports" },
   { key: "regulations:read", category: "regulations", description: "View the regulation library" },
@@ -65,7 +68,8 @@ export const ROLES: RoleDef[] = [
     permissions: [
       "dashboard:read", "packages:read", "packages:write", "packages:delete", "packages:analyze",
       "violations:read", "violations:write", "proofs:read", "proofs:write", "proofs:decide",
-      "suppliers:read", "suppliers:write", "reports:read", "reports:write",
+      "suppliers:read", "suppliers:write", "submissions:read", "submissions:write", "submissions:review",
+      "reports:read", "reports:write",
       "regulations:read", "regulations:write", "fda:read", "audit:read", "notifications:read",
       "ai_providers:read", "users:read", "users:write", "teams:read", "teams:write",
     ],
@@ -78,7 +82,8 @@ export const ROLES: RoleDef[] = [
     permissions: [
       "dashboard:read", "packages:read", "packages:write", "packages:analyze",
       "violations:read", "violations:write", "proofs:read", "proofs:write", "proofs:decide",
-      "suppliers:read", "suppliers:write", "reports:read", "reports:write",
+      "suppliers:read", "suppliers:write", "submissions:read", "submissions:write", "submissions:review",
+      "reports:read", "reports:write",
       "regulations:read", "fda:read", "audit:read", "notifications:read",
       "users:read", "teams:read",
     ],
@@ -91,7 +96,7 @@ export const ROLES: RoleDef[] = [
     permissions: [
       "dashboard:read", "packages:read", "packages:write", "packages:analyze",
       "violations:read", "violations:write", "proofs:read", "proofs:write", "proofs:decide",
-      "suppliers:read", "reports:read", "reports:write",
+      "suppliers:read", "submissions:read", "submissions:review", "reports:read", "reports:write",
       "regulations:read", "fda:read", "audit:read", "notifications:read",
     ],
   },
@@ -134,7 +139,7 @@ export const ROLES: RoleDef[] = [
     rank: 40,
     description: "Read-only access to dashboards and reports for leadership.",
     permissions: [
-      "dashboard:read", "packages:read", "violations:read", "suppliers:read",
+      "dashboard:read", "packages:read", "violations:read", "suppliers:read", "submissions:read",
       "reports:read", "regulations:read", "audit:read", "notifications:read",
     ],
   },
@@ -145,6 +150,7 @@ export const ROLES: RoleDef[] = [
     description: "External supplier with access limited to their own records.",
     permissions: [
       "packages:read", "proofs:read", "reports:read",
+      "submissions:read", "submissions:write",
       "regulations:read", "fda:read", "notifications:read",
     ],
   },

@@ -830,12 +830,95 @@ export interface Supplier {
   /** @nullable */
   category?: string | null;
   riskLevel: string;
+  status: string;
   /** @nullable */
   contactEmail?: string | null;
   /** @nullable */
   country?: string | null;
   complianceScore: number;
   packagesReviewed: number;
+  /** @nullable */
+  externalSource?: string | null;
+  /** @nullable */
+  externalId?: string | null;
+  /** @nullable */
+  externalSyncedAt?: string | null;
+  createdAt: string;
+}
+
+export interface SupplierContact {
+  id: number;
+  supplierId: number;
+  name: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  title?: string | null;
+  isPrimary: boolean;
+  createdAt: string;
+}
+
+export interface SupplierSubmission {
+  id: number;
+  supplierId: number;
+  /** @nullable */
+  supplierName?: string | null;
+  /** @nullable */
+  packageId?: number | null;
+  /** @nullable */
+  submittedByUserId?: number | null;
+  submittedByName: string;
+  title: string;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  artworkUrl?: string | null;
+  status: string;
+  /** @nullable */
+  reviewerUserId?: number | null;
+  /** @nullable */
+  reviewerName?: string | null;
+  /** @nullable */
+  reviewNotes?: string | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupplierScorecard {
+  id: number;
+  supplierId: number;
+  period: string;
+  overallScore: number;
+  /** @nullable */
+  qualityScore?: number | null;
+  /** @nullable */
+  complianceScore?: number | null;
+  /** @nullable */
+  timelinessScore?: number | null;
+  submissionsCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  /** @nullable */
+  notes?: string | null;
+  recordedByName: string;
+  createdAt: string;
+}
+
+export interface SupplierStatusEvent {
+  id: number;
+  supplierId: number;
+  /** @nullable */
+  fromStatus?: string | null;
+  toStatus: string;
+  /** @nullable */
+  reason?: string | null;
+  actorName: string;
   createdAt: string;
 }
 
@@ -847,14 +930,25 @@ export interface SupplierDetail {
   /** @nullable */
   category?: string | null;
   riskLevel: string;
+  status: string;
   /** @nullable */
   contactEmail?: string | null;
   /** @nullable */
   country?: string | null;
   complianceScore: number;
   packagesReviewed: number;
+  /** @nullable */
+  externalSource?: string | null;
+  /** @nullable */
+  externalId?: string | null;
+  /** @nullable */
+  externalSyncedAt?: string | null;
   createdAt: string;
   packages: Package[];
+  contacts: SupplierContact[];
+  submissions: SupplierSubmission[];
+  scorecards: SupplierScorecard[];
+  statusHistory: SupplierStatusEvent[];
 }
 
 export interface SupplierInput {
@@ -863,8 +957,66 @@ export interface SupplierInput {
   code?: string;
   category?: string;
   riskLevel?: string;
+  status?: string;
   contactEmail?: string;
   country?: string;
+  externalSource?: string;
+  externalId?: string;
+}
+
+export interface SupplierUpdateInput {
+  name?: string;
+  /** @nullable */
+  code?: string | null;
+  /** @nullable */
+  category?: string | null;
+  riskLevel?: string;
+  status?: string;
+  statusReason?: string;
+  /** @nullable */
+  contactEmail?: string | null;
+  /** @nullable */
+  country?: string | null;
+  /** @nullable */
+  externalSource?: string | null;
+  /** @nullable */
+  externalId?: string | null;
+}
+
+export interface SupplierContactInput {
+  /** @minLength 1 */
+  name: string;
+  email?: string;
+  phone?: string;
+  title?: string;
+  isPrimary?: boolean;
+}
+
+export interface SupplierScorecardInput {
+  /** @minLength 1 */
+  period: string;
+  overallScore: number;
+  qualityScore?: number;
+  complianceScore?: number;
+  timelinessScore?: number;
+  submissionsCount?: number;
+  approvedCount?: number;
+  rejectedCount?: number;
+  notes?: string;
+}
+
+export interface SubmissionInput {
+  supplierId?: number;
+  /** @minLength 1 */
+  title: string;
+  category?: string;
+  notes?: string;
+  artworkUrl?: string;
+}
+
+export interface SubmissionReviewInput {
+  status: string;
+  reviewNotes?: string;
 }
 
 export interface AuditEvent {
@@ -1258,6 +1410,11 @@ export type ListRegulationsParams = {
 search?: string;
 agency?: string;
 category?: string;
+};
+
+export type ListSupplierSubmissionsParams = {
+status?: string;
+supplierId?: number;
 };
 
 export type ListAuditEventsParams = {

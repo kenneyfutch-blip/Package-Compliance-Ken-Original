@@ -47,6 +47,7 @@ import RegulatoryUpdates from "@/pages/regulatory-updates"
 import FdaRecalls from "@/pages/fda-recalls"
 import FdaSources from "@/pages/fda-sources"
 import SupplierPortal from "@/pages/supplier-portal"
+import SupplierDetail from "@/pages/supplier-detail"
 
 const queryClient = new QueryClient()
 
@@ -269,6 +270,7 @@ function AppRoutes() {
         <Route path="/suppliers" component={SuppliersPage} />
         <Route path="/suppliers/scorecards" component={VendorScorecards} />
         <Route path="/suppliers/portal" component={SupplierPortal} />
+        <Route path="/suppliers/:id" component={SupplierDetail} />
 
         {/* Reports */}
         <Route path="/reports" component={ReportsPage} />

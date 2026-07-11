@@ -7,3 +7,4 @@
 - [Google Document AI extraction](document-ai.md) — enterprise OCR layer; strict 3-trigger contract, content-hash cache, extraction/reasoning/validation separation, SSRF boundary, unconfigured no-op.
 - [Review Assignment & Workload Engine](review-assignment-engine.md) — durable Postgres job queue; category→team routing; atomic monotonic escalation; SLA/metrics; recurring reschedule dedupe.
 - [Operations Console](operations-console.md) — admin UI; jobs table is org-scoped (filter every read); self-lockout guards; invalidateAuthCache on role change; invite = unlinked user row.
+- [Supplier Architecture & Access Control](supplier-architecture.md) — supplier_user isolation via *Conds helpers (org + own supplierId ?? -1); anti-spoof forced supplierId; submissions:review gate; status lifecycle + external linkage.

@@ -2,6 +2,10 @@ import { db } from "@workspace/db";
 import {
   usersTable,
   suppliersTable,
+  supplierContactsTable,
+  supplierSubmissionsTable,
+  supplierScorecardsTable,
+  supplierStatusHistoryTable,
   regulationsTable,
   notificationsTable,
   packagesTable,
@@ -244,9 +248,43 @@ async function main() {
     await db.insert(teamMembersTable).values(teamMemberRows);
   }
 
-  await db.insert(suppliersTable).values(
-    suppliers.map((s) => ({ ...s, organizationId: orgId })),
-  );
+  const insertedSuppliers = await db
+    .insert(suppliersTable)
+    .values(suppliers.map((s) => ({ ...s, organizationId: orgId })))
+    .returning();
+
+  // Seed supplier sub-entities against the first few suppliers so the supplier
+  // architecture (contacts, submissions, reviews, scorecards, lifecycle) is
+  // demonstrable out of the box.
+  const supById = (code: string) =>
+    insertedSuppliers.find((s) => s.code === code) ?? insertedSuppliers[0]!;
+  const sunrise = supById("SUP-1001");
+  const golden = supById("SUP-1002");
+  const cleanco = supById("SUP-1003");
+
+  await db.insert(supplierContactsTable).values([
+    { organizationId: orgId, supplierId: sunrise.id, name: "Maria Santos", title: "QA Director", email: "maria@sunrisepkg.com", phone: "+1 555 0101", isPrimary: true },
+    { organizationId: orgId, supplierId: sunrise.id, name: "Devon Clarke", title: "Regulatory Lead", email: "devon@sunrisepkg.com", isPrimary: false },
+    { organizationId: orgId, supplierId: golden.id, name: "Li Wei", title: "Compliance Manager", email: "liwei@goldenharvest.cn", isPrimary: true },
+    { organizationId: orgId, supplierId: cleanco.id, name: "Sarah Brooks", title: "Regulatory Affairs", email: "sarah@cleanco.com", phone: "+1 555 0199", isPrimary: true },
+  ]);
+
+  await db.insert(supplierScorecardsTable).values([
+    { organizationId: orgId, supplierId: sunrise.id, period: "2026-Q1", overallScore: 94, qualityScore: 96, complianceScore: 93, timelinessScore: 92, submissionsCount: 18, approvedCount: 16, rejectedCount: 2, recordedByName: "System", notes: "Consistently strong performer." },
+    { organizationId: orgId, supplierId: golden.id, period: "2026-Q1", overallScore: 76, qualityScore: 74, complianceScore: 78, timelinessScore: 76, submissionsCount: 12, approvedCount: 8, rejectedCount: 4, recordedByName: "System", notes: "Allergen declarations need attention." },
+    { organizationId: orgId, supplierId: cleanco.id, period: "2026-Q1", overallScore: 61, qualityScore: 58, complianceScore: 60, timelinessScore: 65, submissionsCount: 9, approvedCount: 4, rejectedCount: 5, recordedByName: "System", notes: "High-risk; EPA labeling issues recurring." },
+  ]);
+
+  await db.insert(supplierStatusHistoryTable).values([
+    { organizationId: orgId, supplierId: sunrise.id, fromStatus: "Prospective", toStatus: "Active", reason: "Passed onboarding audit.", actorName: "System" },
+    { organizationId: orgId, supplierId: cleanco.id, fromStatus: "Active", toStatus: "Active", reason: "Under enhanced monitoring due to score decline.", actorName: "System" },
+  ]);
+
+  await db.insert(supplierSubmissionsTable).values([
+    { organizationId: orgId, supplierId: sunrise.id, submittedByName: "Maria Santos", title: "Organic Granola pouch v2", category: "Food & Beverage", notes: "Updated nutrition panel per new serving size.", status: "Approved", reviewerName: "Compliance Team", reviewNotes: "Panel formatting verified.", reviewedAt: new Date() },
+    { organizationId: orgId, supplierId: golden.id, submittedByName: "Li Wei", title: "Snack mix carton", category: "Food & Beverage", notes: "New product line.", status: "ChangesRequested", reviewerName: "Compliance Team", reviewNotes: "Add Contains statement for tree nuts (FALCPA)." },
+    { organizationId: orgId, supplierId: cleanco.id, submittedByName: "Sarah Brooks", title: "Multi-surface cleaner label", category: "Household Chemicals", notes: "Reformulated product.", status: "Submitted" },
+  ]);
   const insertedRegs = await db
     .insert(regulationsTable)
     .values(regulations)

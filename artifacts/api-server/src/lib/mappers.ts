@@ -12,6 +12,10 @@ import type {
   ReviewHistoryRow,
   TeamRow,
   JobRow,
+  SupplierContactRow,
+  SupplierSubmissionRow,
+  SupplierScorecardRow,
+  SupplierStatusHistoryRow,
 } from "@workspace/db";
 import { slaStatusFor } from "./reviews/engine";
 
@@ -190,10 +194,82 @@ export function mapSupplier(s: Supplier) {
     code: s.code,
     category: s.category,
     riskLevel: s.riskLevel,
+    status: s.status,
     contactEmail: s.contactEmail,
     country: s.country,
     complianceScore: s.complianceScore,
     packagesReviewed: s.packagesReviewed,
+    externalSource: s.externalSource,
+    externalId: s.externalId,
+    externalSyncedAt: iso(s.externalSyncedAt),
+    createdAt: iso(s.createdAt)!,
+  };
+}
+
+export function mapSupplierContact(c: SupplierContactRow) {
+  return {
+    id: c.id,
+    supplierId: c.supplierId,
+    name: c.name,
+    email: c.email,
+    phone: c.phone,
+    title: c.title,
+    isPrimary: c.isPrimary,
+    createdAt: iso(c.createdAt)!,
+  };
+}
+
+export function mapSupplierSubmission(
+  s: SupplierSubmissionRow,
+  extra?: { supplierName?: string | null },
+) {
+  return {
+    id: s.id,
+    supplierId: s.supplierId,
+    supplierName: extra?.supplierName ?? null,
+    packageId: s.packageId,
+    submittedByUserId: s.submittedByUserId,
+    submittedByName: s.submittedByName,
+    title: s.title,
+    category: s.category,
+    notes: s.notes,
+    artworkUrl: s.artworkUrl,
+    status: s.status,
+    reviewerUserId: s.reviewerUserId,
+    reviewerName: s.reviewerName,
+    reviewNotes: s.reviewNotes,
+    reviewedAt: iso(s.reviewedAt),
+    createdAt: iso(s.createdAt)!,
+    updatedAt: iso(s.updatedAt)!,
+  };
+}
+
+export function mapSupplierScorecard(s: SupplierScorecardRow) {
+  return {
+    id: s.id,
+    supplierId: s.supplierId,
+    period: s.period,
+    overallScore: s.overallScore,
+    qualityScore: s.qualityScore,
+    complianceScore: s.complianceScore,
+    timelinessScore: s.timelinessScore,
+    submissionsCount: s.submissionsCount,
+    approvedCount: s.approvedCount,
+    rejectedCount: s.rejectedCount,
+    notes: s.notes,
+    recordedByName: s.recordedByName,
+    createdAt: iso(s.createdAt)!,
+  };
+}
+
+export function mapSupplierStatusEvent(s: SupplierStatusHistoryRow) {
+  return {
+    id: s.id,
+    supplierId: s.supplierId,
+    fromStatus: s.fromStatus,
+    toStatus: s.toStatus,
+    reason: s.reason,
+    actorName: s.actorName,
     createdAt: iso(s.createdAt)!,
   };
 }

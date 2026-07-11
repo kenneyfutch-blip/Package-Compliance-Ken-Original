@@ -6,26 +6,21 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface Supplier {
-  id: number;
-  name: string;
+export interface SupplierUpdateInput {
+  name?: string;
   /** @nullable */
   code?: string | null;
   /** @nullable */
   category?: string | null;
-  riskLevel: string;
-  status: string;
+  riskLevel?: string;
+  status?: string;
+  statusReason?: string;
   /** @nullable */
   contactEmail?: string | null;
   /** @nullable */
   country?: string | null;
-  complianceScore: number;
-  packagesReviewed: number;
   /** @nullable */
   externalSource?: string | null;
   /** @nullable */
   externalId?: string | null;
-  /** @nullable */
-  externalSyncedAt?: Date | null;
-  createdAt: Date;
 }

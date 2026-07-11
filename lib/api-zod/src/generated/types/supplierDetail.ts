@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Package } from './package';
+import type { SupplierContact } from './supplierContact';
+import type { SupplierScorecard } from './supplierScorecard';
+import type { SupplierStatusEvent } from './supplierStatusEvent';
+import type { SupplierSubmission } from './supplierSubmission';
 
 export interface SupplierDetail {
   id: number;
@@ -15,12 +19,23 @@ export interface SupplierDetail {
   /** @nullable */
   category?: string | null;
   riskLevel: string;
+  status: string;
   /** @nullable */
   contactEmail?: string | null;
   /** @nullable */
   country?: string | null;
   complianceScore: number;
   packagesReviewed: number;
+  /** @nullable */
+  externalSource?: string | null;
+  /** @nullable */
+  externalId?: string | null;
+  /** @nullable */
+  externalSyncedAt?: Date | null;
   createdAt: Date;
   packages: Package[];
+  contacts: SupplierContact[];
+  submissions: SupplierSubmission[];
+  scorecards: SupplierScorecard[];
+  statusHistory: SupplierStatusEvent[];
 }
