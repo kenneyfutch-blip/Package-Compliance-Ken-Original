@@ -173,7 +173,13 @@ export default function ReviewWorkspace() {
   }
 
   const sc = pkg.scorecard
-  const readinessTone = sc.readinessScore >= 85 ? "text-success" : sc.readinessScore >= 50 ? "text-warning" : "text-destructive"
+  const decided = pkg.approvalStatus !== "Pending"
+  // Once a reviewer records a decision, that decision supersedes the raw AI
+  // readiness estimate so the two indicators can't contradict each other.
+  const readinessLabel = decided ? pkg.approvalStatus : sc.readiness
+  const readinessTone = decided
+    ? approvalStatusTone(pkg.approvalStatus)
+    : sc.readinessScore >= 85 ? "text-success" : sc.readinessScore >= 50 ? "text-warning" : "text-destructive"
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-300">
@@ -225,7 +231,7 @@ export default function ReviewWorkspace() {
         <div className="col-span-2 md:col-span-2 rounded-lg border border-border bg-card px-3 py-2">
           <div className="flex justify-between items-center mb-1">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Readiness</span>
-            <span className={cn("text-xs font-bold", readinessTone)}>{sc.readiness}</span>
+            <span className={cn("text-xs font-bold", readinessTone)}>{readinessLabel}</span>
           </div>
           <Progress value={sc.readinessScore} className="h-1.5" />
         </div>
@@ -283,7 +289,7 @@ export default function ReviewWorkspace() {
             </div>
           </Tabs>
 
-          <ApprovalBar packageId={packageId} onChange={invalidate} />
+          <ApprovalBar pkg={pkg} packageId={packageId} onChange={invalidate} />
         </div>
       </div>
 
@@ -798,34 +804,132 @@ function ComparePanel({ pkg, packageId }: { pkg: Pkg; packageId: number }) {
 // ---------------------------------------------------------------------------
 // Approval bar
 // ---------------------------------------------------------------------------
-function ApprovalBar({ packageId, onChange }: { packageId: number; onChange: () => void }) {
+function approvalStatusTone(status: string): string {
+  switch (status) {
+    case "Approved":
+    case "Approved with Comments":
+      return "text-success"
+    case "Rejected":
+      return "text-destructive"
+    case "Needs Revision":
+      return "text-warning"
+    case "Escalated":
+      return "text-primary"
+    default:
+      return "text-muted-foreground"
+  }
+}
+
+const DECISION_LABELS: Record<string, string> = {
+  approve: "Approved",
+  approve_with_comments: "Approved with comments",
+  needs_revision: "Needs revision",
+  reject: "Rejected",
+  escalate: "Escalated",
+}
+
+function ApprovalBar({ pkg, packageId, onChange }: { pkg: Pkg; packageId: number; onChange: () => void }) {
+  const qc = useQueryClient()
   const decide = useCreateApprovalDecision()
   const [note, setNote] = React.useState("")
-  const act = (decision: string) => decide.mutate(
-    { id: packageId, data: { decision, note: note || undefined } },
-    { onSuccess: () => { setNote(""); onChange() } },
-  )
+  const [feedback, setFeedback] = React.useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [overriding, setOverriding] = React.useState(false)
+
+  const latest = pkg.approvals.length ? pkg.approvals[pkg.approvals.length - 1] : null
+  // Approved / Rejected are settled outcomes; Needs Revision and Escalated still
+  // expect a follow-up decision, so their action buttons stay visible.
+  const terminal =
+    pkg.approvalStatus === "Approved" ||
+    pkg.approvalStatus === "Approved with Comments" ||
+    pkg.approvalStatus === "Rejected"
+
+  const act = (decision: string) => {
+    setFeedback(null)
+    decide.mutate(
+      { id: packageId, data: { decision, note: note || undefined } },
+      {
+        onSuccess: (detail) => {
+          setNote("")
+          setOverriding(false)
+          if (detail) qc.setQueryData(getGetPackageQueryKey(packageId), detail)
+          onChange()
+          setFeedback({ type: "success", text: `Decision saved — ${DECISION_LABELS[decision] ?? decision}.` })
+        },
+        onError: (err) => {
+          setFeedback({
+            type: "error",
+            text: err instanceof Error && err.message ? err.message : "Could not save decision. Please retry.",
+          })
+        },
+      },
+    )
+  }
+
+  const showActions = !terminal || overriding
+
   return (
     <div className="border-t border-border p-3 bg-muted/20 shrink-0 space-y-2">
-      <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Decision note (optional)…" className="h-8 text-sm" />
-      <div className="flex items-center gap-2">
-        <Button size="sm" className="flex-1 gap-1.5 bg-success text-success-foreground hover:bg-success/90" disabled={decide.isPending} onClick={() => act("approve")}>
-          <ShieldCheck className="w-4 h-4" /> Approve
+      {latest && (
+        <div className={cn("rounded-md border p-2 flex items-start gap-2 bg-card", "border-border")}>
+          <Gavel className={cn("w-4 h-4 mt-0.5 shrink-0", approvalStatusTone(pkg.approvalStatus))} />
+          <div className="min-w-0 text-xs">
+            <div className={cn("font-semibold", approvalStatusTone(pkg.approvalStatus))}>{pkg.approvalStatus}</div>
+            <div className="text-muted-foreground">
+              by {latest.reviewer}{latest.reviewerRole ? ` · ${latest.reviewerRole}` : ""} · {relativeTime(latest.createdAt)}
+            </div>
+            {latest.note && <div className="mt-1 italic text-foreground/80 break-words">“{latest.note}”</div>}
+          </div>
+        </div>
+      )}
+
+      {feedback && (
+        <div
+          className={cn(
+            "rounded-md border p-2 text-xs flex items-center gap-2",
+            feedback.type === "success"
+              ? "bg-success/10 border-success/30 text-success"
+              : "bg-destructive/10 border-destructive/30 text-destructive",
+          )}
+        >
+          {feedback.type === "success" ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertOctagon className="w-4 h-4 shrink-0" />}
+          <span className="break-words">{feedback.text}</span>
+        </div>
+      )}
+
+      {terminal && !overriding && (
+        <Button size="sm" variant="outline" className="w-full gap-1.5" disabled={decide.isPending} onClick={() => { setFeedback(null); setOverriding(true) }}>
+          <Gavel className="w-4 h-4" /> Change decision
         </Button>
-        <Button size="sm" variant="outline" className="gap-1.5 border-warning/30 text-warning hover:bg-warning/10" disabled={decide.isPending} onClick={() => act("needs_revision")}>
-          <ShieldAlert className="w-4 h-4" /> Revise
-        </Button>
-        <Button size="sm" variant="outline" className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={decide.isPending} onClick={() => act("reject")}>
-          <XCircle className="w-4 h-4" /> Reject
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild><Button size="sm" variant="ghost" className="px-2" disabled={decide.isPending}><ChevronDown className="w-4 h-4" /></Button></DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => act("approve_with_comments")}><CheckCircle className="w-4 h-4 mr-2" /> Approve with comments</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => act("escalate")}><Gavel className="w-4 h-4 mr-2" /> Escalate</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      )}
+
+      {showActions && (
+        <>
+          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Decision note (optional)…" className="h-8 text-sm" />
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="flex-1 gap-1.5 bg-success text-success-foreground hover:bg-success/90" disabled={decide.isPending} onClick={() => act("approve")}>
+              {decide.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />} Approve
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5 border-warning/30 text-warning hover:bg-warning/10" disabled={decide.isPending} onClick={() => act("needs_revision")}>
+              <ShieldAlert className="w-4 h-4" /> Revise
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={decide.isPending} onClick={() => act("reject")}>
+              <XCircle className="w-4 h-4" /> Reject
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild><Button size="sm" variant="ghost" className="px-2" disabled={decide.isPending}><ChevronDown className="w-4 h-4" /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => act("approve_with_comments")}><CheckCircle className="w-4 h-4 mr-2" /> Approve with comments</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => act("escalate")}><Gavel className="w-4 h-4 mr-2" /> Escalate</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          {terminal && overriding && (
+            <Button size="sm" variant="ghost" className="w-full text-xs" disabled={decide.isPending} onClick={() => setOverriding(false)}>
+              Cancel
+            </Button>
+          )}
+        </>
+      )}
     </div>
   )
 }
