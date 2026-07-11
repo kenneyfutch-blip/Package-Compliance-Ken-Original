@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { requirePermission } from "../lib/rbac/context";
 import { canAccessPackage } from "../lib/rbac/scope";
 import { mapExtraction } from "../lib/mappers";
-import { documentAiStatus } from "../lib/document-ai/config";
+import { extractionStatus } from "../lib/document-ai/providers/registry";
 import {
   getLatestExtraction,
   listExtractions,
@@ -43,7 +43,7 @@ router.get(
   "/document-ai/status",
   requirePermission("packages:read"),
   async (_req: Request, res: Response): Promise<void> => {
-    res.json(documentAiStatus());
+    res.json(extractionStatus());
   },
 );
 

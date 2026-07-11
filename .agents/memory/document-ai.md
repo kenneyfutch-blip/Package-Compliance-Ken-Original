@@ -8,6 +8,11 @@ description: Enterprise OCR/extraction layer — trigger contract, hash-based ca
 Enterprise document extraction layer for the Packaging Compliance AI product.
 Separate from reasoning and validation by deliberate design.
 
+## Extraction is provider-based (OCR provider abstraction)
+Document extraction runs through an `OcrProvider` interface + registry (`lib/document-ai/providers/{types,google,registry}.ts`), not a hardwired vendor. Google Document AI is the first and only provider; `getActiveProvider()` selects it (env `OCR_PROVIDER`, default google, warn+fallback on unknown). Callers (`service.runExtraction`, `policies/extract`, status route) depend only on the interface — adding a provider = implement `OcrProvider` + register in `registry.ts`, no caller/route/DB changes.
+**Why:** avoid future architectural redesign; activation of any provider = just add its config.
+**How to apply:** never re-hardcode `"google-document-ai"` in callers — use `provider.id` (persisted to `document_extractions.engine` / `packages.extractionEngine`; it's a permanent contract value, renaming orphans cached rows). Use `provider.supportedMimeTypes()` / `provider.normalizeMimeType()` / `provider.isConfigured()` / `provider.process()` / `provider.label`. The `/document-ai/status` payload shape is kept backward-compatible (google provider `status()` returns the old shape) so no OpenAPI/codegen change is needed. `config.ts`/`client.ts`/`components.ts` stay Google-specific behind the google adapter.
+
 ## Three-service separation (do not merge)
 - **Extraction** = Google Document AI (the only thing that produces OCR text + page coords + components).
 - **Reasoning** = OpenAI `analyzePackaging` (reads `packages.extractedText`).

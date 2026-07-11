@@ -4,7 +4,7 @@
 - [openFDA integration](openfda.md) — server-only key proxy; 404=empty results, YYYYMMDD dates, per-category enforcement endpoints, 503-vs-502.
 - [Tenancy, RBAC & Teams](tenancy-rbac.md) — code is source of truth for roles/perms; Clerk provisioning + org scoping; requiredPermFor gates nav+routes; global regulations/ai_providers; append-only audit.
 - [AI Language Review Engine](language-review.md) — 6-layer copy review + quality score; sync, latest-only in a txn, reused perms, bounded historical-usage query, SQL-joined findings list.
-- [Google Document AI extraction](document-ai.md) — enterprise OCR layer; strict 3-trigger contract, content-hash cache, extraction/reasoning/validation separation, SSRF boundary, unconfigured no-op.
+- [Google Document AI extraction](document-ai.md) — provider-based OCR (OcrProvider + registry, Google=only provider, use provider.id not hardcoded string); strict 3-trigger contract, content-hash cache, extraction/reasoning/validation separation, SSRF boundary, unconfigured no-op.
 - [orval codegen + tsc build cache](codegen-build-cache.md) — after openapi codegen, consumers can typecheck against stale api-zod dist .d.ts; nuke dist + tsbuildinfo and rebuild libs.
 - [Root tsconfig composite refs](root-tsconfig-composite-refs.md) — every composite lib an artifact references must be in root tsconfig refs or `tsc -p` fails TS6305; clean single run to see the real error.
 - [Review Assignment & Workload Engine](review-assignment-engine.md) — durable Postgres job queue; category→team routing; atomic monotonic escalation; SLA/metrics; recurring reschedule dedupe.

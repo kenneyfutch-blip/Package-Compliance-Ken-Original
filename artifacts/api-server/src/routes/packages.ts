@@ -32,6 +32,7 @@ import {
   mapExtraction,
 } from "../lib/mappers";
 import { runExtraction } from "../lib/document-ai/service";
+import { getActiveProvider } from "../lib/document-ai/providers/registry";
 import { resolveSupplierId } from "../lib/suppliers/link";
 import {
   applyAnalysis,
@@ -321,8 +322,8 @@ router.post(
 
     let current = inserted;
 
-    // Extraction layer: Google Document AI runs on new-package upload. When it
-    // is not configured, this is a no-op and we fall back to any supplied text.
+    // Extraction layer: the active OCR provider runs on new-package upload. When
+    // it is not configured, this is a no-op and we fall back to any supplied text.
     try {
       const run = await runExtraction({ req, pkg: inserted });
       if (run.outcome === "Complete" || run.outcome === "Cached") {
@@ -563,9 +564,9 @@ router.post(
 );
 
 // POST /packages/:id/reprocess
-// Manual reprocess: force Google Document AI to re-extract the source document
-// (bypassing the cache), then re-run OpenAI analysis on the fresh text. This is
-// one of the only triggers allowed to invoke Document AI.
+// Manual reprocess: force the active OCR provider to re-extract the source
+// document (bypassing the cache), then re-run OpenAI analysis on the fresh text.
+// This is one of the only triggers allowed to invoke the extraction provider.
 router.post(
   "/packages/:id/reprocess",
   requirePermission("packages:analyze"),
@@ -579,8 +580,7 @@ router.post(
 
     if (run.outcome === "NotConfigured") {
       res.status(503).json({
-        error:
-          "Google Document AI is not configured. Add the Document AI environment variables to enable extraction.",
+        error: `${getActiveProvider().label} is not configured. Add its credentials to enable document extraction.`,
       });
       return;
     }

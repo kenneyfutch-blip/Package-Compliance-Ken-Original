@@ -1,10 +1,5 @@
 import { ObjectStorageService, ObjectNotFoundError } from "../objectStorage";
-import { processDocument } from "../document-ai/client";
-import {
-  isDocumentAiConfigured,
-  normalizeMimeType,
-  SUPPORTED_DOCUMENT_MIME_TYPES,
-} from "../document-ai/config";
+import { getActiveProvider } from "../document-ai/providers/registry";
 import { logger } from "../logger";
 
 const objectStorage = new ObjectStorageService();
@@ -50,23 +45,24 @@ export async function extractPolicyText(params: {
     const file = await objectStorage.getObjectEntityFile(documentUrl);
     const { buffer, contentType: storedType } =
       await objectStorage.downloadObjectBytes(file);
-    const mime = normalizeMimeType(contentType || storedType);
+    const provider = getActiveProvider();
+    const mime = provider.normalizeMimeType(contentType || storedType);
 
     // Plain-text formats: decode directly.
     if (mime.startsWith("text/")) {
       return { text: buffer.toString("utf-8"), status: "Complete", engine: "text" };
     }
 
-    // PDF / images: Google Document AI (OCR + layout).
-    if (SUPPORTED_DOCUMENT_MIME_TYPES.has(mime)) {
-      if (!isDocumentAiConfigured()) {
+    // PDF / images: run through the active OCR provider.
+    if (provider.supportedMimeTypes().has(mime)) {
+      if (!provider.isConfigured()) {
         return { text: null, status: "NotConfigured", engine: null };
       }
-      const result = await processDocument({ content: buffer, mimeType: mime });
+      const result = await provider.process({ content: buffer, mimeType: mime });
       return {
         text: result.text,
         status: "Complete",
-        engine: "google-document-ai",
+        engine: provider.id,
       };
     }
 

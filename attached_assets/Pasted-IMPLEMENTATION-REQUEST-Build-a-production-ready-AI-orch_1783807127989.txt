@@ -1,0 +1,122 @@
+IMPLEMENTATION REQUEST
+
+Build a production-ready AI orchestration layer for the Packaging Compliance platform using OpenAI models GPT-5.6 Luna, GPT-5.6 Terra, and GPT-5.6 Sol.
+
+====================================================
+MODEL ORCHESTRATION
+====================================================
+
+Configure dynamic model routing.
+
+DEFAULT MODEL:
+GPT-5.6 Terra
+
+LUNA WORKLOADS
+
+Use GPT-5.6 Luna for:
+
+- Packaging metadata classification
+- Ingredient extraction validation
+- Nutrition facts extraction
+- Barcode checks
+- Packaging attribute tagging
+- Product category identification
+- Bulk SKU reviews
+- Batch compliance scans
+- Document summaries
+- Low-risk automated reviews
+- OCR cleanup and formatting
+- Large-scale processing jobs
+
+Goal:
+Maximize speed and minimize cost.
+
+----------------------------------------------------
+
+TERRA WORKLOADS
+
+Use GPT-5.6 Terra for:
+
+- Packaging compliance audits
+- FDA labeling reviews
+- Retail packaging requirement reviews
+- Packaging readiness scoring
+- Missing content detection
+- Compliance report generation
+- Customer-facing recommendations
+- Packaging review workflows
+- Regulatory validation
+- Compliance gap analysis
+- Claim validation workflows
+
+Goal:
+Default production model for most customer actions.
+
+----------------------------------------------------
+
+SOL WORKLOADS
+
+Use GPT-5.6 Sol for:
+
+- Expert compliance assessments
+- Regulatory interpretation
+- Multi-jurisdiction reviews
+- Legal-risk analysis
+- Executive summaries
+- Root-cause analysis
+- High-risk compliance decisions
+- Enterprise packaging reviews
+- Escalation workflows
+- Strategic compliance recommendations
+
+Goal:
+Reserved for advanced reasoning.
+
+====================================================
+AUTOMATIC ESCALATION
+====================================================
+
+Risk Score: LOW
+Model: Luna
+
+Risk Score: MEDIUM
+Model: Terra
+
+Risk Score: HIGH
+Model: Sol
+
+If model confidence drops below 85%:
+
+Luna → Terra
+
+Terra → Sol
+
+====================================================
+API USAGE ANALYTICS
+====================================================
+
+Build a complete API intelligence dashboard.
+
+Store every request in the database.
+
+Track:
+
+- Request ID
+- Customer ID
+- User ID
+- Timestamp
+- Model Used
+- Endpoint Called
+- Prompt Tokens
+- Completion Tokens
+- Total Tokens
+- Estimated Cost
+- Actual Cost
+- Request Duration
+- Success/Failure
+- Compliance Review Type
+- Risk Score
+- Confidence Score
+- Escalation Trigger
+
+===============================================

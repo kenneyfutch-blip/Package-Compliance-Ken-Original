@@ -13,12 +13,8 @@ import { ObjectStorageService, ObjectNotFoundError } from "../objectStorage";
 import { orgId } from "../rbac/context";
 import { writeAudit } from "../audit";
 import { logger } from "../logger";
-import { processDocument } from "./client";
-import {
-  isDocumentAiConfigured,
-  normalizeMimeType,
-  SUPPORTED_DOCUMENT_MIME_TYPES,
-} from "./config";
+import { getActiveProvider } from "./providers/registry";
+import type { OcrProvider } from "./providers/types";
 
 const objectStorage = new ObjectStorageService();
 
@@ -58,14 +54,15 @@ function fileNameFromPath(path: string): string {
 // object-storage paths, data URLs, and remote URLs.
 async function resolveSource(
   pkg: PackageRow,
-  proof?: ProofRow,
+  proof: ProofRow | undefined,
+  provider: OcrProvider,
 ): Promise<SourceDocument | null> {
   if (proof) {
     const file = await objectStorage.getObjectEntityFile(proof.objectPath);
     const { buffer, contentType } = await objectStorage.downloadObjectBytes(file);
     return {
       bytes: buffer,
-      mimeType: normalizeMimeType(proof.contentType || contentType),
+      mimeType: provider.normalizeMimeType(proof.contentType || contentType),
       name: proof.fileName || fileNameFromPath(proof.objectPath),
       type: "proof",
       hash: sha256(buffer),
@@ -81,7 +78,7 @@ async function resolveSource(
     const { buffer, contentType } = await objectStorage.downloadObjectBytes(file);
     return {
       bytes: buffer,
-      mimeType: normalizeMimeType(contentType),
+      mimeType: provider.normalizeMimeType(contentType),
       name: fileNameFromPath(artworkUrl),
       type: "artwork",
       hash: sha256(buffer),
@@ -92,7 +89,7 @@ async function resolveSource(
   if (artworkUrl.startsWith("data:")) {
     const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(artworkUrl);
     if (!match) return null;
-    const mime = normalizeMimeType(match[1] || "application/octet-stream");
+    const mime = provider.normalizeMimeType(match[1] || "application/octet-stream");
     const buffer = match[2]
       ? Buffer.from(match[3] ?? "", "base64")
       : Buffer.from(decodeURIComponent(match[3] ?? ""), "utf-8");
@@ -175,8 +172,9 @@ export async function runExtraction(params: {
   force?: boolean;
 }): Promise<ExtractionRunResult> {
   const { req, pkg, proof, force = false } = params;
+  const provider = getActiveProvider();
 
-  if (!isDocumentAiConfigured()) {
+  if (!provider.isConfigured()) {
     await db
       .update(packagesTable)
       .set({ extractionStatus: "NotConfigured" })
@@ -186,7 +184,7 @@ export async function runExtraction(params: {
 
   let source: SourceDocument | null;
   try {
-    source = await resolveSource(pkg, proof);
+    source = await resolveSource(pkg, proof, provider);
   } catch (err) {
     if (err instanceof ObjectNotFoundError) {
       return { outcome: "Skipped", extraction: null, message: "Source not found" };
@@ -206,7 +204,7 @@ export async function runExtraction(params: {
     };
   }
 
-  if (!SUPPORTED_DOCUMENT_MIME_TYPES.has(source.mimeType)) {
+  if (!provider.supportedMimeTypes().has(source.mimeType)) {
     await db
       .update(packagesTable)
       .set({ extractionStatus: "Failed" })
@@ -241,7 +239,7 @@ export async function runExtraction(params: {
       sourceType: source.type,
       sourceName: source.name,
       status: "Processing",
-      engine: "google-document-ai",
+      engine: provider.id,
     })
     .returning();
 
@@ -251,7 +249,7 @@ export async function runExtraction(params: {
     .where(eq(packagesTable.id, pkg.id));
 
   try {
-    const result = await processDocument({
+    const result = await provider.process({
       content: source.bytes,
       mimeType: source.mimeType,
     });
@@ -282,7 +280,7 @@ export async function runExtraction(params: {
         extractedText: result.text,
         extractionStatus: "Complete",
         extractionConfidence: result.confidence,
-        extractionEngine: "google-document-ai",
+        extractionEngine: provider.id,
         extractedAt: now,
       })
       .where(eq(packagesTable.id, pkg.id));
@@ -292,7 +290,7 @@ export async function runExtraction(params: {
       entityType: "package",
       entityId: pkg.id,
       packageId: pkg.id,
-      detail: `Google Document AI extracted ${result.pageCount} page(s) and ${result.components.length} component(s) from ${source.name}.`,
+      detail: `${provider.label} extracted ${result.pageCount} page(s) and ${result.components.length} component(s) from ${source.name}.`,
     });
 
     return { outcome: "Complete", extraction: completed! };
