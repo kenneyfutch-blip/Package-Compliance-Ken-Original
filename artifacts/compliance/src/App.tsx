@@ -1,9 +1,23 @@
-import { Route, Switch, Router as WouterRouter } from "wouter"
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { useEffect, useRef } from "react"
+import { Route, Switch, Redirect, useLocation, Router as WouterRouter } from "wouter"
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query"
+import {
+  ClerkProvider,
+  SignIn,
+  SignUp,
+  Show,
+  useClerk,
+  useUser,
+} from "@clerk/react"
+import { publishableKeyFromHost } from "@clerk/react/internal"
+import { shadcn } from "@clerk/themes"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Shell } from "@/components/layout"
+import { Button } from "@/components/ui/button"
+import { ShieldCheck, Loader2, Lock } from "lucide-react"
 import NotFound from "@/pages/not-found"
 import Dashboard from "@/pages/dashboard"
+import Landing from "@/pages/landing"
 import UploadPage from "@/pages/upload"
 import BulkQueuePage from "@/pages/bulk"
 import ReviewWorkspace from "@/pages/review-workspace"
@@ -26,6 +40,136 @@ import SupplierPortal from "@/pages/supplier-portal"
 
 const queryClient = new QueryClient()
 
+// REQUIRED — resolves the key from window.location.hostname so the same build
+// serves multiple Clerk custom domains. Copy verbatim.
+const clerkPubKey = publishableKeyFromHost(
+  window.location.hostname,
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+)
+// REQUIRED — empty in dev, auto-set in prod. Do not gate on NODE_ENV/PROD.
+const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "")
+
+// Only Dollar Tree associates may use the app. Server enforces this too.
+const ALLOWED_DOMAINS = ["dollartree.com"]
+function emailAllowed(email: string | null | undefined): boolean {
+  if (!email) return false
+  const at = email.lastIndexOf("@")
+  if (at === -1) return false
+  return ALLOWED_DOMAINS.includes(email.slice(at + 1).toLowerCase())
+}
+
+function stripBase(path: string): string {
+  return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path
+}
+
+if (!clerkPubKey) {
+  throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY in environment")
+}
+
+const clerkAppearance = {
+  theme: shadcn,
+  cssLayerName: "clerk",
+  options: {
+    logoPlacement: "inside" as const,
+    logoLinkUrl: basePath || "/",
+    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+  },
+  variables: {
+    colorPrimary: "#1F47FF",
+    colorForeground: "#0B1220",
+    colorMutedForeground: "#64748B",
+    colorBackground: "#FFFFFF",
+    colorInput: "#FFFFFF",
+    colorInputForeground: "#0B1220",
+    colorDanger: "#F0325B",
+    colorNeutral: "#0B1220",
+    fontFamily: '"Geist", sans-serif',
+    borderRadius: "0.5rem",
+  },
+  elements: {
+    rootBox: "w-full flex justify-center",
+    cardBox: "bg-card border border-border shadow-xl rounded-2xl w-[440px] max-w-full overflow-hidden",
+    headerTitle: "text-foreground",
+    headerSubtitle: "text-muted-foreground",
+    socialButtonsBlockButtonText: "text-foreground",
+    formFieldLabel: "text-foreground",
+    footerActionLink: "text-primary",
+    footerActionText: "text-muted-foreground",
+    dividerText: "text-muted-foreground",
+  },
+}
+
+function AuthShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-4 py-10">
+      <div className="mb-8 flex items-center gap-2 text-primary">
+        <ShieldCheck className="h-7 w-7" />
+        <span className="text-xl font-bold tracking-tight">Packaging Compliance AI</span>
+      </div>
+      {children}
+      <p className="mt-6 text-center text-xs text-muted-foreground">
+        Access is restricted to Dollar Tree associates.
+      </p>
+    </div>
+  )
+}
+
+function SignInPage() {
+  return (
+    <AuthShell>
+      <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
+    </AuthShell>
+  )
+}
+
+function SignUpPage() {
+  return (
+    <AuthShell>
+      <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
+    </AuthShell>
+  )
+}
+
+function FullScreenLoader() {
+  return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  )
+}
+
+function AccessRestricted({ email, onSignOut }: { email: string | null; onSignOut: () => void }) {
+  return (
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-4 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+        <Lock className="h-7 w-7" />
+      </div>
+      <h1 className="mt-6 text-2xl font-bold text-foreground">Access restricted</h1>
+      <p className="mt-2 max-w-md text-muted-foreground">
+        Packaging Compliance AI is available only to Dollar Tree associates. The account
+        {email ? ` ${email}` : ""} is not a Dollar Tree email address.
+      </p>
+      <Button className="mt-6" onClick={onSignOut}>
+        Sign out
+      </Button>
+    </div>
+  )
+}
+
+// Client-side gate for UX. The API server independently enforces the same rule.
+function DomainGate({ children }: { children: React.ReactNode }) {
+  const { user, isLoaded } = useUser()
+  const { signOut } = useClerk()
+  if (!isLoaded) return <FullScreenLoader />
+  const email = user?.primaryEmailAddress?.emailAddress ?? null
+  if (!emailAllowed(email)) {
+    return <AccessRestricted email={email} onSignOut={() => signOut({ redirectUrl: basePath || "/" })} />
+  }
+  return <>{children}</>
+}
+
 const REG_LIBS: Record<string, { agency: string; title: string; subtitle: string }> = {
   fda: { agency: "FDA", title: "FDA Library", subtitle: "Food & Drug Administration labeling and safety rules." },
   epa: { agency: "EPA", title: "EPA Library", subtitle: "Environmental Protection Agency registration and pesticide rules." },
@@ -35,7 +179,7 @@ const REG_LIBS: Record<string, { agency: string; title: string; subtitle: string
   sop: { agency: "Internal", title: "Internal SOP Library", subtitle: "Dollar Tree internal standards and procedures." },
 }
 
-function Router() {
+function AppRoutes() {
   return (
     <Shell>
       <Switch>
@@ -113,15 +257,79 @@ function Router() {
   )
 }
 
+function ProtectedArea() {
+  return (
+    <>
+      <Show when="signed-in">
+        <DomainGate>
+          <AppRoutes />
+        </DomainGate>
+      </Show>
+      <Show when="signed-out">
+        <Switch>
+          <Route path="/" component={Landing} />
+          <Route>
+            <Redirect to="/" />
+          </Route>
+        </Switch>
+      </Show>
+    </>
+  )
+}
+
+// Invalidates cached queries when the signed-in user changes.
+function ClerkQueryClientCacheInvalidator() {
+  const { addListener } = useClerk()
+  const qc = useQueryClient()
+  const prevUserIdRef = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    const unsubscribe = addListener(({ user }) => {
+      const userId = user?.id ?? null
+      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== userId) {
+        qc.clear()
+      }
+      prevUserIdRef.current = userId
+    })
+    return unsubscribe
+  }, [addListener, qc])
+  return null
+}
+
+function ClerkProviderWithRoutes() {
+  const [, setLocation] = useLocation()
+  return (
+    <ClerkProvider
+      publishableKey={clerkPubKey}
+      proxyUrl={clerkProxyUrl}
+      appearance={clerkAppearance}
+      signInUrl={`${basePath}/sign-in`}
+      signUpUrl={`${basePath}/sign-up`}
+      localization={{
+        signIn: { start: { title: "Welcome back", subtitle: "Sign in with your Dollar Tree account" } },
+        signUp: { start: { title: "Create your account", subtitle: "Use your Dollar Tree email address" } },
+      }}
+      routerPush={(to) => setLocation(stripBase(to))}
+      routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
+    >
+      <QueryClientProvider client={queryClient}>
+        <ClerkQueryClientCacheInvalidator />
+        <Switch>
+          <Route path="/sign-in/*?" component={SignInPage} />
+          <Route path="/sign-up/*?" component={SignUpPage} />
+          <Route component={ProtectedArea} />
+        </Switch>
+      </QueryClientProvider>
+    </ClerkProvider>
+  )
+}
+
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="compliance-theme">
-        <WouterRouter base={import.meta.env.BASE_URL?.replace(/\/$/, "") || ""}>
-          <Router />
-        </WouterRouter>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="system" storageKey="compliance-theme">
+      <WouterRouter base={basePath}>
+        <ClerkProviderWithRoutes />
+      </WouterRouter>
+    </ThemeProvider>
   )
 }
 

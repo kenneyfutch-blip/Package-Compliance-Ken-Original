@@ -192,6 +192,38 @@ Respond with JSON of shape:
   };
 }
 
+/**
+ * OCR: transcribe all visible text from a packaging artwork image using the
+ * active multimodal AI engine. Accepts a base64 data URL.
+ */
+export async function extractTextFromImage(
+  imageDataUrl: string,
+): Promise<string> {
+  const { client, model } = await resolveAiClient();
+
+  const system = `You are a precise OCR engine for retail product packaging artwork. Transcribe ALL text visible in the image verbatim — brand names, product names, ingredient lists, warnings, directions, nutrition facts, net weight, marketing claims, country of origin, manufacturer info, barcodes labels, and any fine print. Preserve the reading order roughly top-to-bottom, left-to-right. Keep original spelling exactly as printed, including any misspellings (do NOT correct them). Do not add commentary, headings, or explanations. If no text is legible, respond with an empty string. Do not use emojis.`;
+
+  const response = await client.chat.completions.create({
+    model,
+    messages: [
+      { role: "system", content: system },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Transcribe every piece of text on this packaging artwork, verbatim.",
+          },
+          { type: "image_url", image_url: { url: imageDataUrl } },
+        ],
+      },
+    ],
+    max_completion_tokens: 4096,
+  });
+
+  return response.choices[0]?.message?.content?.trim() ?? "";
+}
+
 export type CopilotCitation = {
   source: string;
   section: string | null;

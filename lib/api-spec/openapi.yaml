@@ -241,6 +241,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/PackageDetail"
 
+  /ocr:
+    post:
+      operationId: extractArtworkText
+      tags: [packages]
+      summary: OCR an uploaded packaging artwork image into plain text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OcrExtractInput"
+      responses:
+        "200":
+          description: Extracted artwork text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrExtractResult"
+        "400":
+          description: Invalid image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
   /packages/{id}:
     get:
       operationId: getPackage
@@ -1208,6 +1233,24 @@ components:
         - recommendations
         - violations
         - regulations
+
+    OcrExtractInput:
+      type: object
+      properties:
+        imageDataUrl:
+          type: string
+          minLength: 1
+          description: Data URL of the artwork image (data:image/...;base64,...)
+      required:
+        - imageDataUrl
+
+    OcrExtractResult:
+      type: object
+      properties:
+        text:
+          type: string
+      required:
+        - text
 
     PackageInput:
       type: object

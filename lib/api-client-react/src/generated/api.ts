@@ -37,6 +37,8 @@ import type {
   ListRegulationsParams,
   ListViolationsParams,
   Notification,
+  OcrExtractInput,
+  OcrExtractResult,
   Package,
   PackageDetail,
   PackageInput,
@@ -781,6 +783,77 @@ export const useCreatePackage = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreatePackageMutationOptions(options));
+    }
+
+export const getExtractArtworkTextUrl = () => {
+
+
+
+
+  return `/api/ocr`
+}
+
+/**
+ * @summary OCR an uploaded packaging artwork image into plain text
+ */
+export const extractArtworkText = async (ocrExtractInput: OcrExtractInput, options?: RequestInit): Promise<OcrExtractResult> => {
+
+  return customFetch<OcrExtractResult>(getExtractArtworkTextUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ocrExtractInput)
+  }
+);}
+
+
+
+
+
+export const getExtractArtworkTextMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extractArtworkText>>, TError,{data: BodyType<OcrExtractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof extractArtworkText>>, TError,{data: BodyType<OcrExtractInput>}, TContext> => {
+
+const mutationKey = ['extractArtworkText'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof extractArtworkText>>, {data: BodyType<OcrExtractInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  extractArtworkText(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExtractArtworkTextMutationResult = NonNullable<Awaited<ReturnType<typeof extractArtworkText>>>
+    export type ExtractArtworkTextMutationBody = BodyType<OcrExtractInput>
+    export type ExtractArtworkTextMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary OCR an uploaded packaging artwork image into plain text
+ */
+export const useExtractArtworkText = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extractArtworkText>>, TError,{data: BodyType<OcrExtractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof extractArtworkText>>,
+        TError,
+        {data: BodyType<OcrExtractInput>},
+        TContext
+      > => {
+      return useMutation(getExtractArtworkTextMutationOptions(options));
     }
 
 export const getGetPackageUrl = (id: number,) => {

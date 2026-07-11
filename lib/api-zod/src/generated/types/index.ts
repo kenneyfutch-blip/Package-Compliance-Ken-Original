@@ -26,6 +26,8 @@ export * from './listRegulationsParams';
 export * from './listViolationsParams';
 export * from './notification';
 export * from './ocrData';
+export * from './ocrExtractInput';
+export * from './ocrExtractResult';
 export * from './package';
 export * from './packageDetail';
 export * from './packageInput';

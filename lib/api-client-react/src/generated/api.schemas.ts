@@ -244,6 +244,18 @@ export interface PackageDetail {
   regulations: Regulation[];
 }
 
+export interface OcrExtractInput {
+  /**
+     * Data URL of the artwork image (data:image/...;base64,...)
+     * @minLength 1
+     */
+  imageDataUrl: string;
+}
+
+export interface OcrExtractResult {
+  text: string;
+}
+
 export interface PackageInput {
   /** @minLength 1 */
   sku: string;

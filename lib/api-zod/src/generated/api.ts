@@ -271,6 +271,21 @@ export const CreatePackageResponse = zod.object({
 
 
 /**
+ * @summary OCR an uploaded packaging artwork image into plain text
+ */
+
+
+
+export const ExtractArtworkTextBody = zod.object({
+  "imageDataUrl": zod.string().min(1).describe('Data URL of the artwork image (data:image\/...;base64,...)')
+})
+
+export const ExtractArtworkTextResponse = zod.object({
+  "text": zod.string()
+})
+
+
+/**
  * @summary Get a package with full compliance intelligence
  */
 export const GetPackageParams = zod.object({

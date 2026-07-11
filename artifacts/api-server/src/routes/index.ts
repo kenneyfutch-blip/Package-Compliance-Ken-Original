@@ -7,10 +7,14 @@ import suppliersRouter from "./suppliers";
 import miscRouter from "./misc";
 import aiProvidersRouter from "./ai-providers";
 import violationsRouter from "./violations";
+import ocrRouter from "./ocr";
+import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
+// Health check stays public; everything below requires a signed-in Dollar Tree user.
 router.use(healthRouter);
+router.use(requireAuth);
 router.use(dashboardRouter);
 router.use(packagesRouter);
 router.use(regulationsRouter);
@@ -18,5 +22,6 @@ router.use(suppliersRouter);
 router.use(miscRouter);
 router.use(aiProvidersRouter);
 router.use(violationsRouter);
+router.use(ocrRouter);
 
 export default router;
