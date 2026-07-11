@@ -261,9 +261,12 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 
 function Brand() {
   return (
-    <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary tracking-tight">
-      <ShieldCheck className="w-6 h-6" />
-      <span>Compliance AI</span>
+    <Link href="/" className="flex items-center gap-2 font-bold text-primary tracking-tight">
+      <ShieldCheck className="w-6 h-6 shrink-0" />
+      <span className="flex flex-col leading-none">
+        <span className="text-lg">Compliance AI</span>
+        <span className="text-[11px] font-medium text-muted-foreground">Dollar Tree</span>
+      </span>
     </Link>
   )
 }
