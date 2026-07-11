@@ -1,0 +1,613 @@
+====================================================
+NAVIGATION UPGRADE
+====================================================
+
+Design the application around the daily workflow of compliance specialists.
+
+The left navigation should be structured as follows:
+
+DASHBOARD
+
+REVIEW QUEUE
+  ├─ My Reviews
+  ├─ High Risk
+  ├─ Bulk Review
+  ├─ Fast Review
+  ├─ Assigned Reviews
+
+PACKAGES
+  ├─ All Packages
+  ├─ Active Reviews
+  ├─ Approved Packages
+  ├─ Rejected Packages
+  ├─ Archived Packages
+
+REGULATORY INTELLIGENCE
+  ├─ FDA Library
+  ├─ EPA Library
+  ├─ CPSC Library
+  ├─ FTC Library
+  ├─ USDA Library
+  ├─ Internal SOP Library
+  ├─ Regulatory Updates
+
+AI COMPLIANCE
+  ├─ Violations Center
+  ├─ Recommended Fixes
+  ├─ Compliance Memory
+  ├─ Compliance Heatmaps
+  ├─ Claim Reviews
+
+SUPPLIERS
+  ├─ Vendor Directory
+  ├─ Vendor Scorecards
+  ├─ Supplier Portal
+
+REPORTS
+  ├─ Compliance Reports
+  ├─ Executive Reports
+  ├─ Trend Analysis
+
+AUDIT HISTORY
+
+ADMIN
+
+====================================================
+SPECIALIST REVIEW EXPERIENCE
+====================================================
+
+The application must be optimized for compliance specialists reviewing between 50 and 500 packages per day.
+
+The user should never be forced to manually read an entire package.
+
+The platform should:
+
+Automatically identify violations.
+
+Automatically prioritize critical issues.
+
+Automatically suggest fixes.
+
+Automatically surface relevant regulations.
+
+Automatically show previous resolutions for similar issues.
+
+Everything should be optimized for speed and high-volume review.
+
+====================================================
+COMPLIANCE MEMORY ENGINE
+====================================================
+
+The platform must continuously learn from previous reviews.
+
+Store:
+
+SKU
+
+Vendor
+
+Category
+
+Violation Type
+
+Regulation
+
+Fix Applied
+
+Final Resolution
+
+Approval Outcome
+
+Reviewer
+
+Review Date
+
+Confidence Score
+
+When reviewing future packages, AI should surface historical resolutions.
+
+Example:
+
+Current Finding:
+
+Missing Allergen Declaration
+
+Historical Resolution:
+
+Add:
+Contains: Soy
+
+Used successfully in 1,245 approved packages.
+
+Confidence:
+96%
+
+Display historical fixes directly within the review workspace.
+
+====================================================
+PACKAGING COMPONENT DETECTION
+====================================================
+
+Automatically identify packaging components through OCR and AI.
+
+Detect:
+
+Nutrition Facts
+
+Ingredient Lists
+
+Country of Origin
+
+Manufacturer Address
+
+Warnings
+
+Directions
+
+Claims
+
+Net Weight
+
+Allergen Statements
+
+Best Before Dates
+
+Expiration Dates
+
+Lot Codes
+
+EPA Registration Numbers
+
+Hazard Statements
+
+UPC Barcodes
+
+Store coordinate locations.
+
+Create a packaging component map.
+
+Display overlays on the package viewer.
+
+====================================================
+SYMBOL RECOGNITION ENGINE
+====================================================
+
+Detect:
+
+Recycling Symbols
+
+USDA Organic
+
+EPA Symbols
+
+Hazard Icons
+
+Prop 65
+
+CE
+
+FSC
+
+Safety Certifications
+
+Ingredient Badges
+
+Sustainability Logos
+
+Determine:
+
+Present
+
+Missing
+
+Potentially Invalid
+
+Needs Review
+
+Display findings visually on the package.
+
+====================================================
+VENDOR SCORECARDS
+====================================================
+
+Track supplier performance.
+
+Metrics:
+
+Total Reviews
+
+Total Products Submitted
+
+Pass Rate
+
+Average Compliance Grade
+
+Average Risk Score
+
+Most Common Violations
+
+Time To Approval
+
+Repeat Offenses
+
+Vendor Ranking
+
+Dashboard Views:
+
+Top Vendors
+
+High-Risk Vendors
+
+Most Improved Vendors
+
+Vendor Compliance Trends
+
+====================================================
+REGULATORY CHANGE MONITORING
+====================================================
+
+Monitor regulatory updates automatically.
+
+Sources:
+
+FDA
+
+EPA
+
+eCFR
+
+USDA
+
+FTC
+
+CPSC
+
+Internal SOP Documents
+
+Track:
+
+New Regulations
+
+Modified Regulations
+
+Removed Regulations
+
+Generate alerts.
+
+Example:
+
+FDA Labeling Update Detected
+
+Potential Impact:
+
+142 Food SKUs
+
+6 Active Projects
+
+4 Vendors
+
+Display alerts in dashboard.
+
+====================================================
+CLAIM INTELLIGENCE ENGINE
+====================================================
+
+Detect claims.
+
+Examples:
+
+Natural
+
+Organic
+
+Healthy
+
+Clinically Proven
+
+Kills 99.9% Germs
+
+Chemical Free
+
+Non Toxic
+
+Doctor Recommended
+
+Environmentally Friendly
+
+Eco Friendly
+
+Analyze:
+
+Regulatory Risk
+
+Compliance Risk
+
+Legal Risk
+
+Marketing Risk
+
+Determine:
+
+Approved
+
+Needs Review
+
+Potential Violation
+
+Display recommended language.
+
+====================================================
+AI FIX RECOMMENDATION ENGINE
+====================================================
+
+Do not simply tell users there is a problem.
+
+Always recommend solutions.
+
+Example:
+
+Issue:
+
+Missing Soy Allergen Statement
+
+Why:
+
+Soy detected in ingredient list.
+
+Suggested Fix:
+
+Contains: Soy
+
+Reference:
+
+FDA Allergen Declaration Requirement
+
+Historical Usage:
+
+Used successfully in 1,245 approved packages.
+
+Users should be able to copy suggested text.
+
+====================================================
+COMPLIANCE HEATMAPS
+====================================================
+
+Generate heatmaps showing:
+
+FDA Issues
+
+EPA Issues
+
+Grammar Issues
+
+Contextual Language Issues
+
+Brand Issues
+
+Supplier Issues
+
+Formatting Issues
+
+Country Of Origin Issues
+
+Filter by:
+
+Vendor
+
+Category
+
+Country
+
+Product Type
+
+SKU
+
+Date Range
+
+====================================================
+FAST REVIEW MODE
+====================================================
+
+Create a dedicated high-volume review interface.
+
+Display:
+
+Package Thumbnail
+
+SKU
+
+Compliance Grade
+
+Risk Score
+
+Critical Count
+
+Status
+
+Reviewer
+
+Users should be able to review packages without opening a full review screen.
+
+Keyboard Shortcuts:
+
+A = Approve
+
+R = Reject
+
+N = Next Package
+
+V = View Details
+
+F = Add Finding
+
+Enable reviewers to process hundreds of packages per day.
+
+====================================================
+REVIEW WORKSPACE ENHANCEMENTS
+====================================================
+
+Add four tabs inside every package review.
+
+TAB 1
+Compliance Findings
+
+Display:
+
+Critical
+
+Major
+
+Minor
+
+Info
+
+TAB 2
+AI Recommendations
+
+Display:
+
+Suggested Fixes
+
+Approved Language
+
+Historical Fixes
+
+TAB 3
+Regulatory Sources
+
+Display:
+
+FDA References
+
+EPA References
+
+Internal SOP References
+
+Source Documents
+
+TAB 4
+Review History
+
+Display:
+
+Previous Reviews
+
+Version Changes
+
+Approvals
+
+Comments
+
+Audit Trail
+
+====================================================
+EXECUTIVE DASHBOARD
+====================================================
+
+Display:
+
+Packages Reviewed
+
+Pass Rate
+
+Failure Rate
+
+Average Risk Score
+
+Approval Velocity
+
+Vendor Rankings
+
+Most Common Violations
+
+Category Risk Analysis
+
+Compliance Trends
+
+Monthly Review Volume
+
+====================================================
+DATABASE TABLE ADDITIONS
+====================================================
+
+Create additional tables:
+
+compliance_memory
+
+claim_reviews
+
+vendor_scorecards
+
+packaging_components
+
+symbol_detections
+
+regulatory_updates
+
+heatmap_data
+
+review_metrics
+
+approved_language_library
+
+historical_remediation
+
+====================================================
+APPROVED LANGUAGE LIBRARY
+====================================================
+
+Create a searchable knowledge base.
+
+Store:
+
+Approved Allergen Statements
+
+Approved Warning Statements
+
+Approved FDA Language
+
+Approved EPA Language
+
+Approved Marketing Disclaimers
+
+Approved Internal Templates
+
+Users should be able to search:
+
+"Show approved soy allergen language"
+
+"Show approved choking hazard warning"
+
+"Show approved EPA caution statement"
+
+====================================================
+PRODUCT PRINCIPLE
+====================================================
+
+The platform should act like a Senior Packaging Compliance Specialist.
+
+It should:
+
+Find the issue.
+
+Explain the issue.
+
+Show the regulation.
+
+Recommend the fix.
+
+Show historical resolutions.
+
+Provide an approval recommendation.
+
+The user should always leave every review with a clear understanding of:
+
+What failed.
+
+Why it failed.
+
+How to fix it.
+
+What regulation applies.
+
+What should happen next.

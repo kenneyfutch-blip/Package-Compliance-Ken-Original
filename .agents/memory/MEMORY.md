@@ -1,0 +1,2 @@
+- [Compliance AI build](compliance-ai.md) — Packaging Compliance AI product: stack, AI engine, seed, and non-obvious decisions.
+- [AI provider integrations](ai-providers.md) — configurable AI models: encrypted keys, single-active invariant, SSRF-validated baseUrl, 8-engine taxonomy.

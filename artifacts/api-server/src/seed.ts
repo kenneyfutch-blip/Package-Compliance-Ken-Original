@@ -1,0 +1,262 @@
+import { db } from "@workspace/db";
+import {
+  usersTable,
+  suppliersTable,
+  regulationsTable,
+  notificationsTable,
+  packagesTable,
+  violationsTable,
+  auditEventsTable,
+  reportsTable,
+  aiProvidersTable,
+} from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { analyzePackaging, type AnalysisResult } from "./lib/ai";
+import { logger } from "./lib/logger";
+
+const users = [
+  { name: "Dana Whitfield", email: "dana.whitfield@dollartree.com", role: "Administrator" },
+  { name: "Marcus Lee", email: "marcus.lee@dollartree.com", role: "Compliance Manager" },
+  { name: "Priya Nair", email: "priya.nair@dollartree.com", role: "Compliance Reviewer" },
+  { name: "Sofia Alvarez", email: "sofia.alvarez@dollartree.com", role: "Packaging Manager" },
+  { name: "Tom Becker", email: "tom.becker@dollartree.com", role: "Designer" },
+  { name: "Rachel Kim", email: "rachel.kim@dollartree.com", role: "Auditor" },
+  { name: "James Okafor", email: "james.okafor@dollartree.com", role: "Executive Viewer" },
+];
+
+const suppliers = [
+  { name: "Sunrise Packaging Co.", code: "SUP-1001", category: "Food & Beverage", riskLevel: "Low", contactEmail: "qa@sunrisepkg.com", country: "USA", complianceScore: 94, packagesReviewed: 128 },
+  { name: "Golden Harvest Foods", code: "SUP-1002", category: "Food & Beverage", riskLevel: "Medium", contactEmail: "compliance@goldenharvest.cn", country: "China", complianceScore: 76, packagesReviewed: 84 },
+  { name: "CleanCo Household", code: "SUP-1003", category: "Household Chemicals", riskLevel: "High", contactEmail: "regulatory@cleanco.com", country: "USA", complianceScore: 61, packagesReviewed: 57 },
+  { name: "PlayWorks Toys", code: "SUP-1004", category: "Toys & Children", riskLevel: "High", contactEmail: "safety@playworks.com", country: "Vietnam", complianceScore: 68, packagesReviewed: 43 },
+  { name: "PureGlow Cosmetics", code: "SUP-1005", category: "Cosmetics & Personal Care", riskLevel: "Medium", contactEmail: "hello@pureglow.com", country: "USA", complianceScore: 82, packagesReviewed: 39 },
+];
+
+const regulations = [
+  { agency: "FDA", category: "Food Labeling", ruleCode: "21 CFR 101.9", title: "Nutrition Labeling of Food", summary: "Requires a Nutrition Facts panel with serving size, calories, and nutrient amounts in the FDA-specified format.", section: "101.9", source: "https://www.ecfr.gov/current/title-21/part-101", regulationText: "Nutrition information relating to food shall be presented using the Nutrition Facts format, including serving size, servings per container, calories, and quantitative amounts of specified nutrients per serving." },
+  { agency: "FDA", category: "Allergen", ruleCode: "FALCPA", title: "Food Allergen Labeling and Consumer Protection Act", summary: "Requires the nine major food allergens to be clearly declared using their common names on food packaging.", section: "403(w)", source: "https://www.fda.gov/food/food-allergensgluten-free-guidance-documents-regulatory-information", regulationText: "The label of a food that contains a major food allergen must declare the presence of the allergen using the name of the food source, either in the ingredient list or in a separate Contains statement." },
+  { agency: "FDA", category: "Food Labeling", ruleCode: "21 CFR 101.4", title: "Ingredient Declaration", summary: "Ingredients must be listed in descending order of predominance by weight using common or usual names.", section: "101.4", source: "https://www.ecfr.gov/current/title-21/part-101" },
+  { agency: "FTC", category: "Marketing Claims", ruleCode: "16 CFR 260", title: "Green Guides", summary: "Environmental marketing claims such as biodegradable, recyclable, or eco-friendly must be substantiated and not deceptive.", section: "260.4", source: "https://www.ftc.gov/legal-library/browse/rules/green-guides" },
+  { agency: "EPA", category: "Pesticides", ruleCode: "40 CFR 156.10", title: "FIFRA Labeling Requirements", summary: "Antimicrobial and pesticide products must display an EPA registration number, signal word, and precautionary statements.", section: "156.10", source: "https://www.epa.gov/pesticide-registration" },
+  { agency: "CPSC", category: "Children's Products", ruleCode: "16 CFR 1500.19", title: "Small Parts / Choking Hazard Warnings", summary: "Toys and games for children under 3 or with small parts require specific choking hazard warning statements.", section: "1500.19", source: "https://www.cpsc.gov" },
+  { agency: "CPSC", category: "Children's Products", ruleCode: "CPSIA", title: "Tracking Label Requirement", summary: "Children's products must bear a permanent tracking label with manufacturer, location, and date of production.", section: "103", source: "https://www.cpsc.gov" },
+  { agency: "FTC", category: "Country of Origin", ruleCode: "19 CFR 134", title: "Country of Origin Marking", summary: "Imported articles must be conspicuously marked with the English name of the country of origin.", section: "134.11", source: "https://www.cbp.gov" },
+];
+
+const notifications = [
+  { title: "High-risk package detected", message: "SKU DT-CLN-4471 flagged with 2 critical EPA violations. Immediate review required.", type: "critical", read: false },
+  { title: "Bulk analysis complete", message: "Overnight batch of 12 packages finished processing. 4 passed, 5 failed, 3 need review.", type: "info", read: false },
+  { title: "New regulation added", message: "FTC Green Guides (16 CFR 260) was added to the knowledge base.", type: "info", read: false },
+  { title: "Supplier score changed", message: "CleanCo Household compliance score dropped below 65%.", type: "warning", read: true },
+];
+
+type SeedPackage = {
+  sku: string;
+  upc: string;
+  name: string;
+  brand: string;
+  vendor: string;
+  category: string;
+  country: string;
+  netWeight: string;
+  dimensions: string;
+  packageType: string;
+  productType: string;
+  manufacturingRegion: string;
+  reviewer: string;
+  extractedText: string;
+  artworkUrl: string;
+};
+
+const seedPackages: SeedPackage[] = [
+  {
+    sku: "DT-SNK-2201", upc: "071912004417", name: "Cheddar Cheese Crackers", brand: "Snack Time", vendor: "Golden Harvest Foods", category: "Food & Beverage", country: "USA", netWeight: "6 oz (170g)", dimensions: "8 x 5 x 2 in", packageType: "Flexible Film Bag", productType: "Baked Snack", manufacturingRegion: "China", reviewer: "Priya Nair", artworkUrl: "/artwork/pkg-1.png",
+    extractedText: `SNACK TIME CHEDDAR CHEESE CRACKERS\nNOW WITH 100% REAL CHEESE!\nNet Wt 6oz\nIngredients: Enriched flour, vegetable oil, cheddar cheese, salt, whey, spices, natural flavor.\nManufactured for Snack Time Brands, distributed by Golden Harvest Foods.\nBest by date printed on back.\nMade in China`,
+  },
+  {
+    sku: "DT-CLN-4471", upc: "071912044718", name: "Ultra Power Disinfectant Spray", brand: "CleanCo", vendor: "CleanCo Household", category: "Household Chemicals", country: "USA", netWeight: "12 fl oz (355 mL)", dimensions: "9 x 3 x 3 in", packageType: "Aerosol Can", productType: "Antimicrobial Spray", manufacturingRegion: "USA", reviewer: "Marcus Lee", artworkUrl: "/artwork/pkg-2.png",
+    extractedText: `CLEANCO ULTRA POWER DISINFECTANT SPRAY\nKILLS 99.9% OF GERMS INSTANTLY\nAll natural and completely safe for kids and pets!\nDirections: Spray on surface and wipe.\nContents: 12 fl oz\nDistributed by CleanCo Household, USA`,
+  },
+  {
+    sku: "DT-TOY-8890", upc: "071912088905", name: "Mini Building Blocks Set", brand: "PlayWorks", vendor: "PlayWorks Toys", category: "Toys & Children", country: "USA", netWeight: "0.5 lb", dimensions: "10 x 7 x 2 in", packageType: "Blister Card", productType: "Construction Toy", manufacturingRegion: "Vietnam", reviewer: "Sofia Alvarez", artworkUrl: "/artwork/pkg-3.png",
+    extractedText: `PLAYWORKS MINI BUILDING BLOCKS\n120 Pieces of Creative Fun!\nGreat for ages 3+\nBuild houses, cars, animals and more.\nColors may vary.\nDistributed by PlayWorks Toys\nMade in Vietnam`,
+  },
+  {
+    sku: "DT-COS-3312", upc: "071912033127", name: "Hydrating Face Cream", brand: "PureGlow", vendor: "PureGlow Cosmetics", category: "Cosmetics & Personal Care", country: "USA", netWeight: "1.7 oz (50g)", dimensions: "3 x 3 x 3 in", packageType: "Plastic Jar", productType: "Skin Moisturizer", manufacturingRegion: "USA", reviewer: "Priya Nair", artworkUrl: "/artwork/pkg-4.png",
+    extractedText: `PUREGLOW HYDRATING FACE CREAM\nClinically proven to reverse aging in 7 days!\nReduces wrinkles 100%.\nApply daily to clean skin.\nIngredients: Water, glycerin, shea butter, fragrance, tocopherol.\n1.7 oz\nMade in USA`,
+  },
+  {
+    sku: "DT-BEV-5540", upc: "071912055401", name: "Tropical Fruit Punch Drink Mix", brand: "Sunrise", vendor: "Sunrise Packaging Co.", category: "Food & Beverage", country: "USA", netWeight: "4.2 oz (119g)", dimensions: "6 x 4 x 1 in", packageType: "Carton", productType: "Powdered Drink Mix", manufacturingRegion: "USA", reviewer: "Rachel Kim", artworkUrl: "/artwork/pkg-5.png",
+    extractedText: `SUNRISE TROPICAL FRUIT PUNCH DRINK MIX\nMakes 8 quarts\nNutrition Facts: Serving size 1 scoop (8g), Calories 30, Total Sugars 7g, Sodium 15mg.\nIngredients: Sugar, citric acid, natural and artificial flavors, red 40, blue 1.\nContains: no major allergens.\nManufactured by Sunrise Packaging Co., Springfield, IL, USA.\nNet Wt 4.2 oz (119g)`,
+  },
+  {
+    sku: "DT-SNK-2208", upc: "071912022084", name: "Milk Chocolate Peanut Bar", brand: "Snack Time", vendor: "Golden Harvest Foods", category: "Food & Beverage", country: "USA", netWeight: "1.5 oz (43g)", dimensions: "5 x 2 x 0.5 in", packageType: "Flexible Film Wrap", productType: "Confection", manufacturingRegion: "China", reviewer: "Priya Nair", artworkUrl: "/artwork/pkg-6.png",
+    extractedText: `SNACK TIME MILK CHOCOLATE PEANUT BAR\nDeliciously smooth!\nIngredients: Milk chocolate (sugar, cocoa butter, milk, chocolate liquor), peanuts, sugar.\nNet Wt 1.5 oz\nManufactured for Snack Time Brands.\nMade in China`,
+  },
+];
+
+async function clearAll() {
+  await db.delete(violationsTable);
+  await db.delete(reportsTable);
+  await db.delete(auditEventsTable);
+  await db.delete(packagesTable);
+  await db.delete(regulationsTable);
+  await db.delete(suppliersTable);
+  await db.delete(notificationsTable);
+  await db.delete(usersTable);
+  await db.delete(aiProvidersTable);
+}
+
+async function main() {
+  logger.info("Seeding database...");
+  await clearAll();
+
+  await db.insert(aiProvidersTable).values({
+    name: "Replit-managed OpenAI",
+    providerType: "openai",
+    model: "gpt-5.4",
+    managed: true,
+    active: true,
+    status: "connected",
+    statusMessage: "Built-in Replit AI integration",
+  });
+  await db.insert(usersTable).values(users);
+  await db.insert(suppliersTable).values(suppliers);
+  const insertedRegs = await db
+    .insert(regulationsTable)
+    .values(regulations)
+    .returning();
+  await db.insert(notificationsTable).values(notifications);
+
+  logger.info("Analyzing seed packages with AI (this may take a minute)...");
+  for (const sp of seedPackages) {
+    const [pkg] = await db
+      .insert(packagesTable)
+      .values({
+        sku: sp.sku,
+        upc: sp.upc,
+        name: sp.name,
+        brand: sp.brand,
+        vendor: sp.vendor,
+        category: sp.category,
+        country: sp.country,
+        netWeight: sp.netWeight,
+        dimensions: sp.dimensions,
+        packageType: sp.packageType,
+        productType: sp.productType,
+        manufacturingRegion: sp.manufacturingRegion,
+        reviewer: sp.reviewer,
+        extractedText: sp.extractedText,
+        artworkUrl: sp.artworkUrl,
+        status: "Uploaded",
+        complianceStatus: "Pending",
+      })
+      .returning();
+    if (!pkg) continue;
+
+    await db.insert(auditEventsTable).values({
+      packageId: pkg.id,
+      actor: "System",
+      action: "Package uploaded",
+      detail: `${pkg.name} (${pkg.sku}) uploaded for review.`,
+    });
+
+    let result: AnalysisResult;
+    try {
+      result = await analyzePackaging(pkg, insertedRegs);
+    } catch (err) {
+      logger.error({ err, sku: sp.sku }, "Seed analysis failed; skipping");
+      continue;
+    }
+
+    const counts = result.violations.reduce(
+      (acc, v) => {
+        if (v.severity === "critical") acc.critical += 1;
+        else if (v.severity === "major") acc.major += 1;
+        else if (v.severity === "minor") acc.minor += 1;
+        return acc;
+      },
+      { critical: 0, major: 0, minor: 0 },
+    );
+
+    const status =
+      result.complianceStatus === "Passed"
+        ? "Approved"
+        : result.complianceStatus === "Failed"
+          ? "Needs Revision"
+          : "AI Review";
+
+    await db
+      .update(packagesTable)
+      .set({
+        category: result.category,
+        grade: result.grade,
+        riskScore: result.riskScore,
+        complianceStatus: result.complianceStatus,
+        status,
+        summary: result.summary,
+        ocr: result.ocr,
+        recommendations: result.recommendations,
+        criticalCount: counts.critical,
+        majorCount: counts.major,
+        minorCount: counts.minor,
+        analyzedAt: new Date(),
+      })
+      .where(eq(packagesTable.id, pkg.id));
+
+    if (result.violations.length > 0) {
+      await db.insert(violationsTable).values(
+        result.violations.map((v) => ({
+          packageId: pkg.id,
+          severity: v.severity,
+          engine: v.engine,
+          title: v.title,
+          description: v.description,
+          regulationRef: v.regulationRef,
+          recommendation: v.recommendation,
+          detectedText: v.detectedText,
+          suggestedText: v.suggestedText,
+          bboxX: v.bbox?.x ?? null,
+          bboxY: v.bbox?.y ?? null,
+          bboxW: v.bbox?.w ?? null,
+          bboxH: v.bbox?.h ?? null,
+          status: "Open",
+        })),
+      );
+    }
+
+    await db.insert(auditEventsTable).values({
+      packageId: pkg.id,
+      actor: "AI Compliance Engine",
+      action: "Analysis completed",
+      detail: `Grade ${result.grade}, risk ${result.riskScore}, ${result.violations.length} issue(s). Status: ${result.complianceStatus}.`,
+    });
+
+    logger.info(
+      { sku: sp.sku, grade: result.grade, status: result.complianceStatus },
+      "Analyzed seed package",
+    );
+  }
+
+  // A couple of generated reports for the reports page
+  const analyzed = await db.select().from(packagesTable);
+  const failedPkgs = analyzed.filter((p) => p.complianceStatus === "Failed");
+  for (const p of failedPkgs.slice(0, 2)) {
+    await db.insert(reportsTable).values({
+      packageId: p.id,
+      title: `Compliance Report - ${p.name}`,
+      type: "Compliance",
+      format: "PDF",
+      summary: p.summary,
+    });
+  }
+
+  logger.info("Seed complete.");
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    logger.error({ err }, "Seed failed");
+    process.exit(1);
+  });

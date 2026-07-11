@@ -3,13 +3,31 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Packaging Compliance AI API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: dashboard
+    description: Compliance command center metrics
+  - name: packages
+    description: Packaging review records
+  - name: regulations
+    description: Regulatory knowledge base
+  - name: suppliers
+    description: Suppliers and vendors
+  - name: audit
+    description: Audit history
+  - name: notifications
+    description: Notification center
+  - name: reports
+    description: Compliance reports
+  - name: admin
+    description: Admin and users
+  - name: ai
+    description: AI model provider configuration
 paths:
   /healthz:
     get:
@@ -24,6 +42,690 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Compliance command center KPIs
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/trends:
+    get:
+      operationId: getComplianceTrends
+      tags: [dashboard]
+      summary: Compliance, risk and review-volume trends over time
+      responses:
+        "200":
+          description: Trend points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrendPoint"
+
+  /dashboard/violation-distribution:
+    get:
+      operationId: getViolationDistribution
+      tags: [dashboard]
+      summary: Violations grouped by compliance engine
+      responses:
+        "200":
+          description: Violation distribution
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DistributionItem"
+
+  /dashboard/category-distribution:
+    get:
+      operationId: getCategoryDistribution
+      tags: [dashboard]
+      summary: Packages grouped by product category
+      responses:
+        "200":
+          description: Category distribution
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DistributionItem"
+
+  /dashboard/vendor-performance:
+    get:
+      operationId: getVendorPerformance
+      tags: [dashboard]
+      summary: Vendor compliance performance
+      responses:
+        "200":
+          description: Vendor performance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VendorPerformanceItem"
+
+  /packages:
+    get:
+      operationId: listPackages
+      tags: [packages]
+      summary: List packaging reviews with optional filters
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: risk
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: engine
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: vendor
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of packages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Package"
+    post:
+      operationId: createPackage
+      tags: [packages]
+      summary: Upload a package for review (auto-runs AI analysis when artwork text is provided)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageInput"
+      responses:
+        "201":
+          description: Created package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageDetail"
+
+  /packages/{id}:
+    get:
+      operationId: getPackage
+      tags: [packages]
+      summary: Get a package with full compliance intelligence
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Package detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updatePackage
+      tags: [packages]
+      summary: Update package status or workflow state
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageUpdate"
+      responses:
+        "200":
+          description: Updated package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deletePackage
+      tags: [packages]
+      summary: Delete a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/{id}/analyze:
+    post:
+      operationId: analyzePackage
+      tags: [packages]
+      summary: Run (or re-run) the AI compliance analysis pipeline
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Analyzed package detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/{id}/copilot:
+    post:
+      operationId: askCopilot
+      tags: [packages]
+      summary: Ask the AI compliance copilot a question about this package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CopilotInput"
+      responses:
+        "200":
+          description: Copilot answer with citations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CopilotAnswer"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/{id}/audit:
+    get:
+      operationId: getPackageAudit
+      tags: [packages]
+      summary: Review history for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEvent"
+
+  /packages/{id}/report:
+    post:
+      operationId: generateReport
+      tags: [reports]
+      summary: Generate a compliance report for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportInput"
+      responses:
+        "201":
+          description: Created report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/bulk-analyze:
+    post:
+      operationId: bulkAnalyze
+      tags: [packages]
+      summary: Run compliance analysis across many packages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkAnalyzeInput"
+      responses:
+        "200":
+          description: Bulk analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkAnalyzeResult"
+
+  /regulations:
+    get:
+      operationId: listRegulations
+      tags: [regulations]
+      summary: Browse the regulatory knowledge base
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: agency
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of regulations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Regulation"
+    post:
+      operationId: createRegulation
+      tags: [regulations]
+      summary: Add a regulation to the knowledge base
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegulationInput"
+      responses:
+        "201":
+          description: Created regulation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Regulation"
+
+  /regulations/{id}:
+    get:
+      operationId: getRegulation
+      tags: [regulations]
+      summary: Get a single regulation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Regulation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Regulation"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /suppliers:
+    get:
+      operationId: listSuppliers
+      tags: [suppliers]
+      summary: List suppliers and vendors
+      responses:
+        "200":
+          description: List of suppliers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Supplier"
+    post:
+      operationId: createSupplier
+      tags: [suppliers]
+      summary: Add a supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "201":
+          description: Created supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+
+  /suppliers/{id}:
+    get:
+      operationId: getSupplier
+      tags: [suppliers]
+      summary: Get a supplier with its packages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Supplier detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupplierDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /audit:
+    get:
+      operationId: listAuditEvents
+      tags: [audit]
+      summary: Global audit history feed
+      responses:
+        "200":
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEvent"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: Notification center feed
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /reports:
+    get:
+      operationId: listReports
+      tags: [reports]
+      summary: List generated compliance reports
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Report"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [admin]
+      summary: List platform users and their roles
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserAccount"
+
+  /ai-providers:
+    get:
+      operationId: listAiProviders
+      tags: [ai]
+      summary: List configured AI model providers
+      responses:
+        "200":
+          description: Providers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiProvider"
+    post:
+      operationId: createAiProvider
+      tags: [ai]
+      summary: Add an AI model provider
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiProviderInput"
+      responses:
+        "201":
+          description: Created provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiProvider"
+
+  /ai-providers/{id}:
+    patch:
+      operationId: updateAiProvider
+      tags: [ai]
+      summary: Update an AI model provider
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiProviderUpdate"
+      responses:
+        "200":
+          description: Updated provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiProvider"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteAiProvider
+      tags: [ai]
+      summary: Remove an AI model provider
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /ai-providers/{id}/activate:
+    post:
+      operationId: activateAiProvider
+      tags: [ai]
+      summary: Make this provider the active analysis engine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Activated provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiProvider"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /ai-providers/{id}/test:
+    post:
+      operationId: testAiProvider
+      tags: [ai]
+      summary: Test connectivity to an AI model provider
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiProviderTestResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +736,818 @@ components:
       required:
         - status
 
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    DashboardStats:
+      type: object
+      properties:
+        reviewedToday:
+          type: integer
+        inReview:
+          type: integer
+        passed:
+          type: integer
+        failed:
+          type: integer
+        highRisk:
+          type: integer
+        mediumRisk:
+          type: integer
+        lowRisk:
+          type: integer
+        avgReviewMinutes:
+          type: number
+        complianceVelocity:
+          type: number
+        totalPackages:
+          type: integer
+        criticalViolations:
+          type: integer
+      required:
+        - reviewedToday
+        - inReview
+        - passed
+        - failed
+        - highRisk
+        - mediumRisk
+        - lowRisk
+        - avgReviewMinutes
+        - complianceVelocity
+        - totalPackages
+        - criticalViolations
+
+    TrendPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        passed:
+          type: integer
+        failed:
+          type: integer
+        reviewVolume:
+          type: integer
+        avgRisk:
+          type: number
+      required:
+        - date
+        - passed
+        - failed
+        - reviewVolume
+        - avgRisk
+
+    DistributionItem:
+      type: object
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+      required:
+        - label
+        - count
+
+    VendorPerformanceItem:
+      type: object
+      properties:
+        vendor:
+          type: string
+        complianceScore:
+          type: integer
+        packages:
+          type: integer
+        failed:
+          type: integer
+      required:
+        - vendor
+        - complianceScore
+        - packages
+        - failed
+
+    Bbox:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        w:
+          type: number
+        h:
+          type: number
+      required:
+        - x
+        - y
+        - w
+        - h
+
+    Violation:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        severity:
+          type: string
+        engine:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        regulationRef:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        detectedText:
+          type: ["string", "null"]
+        suggestedText:
+          type: ["string", "null"]
+        bbox:
+          oneOf:
+            - $ref: "#/components/schemas/Bbox"
+            - type: "null"
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - packageId
+        - severity
+        - engine
+        - title
+        - description
+        - status
+        - createdAt
+
+    OcrData:
+      type: object
+      properties:
+        productName:
+          type: ["string", "null"]
+        ingredients:
+          type: ["string", "null"]
+        directions:
+          type: ["string", "null"]
+        warnings:
+          type: ["string", "null"]
+        claims:
+          type: array
+          items:
+            type: string
+        marketingCopy:
+          type: ["string", "null"]
+        nutritionFacts:
+          type: ["string", "null"]
+        allergenStatements:
+          type: ["string", "null"]
+        netWeight:
+          type: ["string", "null"]
+        countryOfOrigin:
+          type: ["string", "null"]
+        manufacturerInfo:
+          type: ["string", "null"]
+        expirationDate:
+          type: ["string", "null"]
+        epaRegistrationNumbers:
+          type: ["string", "null"]
+        hazardStatements:
+          type: ["string", "null"]
+
+    Package:
+      type: object
+      properties:
+        id:
+          type: integer
+        sku:
+          type: string
+        upc:
+          type: ["string", "null"]
+        name:
+          type: string
+        brand:
+          type: string
+        vendor:
+          type: string
+        category:
+          type: string
+        country:
+          type: ["string", "null"]
+        netWeight:
+          type: ["string", "null"]
+        dimensions:
+          type: ["string", "null"]
+        packageType:
+          type: ["string", "null"]
+        productType:
+          type: ["string", "null"]
+        manufacturingRegion:
+          type: ["string", "null"]
+        status:
+          type: string
+        grade:
+          type: ["string", "null"]
+        riskScore:
+          type: ["integer", "null"]
+        complianceStatus:
+          type: string
+        reviewer:
+          type: ["string", "null"]
+        artworkUrl:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        criticalCount:
+          type: integer
+        majorCount:
+          type: integer
+        minorCount:
+          type: integer
+        analyzedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - sku
+        - name
+        - brand
+        - vendor
+        - category
+        - status
+        - complianceStatus
+        - criticalCount
+        - majorCount
+        - minorCount
+        - createdAt
+        - updatedAt
+
+    PackageDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        sku:
+          type: string
+        upc:
+          type: ["string", "null"]
+        name:
+          type: string
+        brand:
+          type: string
+        vendor:
+          type: string
+        category:
+          type: string
+        country:
+          type: ["string", "null"]
+        netWeight:
+          type: ["string", "null"]
+        dimensions:
+          type: ["string", "null"]
+        packageType:
+          type: ["string", "null"]
+        productType:
+          type: ["string", "null"]
+        manufacturingRegion:
+          type: ["string", "null"]
+        status:
+          type: string
+        grade:
+          type: ["string", "null"]
+        riskScore:
+          type: ["integer", "null"]
+        complianceStatus:
+          type: string
+        reviewer:
+          type: ["string", "null"]
+        artworkUrl:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        extractedText:
+          type: ["string", "null"]
+        criticalCount:
+          type: integer
+        majorCount:
+          type: integer
+        minorCount:
+          type: integer
+        analyzedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        ocr:
+          oneOf:
+            - $ref: "#/components/schemas/OcrData"
+            - type: "null"
+        recommendations:
+          type: array
+          items:
+            type: string
+        violations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Violation"
+        regulations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Regulation"
+      required:
+        - id
+        - sku
+        - name
+        - brand
+        - vendor
+        - category
+        - status
+        - complianceStatus
+        - criticalCount
+        - majorCount
+        - minorCount
+        - createdAt
+        - updatedAt
+        - recommendations
+        - violations
+        - regulations
+
+    PackageInput:
+      type: object
+      properties:
+        sku:
+          type: string
+          minLength: 1
+        upc:
+          type: string
+        name:
+          type: string
+          minLength: 1
+        brand:
+          type: string
+          minLength: 1
+        vendor:
+          type: string
+          minLength: 1
+        category:
+          type: string
+        country:
+          type: string
+        netWeight:
+          type: string
+        dimensions:
+          type: string
+        packageType:
+          type: string
+        productType:
+          type: string
+        manufacturingRegion:
+          type: string
+        artworkUrl:
+          type: string
+        extractedText:
+          type: string
+      required:
+        - sku
+        - name
+        - brand
+        - vendor
+
+    PackageUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+        reviewer:
+          type: string
+        grade:
+          type: string
+        riskScore:
+          type: integer
+        complianceStatus:
+          type: string
+
+    CopilotInput:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 1
+      required:
+        - question
+
+    Citation:
+      type: object
+      properties:
+        source:
+          type: string
+        section:
+          type: ["string", "null"]
+        text:
+          type: ["string", "null"]
+      required:
+        - source
+
+    CopilotAnswer:
+      type: object
+      properties:
+        answer:
+          type: string
+        citations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Citation"
+      required:
+        - answer
+        - citations
+
+    BulkAnalyzeInput:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+      required:
+        - ids
+
+    BulkAnalyzeResult:
+      type: object
+      properties:
+        analyzed:
+          type: integer
+        passed:
+          type: integer
+        failed:
+          type: integer
+      required:
+        - analyzed
+        - passed
+        - failed
+
+    Regulation:
+      type: object
+      properties:
+        id:
+          type: integer
+        agency:
+          type: string
+        category:
+          type: string
+        ruleCode:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        regulationText:
+          type: ["string", "null"]
+        section:
+          type: ["string", "null"]
+        source:
+          type: ["string", "null"]
+        publicationDate:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - agency
+        - category
+        - ruleCode
+        - title
+        - summary
+        - createdAt
+
+    RegulationInput:
+      type: object
+      properties:
+        agency:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          minLength: 1
+        ruleCode:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        summary:
+          type: string
+          minLength: 1
+        regulationText:
+          type: string
+        section:
+          type: string
+        source:
+          type: string
+        publicationDate:
+          type: string
+      required:
+        - agency
+        - category
+        - ruleCode
+        - title
+        - summary
+
+    AiProvider:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        providerType:
+          type: string
+        model:
+          type: string
+        baseUrl:
+          type: ["string", "null"]
+        managed:
+          type: boolean
+        active:
+          type: boolean
+        status:
+          type: string
+        statusMessage:
+          type: ["string", "null"]
+        hasKey:
+          type: boolean
+        keyLast4:
+          type: ["string", "null"]
+        lastTestedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - providerType
+        - model
+        - managed
+        - active
+        - status
+        - hasKey
+        - createdAt
+
+    AiProviderInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        providerType:
+          type: string
+        model:
+          type: string
+          minLength: 1
+        baseUrl:
+          type: string
+        apiKey:
+          type: string
+      required:
+        - name
+        - model
+
+    AiProviderUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        model:
+          type: string
+        baseUrl:
+          type: string
+        apiKey:
+          type: string
+        active:
+          type: boolean
+
+    AiProviderTestResult:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: ["string", "null"]
+      required:
+        - status
+
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        riskLevel:
+          type: string
+        contactEmail:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        complianceScore:
+          type: integer
+        packagesReviewed:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - riskLevel
+        - complianceScore
+        - packagesReviewed
+        - createdAt
+
+    SupplierDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        riskLevel:
+          type: string
+        contactEmail:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        complianceScore:
+          type: integer
+        packagesReviewed:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        packages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Package"
+      required:
+        - id
+        - name
+        - riskLevel
+        - complianceScore
+        - packagesReviewed
+        - createdAt
+        - packages
+
+    SupplierInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        code:
+          type: string
+        category:
+          type: string
+        riskLevel:
+          type: string
+        contactEmail:
+          type: string
+        country:
+          type: string
+      required:
+        - name
+
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: ["integer", "null"]
+        actor:
+          type: string
+        action:
+          type: string
+        detail:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - actor
+        - action
+        - createdAt
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        message:
+          type: string
+        type:
+          type: string
+        read:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - message
+        - type
+        - read
+        - createdAt
+
+    Report:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: ["integer", "null"]
+        title:
+          type: string
+        type:
+          type: string
+        format:
+          type: string
+        summary:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - type
+        - format
+        - createdAt
+
+    ReportInput:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+        type:
+          type: string
+        format:
+          type: string
+      required:
+        - title
+
+    UserAccount:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - email
+        - role
+        - active
+        - createdAt

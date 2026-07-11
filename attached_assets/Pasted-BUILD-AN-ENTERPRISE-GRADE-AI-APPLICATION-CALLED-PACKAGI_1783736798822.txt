@@ -1,0 +1,1164 @@
+BUILD AN ENTERPRISE-GRADE AI APPLICATION CALLED:
+
+PACKAGING COMPLIANCE AI
+
+MISSION
+
+Build a Packaging Compliance Intelligence Platform that allows retailers, manufacturers, suppliers, packaging engineers, regulatory reviewers, legal teams, and compliance teams to upload packaging artwork and automatically identify compliance, regulatory, spelling, contextual language, and packaging defects before products go to production.
+
+This is NOT a document management system.
+
+This is NOT an approval workflow tool.
+
+This is NOT a design tool.
+
+This is an AI-powered Packaging Compliance Operating System.
+
+The primary use case is supporting thousands of product packaging reviews across categories including food, beverage, household cleaners, chemicals, seasonal items, health & beauty, toys, pet products, and private-label retail products.
+
+The system should be capable of processing individual reviews and large-scale batch reviews involving hundreds or thousands of SKUs.
+
+====================================================
+CORE BUSINESS PROBLEM
+====================================================
+
+Today packaging compliance reviews are manual.
+
+Teams manually review:
+
+- FDA requirements
+- EPA requirements
+- CPSC regulations
+- Packaging requirements
+- Internal SOPs
+- Spelling errors
+- Contextual language errors
+- Missing disclosures
+- Artwork issues
+
+The platform should automate this review process.
+
+Users should know within seconds:
+
+1. Is the package compliant?
+2. What failed?
+3. Why did it fail?
+4. What regulation was violated?
+5. How can it be fixed?
+6. Is production approval recommended?
+
+====================================================
+TECH STACK
+====================================================
+
+Frontend
+- Next.js
+- TypeScript
+- Tailwind CSS
+- Shadcn/UI
+- React
+
+Backend
+- Python FastAPI
+
+Database
+- PostgreSQL
+
+Vector Search
+- pgvector
+
+AI
+- OpenAI GPT-5
+- OpenAI Embeddings
+
+Authentication
+- Secure login
+- Enterprise ready
+
+Storage
+- Replit Storage
+- File upload support
+
+====================================================
+UI / UX REQUIREMENTS
+====================================================
+
+This platform should feel like a combination of:
+
+- OpenAI
+- Figma
+- Grammarly
+- Linear
+- Notion
+- Stripe Dashboard
+
+Design Principles:
+
+- Enterprise grade
+- AI first
+- Fast
+- Highly visual
+- Minimal clicks
+- Clean
+- Modern
+- Responsive
+- Scalable
+- Dark mode
+- Light mode
+
+The platform must be optimized for users reviewing:
+
+- 1 package
+- 100 packages
+- 10,000 packages
+
+without changing workflows.
+
+====================================================
+GLOBAL APPLICATION LAYOUT
+====================================================
+
+Top Navigation:
+
+Logo
+
+Global Search
+
+Upload
+
+Bulk Processing
+
+Reviews
+
+Reports
+
+Regulatory Library
+
+Vendors
+
+Settings
+
+User Profile
+
+Notification Center
+
+----------------------------------------------------
+
+Left Navigation
+
+Dashboard
+
+Compliance Queue
+
+Projects
+
+Packaging Reviews
+
+Approvals
+
+Reports
+
+Regulatory Knowledge Base
+
+Suppliers
+
+Audit History
+
+Admin
+
+----------------------------------------------------
+
+Main Content Area
+
+====================================================
+DASHBOARD EXPERIENCE
+====================================================
+
+The dashboard should serve as a compliance command center.
+
+Display:
+
+Packages Reviewed Today
+
+Packages In Review
+
+Passed
+
+Failed
+
+High Risk
+
+Medium Risk
+
+Low Risk
+
+Average Review Time
+
+Compliance Velocity
+
+----------------------------------------------------
+
+Charts
+
+Compliance Trends
+
+Risk Trends
+
+Review Volume
+
+Violation Distribution
+
+Category Distribution
+
+Vendor Performance
+
+----------------------------------------------------
+
+Quick Actions
+
+Upload Package
+
+Bulk Upload
+
+Review High Risk Packages
+
+Run Compliance Scan
+
+Generate Reports
+
+====================================================
+USER ROLES
+====================================================
+
+Administrator
+
+Compliance Manager
+
+Compliance Reviewer
+
+Packaging Manager
+
+Designer
+
+Supplier
+
+Executive Viewer
+
+Auditor
+
+====================================================
+FILE INGESTION
+====================================================
+
+Support:
+
+PDF
+
+AI
+
+INDD
+
+PNG
+
+JPG
+
+JPEG
+
+WEBP
+
+ZIP Batch Uploads
+
+----------------------------------------------------
+
+Single Upload
+
+Drag and Drop Interface
+
+Upload artwork
+
+Add metadata
+
+----------------------------------------------------
+
+Metadata
+
+SKU
+
+UPC
+
+Vendor
+
+Brand
+
+Category
+
+Country
+
+Net Weight
+
+Package Dimensions
+
+Package Type
+
+Product Type
+
+Manufacturing Region
+
+====================================================
+BULK PROCESSING EXPERIENCE
+====================================================
+
+Users must be able to upload hundreds or thousands of files.
+
+Display queue view.
+
+Columns
+
+SKU
+
+Name
+
+Brand
+
+Vendor
+
+Category
+
+Status
+
+Risk Score
+
+Grade
+
+Compliance Status
+
+Reviewer
+
+Date
+
+----------------------------------------------------
+
+Filters
+
+FDA
+
+EPA
+
+CPSC
+
+Spelling
+
+Grammar
+
+Claims
+
+High Risk
+
+Critical
+
+Needs Review
+
+Approved
+
+Rejected
+
+Pending
+
+Search functionality required.
+
+====================================================
+AI PROCESSING PIPELINE
+====================================================
+
+When a file is uploaded:
+
+Step 1
+
+Extract text using OCR.
+
+Step 2
+
+Extract packaging structure.
+
+Step 3
+
+Identify packaging elements.
+
+Step 4
+
+Detect category.
+
+Step 5
+
+Load regulations.
+
+Step 6
+
+Run AI compliance analysis.
+
+Step 7
+
+Generate score.
+
+Step 8
+
+Generate recommendations.
+
+Step 9
+
+Create compliance report.
+
+====================================================
+OCR EXTRACTION
+====================================================
+
+Extract:
+
+Product Name
+
+Ingredients
+
+Directions
+
+Warnings
+
+Claims
+
+Marketing Copy
+
+Nutrition Facts
+
+Allergen Statements
+
+Net Weight
+
+Country Of Origin
+
+Manufacturer Information
+
+Expiration Date
+
+Best Before Date
+
+Lot Codes
+
+EPA Registration Numbers
+
+Hazard Statements
+
+Store bounding boxes and coordinates.
+
+====================================================
+AI CATEGORY DETECTION
+====================================================
+
+Automatically classify products.
+
+Possible categories:
+
+Food
+
+Beverage
+
+Toy
+
+Pet Product
+
+Seasonal Product
+
+Chemical
+
+Disinfectant
+
+Cleaning Product
+
+Beauty
+
+Health Product
+
+Personal Care
+
+Household Goods
+
+Automatically determine required regulations.
+
+====================================================
+REGULATORY KNOWLEDGE ENGINE
+====================================================
+
+Create a centralized regulatory library.
+
+Support ingestion from:
+
+FDA
+
+openFDA
+
+EPA
+
+eCFR
+
+FTC
+
+USDA
+
+CPSC
+
+Internal Company SOPs
+
+Internal Packaging Standards
+
+Private Label Standards
+
+Supplier Documentation
+
+----------------------------------------------------
+
+Store:
+
+Agency
+
+Category
+
+Rule
+
+Summary
+
+Regulation Text
+
+Section
+
+Source
+
+Publication Date
+
+Embedding
+
+Vector
+
+====================================================
+RAG COMPLIANCE ENGINE
+====================================================
+
+Use Retrieval Augmented Generation.
+
+Workflow:
+
+Upload Package
+
+↓
+
+Extract Text
+
+↓
+
+Classify Product
+
+↓
+
+Retrieve Relevant Regulations
+
+↓
+
+Inject Regulations Into AI Context
+
+↓
+
+Generate Compliance Review
+
+The AI should never guess.
+
+The AI should provide evidence-based compliance recommendations.
+
+====================================================
+SPELLING ENGINE
+====================================================
+
+Detect:
+
+Typographical Errors
+
+Grammar Errors
+
+Packaging Copy Errors
+
+Brand Terminology Issues
+
+Examples:
+
+Ingrediants
+
+Refridgerate
+
+Nutriton
+
+====================================================
+CONTEXTUAL LANGUAGE ENGINE
+====================================================
+
+This is a major differentiator.
+
+Use AI reasoning.
+
+Examples:
+
+Hair Die
+
+Recommended:
+Hair Dye
+
+----------------------------------------------------
+
+Big Summer Sail
+
+Recommended:
+Big Summer Sale
+
+----------------------------------------------------
+
+Their
+
+There
+
+They're
+
+----------------------------------------------------
+
+Contextual spelling must understand:
+
+Product Category
+
+Package Type
+
+Marketing Intent
+
+Consumer Language
+
+Regulatory Context
+
+====================================================
+CLAIM EVALUATION ENGINE
+====================================================
+
+Detect regulated claims.
+
+Examples:
+
+Kills 99.9% of Germs
+
+Organic
+
+Natural
+
+Healthy
+
+Eco Friendly
+
+Safe
+
+Chemical Free
+
+Clinically Proven
+
+Doctor Recommended
+
+Environmentally Friendly
+
+Flag claims requiring review.
+
+====================================================
+FDA COMPLIANCE ENGINE
+====================================================
+
+Validate:
+
+Principal Display Panel
+
+Statement Of Identity
+
+Net Quantity Of Contents
+
+Nutrition Facts Panel
+
+Ingredient List
+
+Manufacturer Name
+
+Manufacturer Address
+
+Country Of Origin
+
+Allergen Declaration
+
+Required Warnings
+
+Formatting Rules
+
+Placement Rules
+
+Missing Required Disclosures
+
+----------------------------------------------------
+
+Major Allergens
+
+Milk
+
+Eggs
+
+Fish
+
+Shellfish
+
+Tree Nuts
+
+Peanuts
+
+Soy
+
+Wheat
+
+Sesame
+
+If ingredients contain allergens and no declaration exists:
+
+Generate Critical Violation.
+
+====================================================
+EPA COMPLIANCE ENGINE
+====================================================
+
+Validate:
+
+EPA Registration Number
+
+Signal Words
+
+Danger
+
+Warning
+
+Caution
+
+Hazard Statements
+
+Storage Instructions
+
+Disposal Instructions
+
+Chemical Claims
+
+Disinfectant Claims
+
+Child Resistant Packaging Requirements
+
+====================================================
+INTERNAL STANDARDS ENGINE
+====================================================
+
+Provide support for internal company standards.
+
+Examples:
+
+Date Formatting
+
+Country Of Origin Standards
+
+Brand Guidelines
+
+Private Label Templates
+
+Packaging SOPs
+
+Retail Requirements
+
+====================================================
+COMPLIANCE SCORING ENGINE
+====================================================
+
+Generate:
+
+Letter Grade
+
+A
+
+B
+
+C
+
+D
+
+F
+
+----------------------------------------------------
+
+Risk Score
+
+0 to 100
+
+----------------------------------------------------
+
+Status
+
+Passed
+
+Approved
+
+Needs Review
+
+Failed
+
+Critical Failure
+
+----------------------------------------------------
+
+Issue Classification
+
+Critical
+
+Major
+
+Minor
+
+Informational
+
+====================================================
+REVIEW WORKSPACE
+====================================================
+
+This is the core user experience.
+
+Use a split screen layout.
+
+----------------------------------------------------
+
+LEFT PANEL
+
+Interactive Packaging Viewer
+
+----------------------------------------------------
+
+Display packaging artwork.
+
+Display bounding boxes.
+
+Display detected text.
+
+Display hotspots.
+
+Color Coding:
+
+Green = Passed
+
+Yellow = Warning
+
+Red = Failure
+
+----------------------------------------------------
+
+Interactions
+
+Click bounding box
+
+Zoom
+
+Pan
+
+Multi-page support
+
+Hover for issue details
+
+====================================================
+RIGHT PANEL
+====================================================
+
+Compliance Intelligence Panel
+
+Display:
+
+Grade
+
+Risk Score
+
+Status
+
+Issue Breakdown
+
+Recommendations
+
+Applicable Regulations
+
+Regulatory Sources
+
+----------------------------------------------------
+
+Example
+
+Critical
+
+Missing Allergen Declaration
+
+Soy detected in ingredients.
+
+Contains statement not found.
+
+----------------------------------------------------
+
+Major
+
+Potential EPA Claim
+
+"Kills 99.9% of Germs"
+
+EPA review required.
+
+----------------------------------------------------
+
+Minor
+
+Contextual language issue.
+
+Hair Die
+
+Suggested:
+Hair Dye
+
+====================================================
+AI COMPLIANCE COPILOT
+====================================================
+
+Persistent AI assistant.
+
+User can ask:
+
+Why did this fail?
+
+Show applicable rule.
+
+How do I fix this?
+
+What FDA section applies?
+
+Show compliant language examples.
+
+Suggest wording.
+
+Generate remediation text.
+
+The AI must cite the regulation source when available.
+
+====================================================
+ANNOTATED REPORT ENGINE
+====================================================
+
+Generate:
+
+Compliance Report
+
+Annotated Artwork
+
+Violation Summary
+
+Recommended Fixes
+
+Applicable Regulations
+
+Review History
+
+----------------------------------------------------
+
+Export Formats
+
+PDF
+
+CSV
+
+Excel
+
+JSON
+
+====================================================
+WORKFLOW ENGINE
+====================================================
+
+Package Statuses
+
+Draft
+
+Uploaded
+
+OCR Complete
+
+AI Review
+
+Needs Revision
+
+Resubmitted
+
+Approved
+
+Ready For Production
+
+Archived
+
+====================================================
+WORKFRONT INTEGRATION READY
+====================================================
+
+Design architecture for future integration.
+
+Workflow
+
+Workfront
+
+↓
+
+Package Created
+
+↓
+
+Ready For Compliance
+
+↓
+
+Send To Compliance AI
+
+↓
+
+Return Results
+
+↓
+
+Update Status
+
+The platform should function independently of Workfront.
+
+Workfront should only be an integration.
+
+====================================================
+DATABASE STRUCTURE
+====================================================
+
+Users
+
+Roles
+
+Projects
+
+Products
+
+Uploads
+
+Reviews
+
+Violations
+
+Reports
+
+Regulations
+
+Embeddings
+
+Suppliers
+
+Audit History
+
+Tasks
+
+Notifications
+
+====================================================
+AUDIT TRAIL
+====================================================
+
+Track:
+
+Who reviewed
+
+What changed
+
+When reviewed
+
+Version history
+
+AI findings
+
+Compliance decisions
+
+Regulatory references
+
+====================================================
+ADMIN EXPERIENCE
+====================================================
+
+Manage:
+
+Users
+
+Roles
+
+Permissions
+
+Regulatory Sources
+
+Internal SOPs
+
+AI Settings
+
+Prompt Settings
+
+Audit Logs
+
+Data Sources
+
+====================================================
+FUTURE ROADMAP SUPPORT
+====================================================
+
+Illustrator Parsing
+
+InDesign Parsing
+
+Font Size Detection
+
+Barcode Validation
+
+Symbol Recognition
+
+Logo Recognition
+
+Nutrition Panel Validation
+
+Vendor Scorecards
+
+Automated Approvals
+
+Regulation Change Monitoring
+
+Supplier Portal
+
+PIM Integration
+
+DAM Integration
+
+ERP Integration
+
+====================================================
+SUCCESS METRIC
+====================================================
+
+The application should allow a compliance reviewer to:
+
+Understand package health within 10 seconds.
+
+Identify critical risks within 30 seconds.
+
+Review hundreds of SKUs daily.
+
+Avoid manually searching FDA or EPA regulations.
+
+Trust AI-generated recommendations.
+
+Reduce compliance review time by at least 50%.
+
+The final product should feel like an AI-powered Packaging Compliance Operating System built for Fortune 500 retail packaging organizations.

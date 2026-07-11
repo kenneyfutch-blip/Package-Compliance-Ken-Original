@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Packaging Compliance AI"
+version = "1.0.0"
+id = "artifacts/compliance"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26095
+
+[services.development]
+run = "pnpm --filter @workspace/compliance run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/compliance", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/compliance/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26095"
+BASE_PATH = "/"
