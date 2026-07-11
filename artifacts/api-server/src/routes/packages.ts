@@ -58,6 +58,7 @@ import {
   formatMemoryForPrompt,
 } from "../lib/memory/engine";
 import { readArchivedAuditForPackage } from "../lib/maintenance/archive";
+import { gatherEcfrIntelligence, formatEcfrForPrompt } from "../lib/ecfr";
 
 const router: IRouter = Router();
 
@@ -127,6 +128,22 @@ async function relevantPoliciesFor(
     return formatPoliciesForPrompt(policies) || undefined;
   } catch (err) {
     logger.error({ err }, "Internal policy recall failed");
+    return undefined;
+  }
+}
+
+// eCFR recall: fetch the synced federal regulation sections most relevant to
+// this package and format them for the AI review prompt so AI-generated
+// violations can cite real CFR sections. Reads only locally-synced content and
+// is non-fatal — an unsynced or unreachable store must never block analysis.
+async function ecfrRegulationsFor(
+  pkg: PackageRow,
+): Promise<string | undefined> {
+  try {
+    const intel = await gatherEcfrIntelligence(pkg);
+    return formatEcfrForPrompt(intel.sections) || undefined;
+  } catch (err) {
+    logger.error({ err }, "eCFR recall failed");
     return undefined;
   }
 }
@@ -344,11 +361,13 @@ router.post(
         const regulations = await loadRegulations();
         const priorKnowledge = await priorKnowledgeFor(current, req);
         const internalStandards = await relevantPoliciesFor(current, req);
+        const cfrRegulations = await ecfrRegulationsFor(current);
         const result = await analyzePackaging(
           current,
           regulations,
           priorKnowledge,
           internalStandards,
+          cfrRegulations,
         );
         const version = await ensureInitialVersion(current);
         await applyAnalysis(current, result, version.id, organizationId);
@@ -542,11 +561,13 @@ router.post(
       const regulations = await loadRegulations();
       const priorKnowledge = await priorKnowledgeFor(pkg, req);
       const internalStandards = await relevantPoliciesFor(pkg, req);
+      const cfrRegulations = await ecfrRegulationsFor(pkg);
       const result = await analyzePackaging(
         pkg,
         regulations,
         priorKnowledge,
         internalStandards,
+        cfrRegulations,
       );
       const version = await ensureInitialVersion(pkg);
       await applyAnalysis(pkg, result, version.id, orgId(req));
@@ -614,11 +635,13 @@ router.post(
         const regulations = await loadRegulations();
         const priorKnowledge = await priorKnowledgeFor(current, req);
         const internalStandards = await relevantPoliciesFor(current, req);
+        const cfrRegulations = await ecfrRegulationsFor(current);
         const result = await analyzePackaging(
           current,
           regulations,
           priorKnowledge,
           internalStandards,
+          cfrRegulations,
         );
         const version = await ensureInitialVersion(current);
         await applyAnalysis(current, result, version.id, orgId(req));
@@ -771,11 +794,13 @@ router.post(
       try {
         const priorKnowledge = await priorKnowledgeFor(pkg, req);
         const internalStandards = await relevantPoliciesFor(pkg, req);
+        const cfrRegulations = await ecfrRegulationsFor(pkg);
         const result = await analyzePackaging(
           pkg,
           regulations,
           priorKnowledge,
           internalStandards,
+          cfrRegulations,
         );
         const version = await ensureInitialVersion(pkg);
         await applyAnalysis(pkg, result, version.id, organizationId);

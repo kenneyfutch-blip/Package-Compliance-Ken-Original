@@ -1906,6 +1906,97 @@ export const GetFdaIntelligenceResponse = zod.object({
 
 
 /**
+ * @summary eCFR regulatory data sync status & curated parts catalog (admin)
+ */
+export const GetEcfrStatusResponse = zod.object({
+  "configured": zod.boolean(),
+  "reachable": zod.boolean(),
+  "synced": zod.boolean(),
+  "totalSections": zod.number(),
+  "countsByTitle": zod.array(zod.object({
+  "title": zod.number(),
+  "sections": zod.number()
+})),
+  "lastSyncedAt": zod.string().nullable(),
+  "editionDate": zod.string().nullable(),
+  "curatedParts": zod.array(zod.object({
+  "title": zod.number(),
+  "part": zod.string(),
+  "category": zod.string(),
+  "label": zod.string()
+})),
+  "checkedAt": zod.string(),
+  "disclaimer": zod.string()
+})
+
+
+/**
+ * @summary Trigger a refresh of synced eCFR content (admin)
+ */
+export const SyncEcfrResponse = zod.object({
+  "parts": zod.number(),
+  "partsSynced": zod.number(),
+  "sectionsStored": zod.number(),
+  "failures": zod.array(zod.object({
+  "part": zod.string(),
+  "error": zod.string()
+})),
+  "at": zod.string()
+})
+
+
+/**
+ * @summary Applicable synced eCFR sections for a package
+ */
+export const GetEcfrIntelligenceQueryParams = zod.object({
+  "packageId": zod.coerce.number()
+})
+
+export const GetEcfrIntelligenceResponse = zod.object({
+  "detectedCategory": zod.string().nullable(),
+  "categoryLabel": zod.string(),
+  "searchTerm": zod.string().nullable(),
+  "sections": zod.array(zod.object({
+  "citation": zod.string(),
+  "heading": zod.string(),
+  "snippet": zod.string(),
+  "url": zod.string().nullable(),
+  "title": zod.number(),
+  "part": zod.string(),
+  "editionDate": zod.string().nullable(),
+  "similarity": zod.number()
+})),
+  "available": zod.boolean(),
+  "message": zod.string().nullable(),
+  "disclaimer": zod.string()
+})
+
+
+/**
+ * @summary Natural-language search over synced eCFR sections
+ */
+export const SearchEcfrQueryParams = zod.object({
+  "q": zod.coerce.string(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const SearchEcfrResponse = zod.object({
+  "query": zod.string(),
+  "results": zod.array(zod.object({
+  "citation": zod.string(),
+  "heading": zod.string(),
+  "snippet": zod.string(),
+  "url": zod.string().nullable(),
+  "title": zod.number(),
+  "part": zod.string(),
+  "editionDate": zod.string().nullable(),
+  "similarity": zod.number()
+})),
+  "disclaimer": zod.string()
+})
+
+
+/**
  * @summary Browse the regulatory knowledge base
  */
 export const ListRegulationsQueryParams = zod.object({

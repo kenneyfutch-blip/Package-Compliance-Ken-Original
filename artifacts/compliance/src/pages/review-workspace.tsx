@@ -31,6 +31,7 @@ import { useUpload } from "@workspace/object-storage-web"
 import { ProofViewer, type ViewerAnnotation, type AnnotationDraft } from "@/components/proof-viewer"
 import { RegulationRef } from "@/components/regulation-ref"
 import { FdaIntelligenceTab } from "@/components/fda-intelligence-tab"
+import { EcfrRegulationsTab } from "@/components/ecfr-regulations-tab"
 import {
   type MarkupTool, findingClassMeta, priorityMeta, REVIEWERS,
   extractMentions, relativeTime, HUMAN_MARKUP_COLOR, fileTypeFromName,
@@ -266,7 +267,7 @@ export default function ReviewWorkspace() {
             <TabsList className="w-full justify-start rounded-none border-b border-border h-auto p-0 bg-muted/20 gap-4 px-4 overflow-x-auto shrink-0">
               {[
                 ["findings", "Findings"], ["comments", "Comments"], ["tasks", "Tasks"],
-                ["data", "Data"], ["fda", "FDA Intel"], ["copilot", "Copilot"], ["compare", "Compare"],
+                ["data", "Data"], ["fda", "FDA Intel"], ["ecfr", "eCFR Regs"], ["copilot", "Copilot"], ["compare", "Compare"],
                 ["language", "Language"], ["document", "Document AI"],
               ].map(([v, label]) => (
                 <TabsTrigger key={v} value={v}
@@ -282,6 +283,7 @@ export default function ReviewWorkspace() {
               <TabsContent value="tasks" className="m-0 p-4"><TasksPanel pkg={pkg} packageId={packageId} onChange={invalidate} /></TabsContent>
               <TabsContent value="data" className="m-0 p-4"><DataPanel pkg={pkg} /></TabsContent>
               <TabsContent value="fda" className="m-0 p-4"><FdaIntelligenceTab packageId={packageId} /></TabsContent>
+              <TabsContent value="ecfr" className="m-0 p-4"><EcfrRegulationsTab packageId={packageId} /></TabsContent>
               <TabsContent value="copilot" className="m-0 p-4 h-full"><CopilotPanel packageId={packageId} pkg={pkg} /></TabsContent>
               <TabsContent value="compare" className="m-0 p-4"><ComparePanel pkg={pkg} packageId={packageId} /></TabsContent>
               <TabsContent value="language" className="m-0 p-4"><LanguageReviewTab detail={languageReview} onRun={handleRunLanguage} isRunning={runLanguage.isPending} /></TabsContent>

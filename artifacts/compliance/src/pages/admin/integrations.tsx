@@ -1,11 +1,16 @@
 import { 
   useListAiProviders, 
   useGetDocumentAiStatus, 
-  useGetFdaStatus 
+  useGetFdaStatus,
+  useGetEcfrStatus,
+  useSyncEcfr,
+  getGetEcfrStatusQueryKey,
 } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Cpu, FileText, Activity, Server, AlertTriangle, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Cpu, FileText, Activity, Server, AlertTriangle, CheckCircle2, ShieldCheck, Landmark, RefreshCw } from "lucide-react";
 
 function StatusBadge({ active, text }: { active?: boolean, text?: string }) {
   if (active) {
@@ -18,6 +23,15 @@ export default function Integrations() {
   const { data: providers, isLoading: providersLoading } = useListAiProviders();
   const { data: docAi, isLoading: docAiLoading } = useGetDocumentAiStatus();
   const { data: fda, isLoading: fdaLoading } = useGetFdaStatus();
+  const { data: ecfr, isLoading: ecfrLoading } = useGetEcfrStatus();
+  const queryClient = useQueryClient();
+  const syncEcfr = useSyncEcfr({
+    mutation: {
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: getGetEcfrStatusQueryKey() });
+      },
+    },
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -154,6 +168,78 @@ export default function Integrations() {
                   </div>
                   <div className="p-4 bg-muted/40 border border-border/50 rounded-lg mt-4">
                     <div className="text-xs text-muted-foreground leading-relaxed italic">{fda.disclaimer}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Landmark className="w-5 h-5 text-primary" /> eCFR Regulatory Data</CardTitle>
+            <CardDescription>Synced federal regulation text (Title 21 FDA / Title 40 EPA).</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {ecfrLoading ? (
+              <div className="py-8 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+            ) : !ecfr ? (
+              <div className="py-12 text-center text-muted-foreground bg-muted/20 rounded-lg border border-dashed">eCFR status unavailable.</div>
+            ) : (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between pb-4 border-b border-border/50">
+                  <div className="font-semibold text-lg text-foreground">Status</div>
+                  <div className="flex items-center gap-2">
+                    <StatusBadge active={ecfr.synced} text={ecfr.synced ? "Synced" : "Not Synced"} />
+                    <StatusBadge active={ecfr.reachable} text={ecfr.reachable ? "Reachable" : "Unreachable"} />
+                  </div>
+                </div>
+                <div className="space-y-4 text-sm">
+                  <div className="flex justify-between items-center px-2.5">
+                    <span className="text-muted-foreground flex items-center gap-1.5"><ShieldCheck className="w-4 h-4" /> Sections Synced</span>
+                    <span className="font-bold text-lg">{ecfr.totalSections}</span>
+                  </div>
+                  {ecfr.countsByTitle.length > 0 && (
+                    <div className="flex flex-wrap gap-2 px-2.5">
+                      {ecfr.countsByTitle.map((c) => (
+                        <Badge key={c.title} variant="outline" className="font-normal">Title {c.title}: {c.sections}</Badge>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center px-2.5">
+                    <span className="text-muted-foreground flex items-center gap-1.5"><Activity className="w-4 h-4" /> Last Synced</span>
+                    <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{ecfr.lastSyncedAt ? new Date(ecfr.lastSyncedAt).toLocaleString() : "Never"}</span>
+                  </div>
+                  <div className="flex justify-between items-center px-2.5">
+                    <span className="text-muted-foreground flex items-center gap-1.5"><FileText className="w-4 h-4" /> Edition Date</span>
+                    <span className="font-mono text-xs">{ecfr.editionDate || "—"}</span>
+                  </div>
+                  <div className="flex justify-between items-center px-2.5">
+                    <span className="text-muted-foreground flex items-center gap-1.5"><Landmark className="w-4 h-4" /> Curated Parts</span>
+                    <span className="font-bold">{ecfr.curatedParts.length}</span>
+                  </div>
+                  <div className="pt-3 border-t border-border/50">
+                    <Button
+                      size="sm"
+                      onClick={() => syncEcfr.mutate()}
+                      disabled={syncEcfr.isPending}
+                      className="w-full"
+                    >
+                      {syncEcfr.isPending ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Syncing…</>
+                      ) : (
+                        <><RefreshCw className="w-4 h-4 mr-2" /> Sync now</>
+                      )}
+                    </Button>
+                    {syncEcfr.isError && (
+                      <p className="text-xs text-destructive mt-2 text-center">Sync failed. Check permissions and try again.</p>
+                    )}
+                    {syncEcfr.isSuccess && syncEcfr.data && (
+                      <p className="text-xs text-success mt-2 text-center">Synced {syncEcfr.data.sectionsStored} sections across {syncEcfr.data.partsSynced} parts.</p>
+                    )}
+                  </div>
+                  <div className="p-4 bg-muted/40 border border-border/50 rounded-lg mt-2">
+                    <div className="text-xs text-muted-foreground leading-relaxed italic">{ecfr.disclaimer}</div>
                   </div>
                 </div>
               </div>

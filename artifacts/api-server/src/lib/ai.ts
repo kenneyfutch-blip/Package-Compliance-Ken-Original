@@ -96,6 +96,7 @@ export async function analyzePackaging(
   regulations: Regulation[],
   priorKnowledge?: string,
   internalStandards?: string,
+  cfrRegulations?: string,
 ): Promise<AnalysisResult> {
   const regContext = regulations
     .map(
@@ -147,6 +148,10 @@ ${
 }${
   internalStandards && internalStandards.trim()
     ? `\nINTERNAL COMPANY STANDARDS (internal Dollar Tree policies uploaded by compliance managers — these carry EQUAL authority to FDA/EPA/eCFR regulations. Evaluate the packaging against EACH policy below; when the packaging violates one, produce a finding with engine "Internal Standard", severity matching the policy, detectedText for the offending copy/element (or null if a required element is missing), regulationRef set to the policy Source, and cite the specific policy name in the description. Internal compliance can FAIL even when external regulatory compliance passes.):\n${internalStandards}\n`
+    : ""
+}${
+  cfrRegulations && cfrRegulations.trim()
+    ? `\nAPPLICABLE eCFR REGULATIONS (verbatim sections from the live Electronic Code of Federal Regulations — Title 21 FDA / Title 40 EPA — matched to this product's category. These are the ACTUAL regulatory text of the requirements. When the packaging violates or omits a requirement described in one of these sections, cite the EXACT section (e.g. "21 CFR 101.9") in regulationRef and reference it in the description. Prefer these real citations over generic ones whenever a matching section is listed below.):\n${cfrRegulations}\n`
     : ""
 }
 Perform:

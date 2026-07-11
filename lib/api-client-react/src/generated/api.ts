@@ -47,10 +47,15 @@ import type {
   DocumentExtraction,
   DuplicateConflict,
   DuplicatePackageCheck,
+  EcfrIntelligence,
+  EcfrSearchResult,
+  EcfrStatus,
+  EcfrSyncResult,
   ErrorEnvelope,
   FdaIntelligence,
   FdaRecallResponse,
   FdaStatus,
+  GetEcfrIntelligenceParams,
   GetFdaIntelligenceParams,
   HealthStatus,
   LanguageFinding,
@@ -100,6 +105,7 @@ import type {
   ReviewTaskInput,
   ReviewTaskUpdate,
   RoleInfo,
+  SearchEcfrParams,
   SearchPoliciesParams,
   SearchResourcesParams,
   SubmissionInput,
@@ -2732,6 +2738,322 @@ export function useGetFdaIntelligence<TData = Awaited<ReturnType<typeof getFdaIn
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetFdaIntelligenceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetEcfrStatusUrl = () => {
+
+
+
+
+  return `/api/ecfr/status`
+}
+
+/**
+ * @summary eCFR regulatory data sync status & curated parts catalog (admin)
+ */
+export const getEcfrStatus = async ( options?: RequestInit): Promise<EcfrStatus> => {
+
+  return customFetch<EcfrStatus>(getGetEcfrStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEcfrStatusQueryKey = () => {
+    return [
+    `/api/ecfr/status`
+    ] as const;
+    }
+
+
+export const getGetEcfrStatusQueryOptions = <TData = Awaited<ReturnType<typeof getEcfrStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEcfrStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEcfrStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEcfrStatus>>> = ({ signal }) => getEcfrStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEcfrStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEcfrStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getEcfrStatus>>>
+export type GetEcfrStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary eCFR regulatory data sync status & curated parts catalog (admin)
+ */
+
+export function useGetEcfrStatus<TData = Awaited<ReturnType<typeof getEcfrStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEcfrStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEcfrStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSyncEcfrUrl = () => {
+
+
+
+
+  return `/api/ecfr/sync`
+}
+
+/**
+ * @summary Trigger a refresh of synced eCFR content (admin)
+ */
+export const syncEcfr = async ( options?: RequestInit): Promise<EcfrSyncResult> => {
+
+  return customFetch<EcfrSyncResult>(getSyncEcfrUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getSyncEcfrMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncEcfr>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof syncEcfr>>, TError,void, TContext> => {
+
+const mutationKey = ['syncEcfr'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof syncEcfr>>, void> = () => {
+
+
+          return  syncEcfr(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SyncEcfrMutationResult = NonNullable<Awaited<ReturnType<typeof syncEcfr>>>
+
+    export type SyncEcfrMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Trigger a refresh of synced eCFR content (admin)
+ */
+export const useSyncEcfr = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof syncEcfr>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof syncEcfr>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSyncEcfrMutationOptions(options));
+    }
+
+export const getGetEcfrIntelligenceUrl = (params: GetEcfrIntelligenceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/ecfr/intelligence?${stringifiedParams}` : `/api/ecfr/intelligence`
+}
+
+/**
+ * @summary Applicable synced eCFR sections for a package
+ */
+export const getEcfrIntelligence = async (params: GetEcfrIntelligenceParams, options?: RequestInit): Promise<EcfrIntelligence> => {
+
+  return customFetch<EcfrIntelligence>(getGetEcfrIntelligenceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEcfrIntelligenceQueryKey = (params?: GetEcfrIntelligenceParams,) => {
+    return [
+    `/api/ecfr/intelligence`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetEcfrIntelligenceQueryOptions = <TData = Awaited<ReturnType<typeof getEcfrIntelligence>>, TError = ErrorType<unknown>>(params: GetEcfrIntelligenceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEcfrIntelligence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEcfrIntelligenceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEcfrIntelligence>>> = ({ signal }) => getEcfrIntelligence(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEcfrIntelligence>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEcfrIntelligenceQueryResult = NonNullable<Awaited<ReturnType<typeof getEcfrIntelligence>>>
+export type GetEcfrIntelligenceQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Applicable synced eCFR sections for a package
+ */
+
+export function useGetEcfrIntelligence<TData = Awaited<ReturnType<typeof getEcfrIntelligence>>, TError = ErrorType<unknown>>(
+ params: GetEcfrIntelligenceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEcfrIntelligence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEcfrIntelligenceQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchEcfrUrl = (params: SearchEcfrParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/ecfr/search?${stringifiedParams}` : `/api/ecfr/search`
+}
+
+/**
+ * @summary Natural-language search over synced eCFR sections
+ */
+export const searchEcfr = async (params: SearchEcfrParams, options?: RequestInit): Promise<EcfrSearchResult> => {
+
+  return customFetch<EcfrSearchResult>(getSearchEcfrUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchEcfrQueryKey = (params?: SearchEcfrParams,) => {
+    return [
+    `/api/ecfr/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchEcfrQueryOptions = <TData = Awaited<ReturnType<typeof searchEcfr>>, TError = ErrorType<unknown>>(params: SearchEcfrParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchEcfr>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchEcfrQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchEcfr>>> = ({ signal }) => searchEcfr(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchEcfr>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchEcfrQueryResult = NonNullable<Awaited<ReturnType<typeof searchEcfr>>>
+export type SearchEcfrQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Natural-language search over synced eCFR sections
+ */
+
+export function useSearchEcfr<TData = Awaited<ReturnType<typeof searchEcfr>>, TError = ErrorType<unknown>>(
+ params: SearchEcfrParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchEcfr>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchEcfrQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

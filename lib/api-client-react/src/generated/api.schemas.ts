@@ -227,6 +227,71 @@ export interface FdaIntelligence {
   disclaimer: string;
 }
 
+export interface EcfrCuratedPart {
+  title: number;
+  part: string;
+  category: string;
+  label: string;
+}
+
+export interface EcfrTitleCount {
+  title: number;
+  sections: number;
+}
+
+export interface EcfrStatus {
+  configured: boolean;
+  reachable: boolean;
+  synced: boolean;
+  totalSections: number;
+  countsByTitle: EcfrTitleCount[];
+  lastSyncedAt: string | null;
+  editionDate: string | null;
+  curatedParts: EcfrCuratedPart[];
+  checkedAt: string;
+  disclaimer: string;
+}
+
+export interface EcfrSyncFailure {
+  part: string;
+  error: string;
+}
+
+export interface EcfrSyncResult {
+  parts: number;
+  partsSynced: number;
+  sectionsStored: number;
+  failures: EcfrSyncFailure[];
+  at: string;
+}
+
+export interface EcfrSectionMatch {
+  citation: string;
+  heading: string;
+  snippet: string;
+  url: string | null;
+  title: number;
+  part: string;
+  editionDate: string | null;
+  similarity: number;
+}
+
+export interface EcfrIntelligence {
+  detectedCategory: string | null;
+  categoryLabel: string;
+  searchTerm: string | null;
+  sections: EcfrSectionMatch[];
+  available: boolean;
+  message: string | null;
+  disclaimer: string;
+}
+
+export interface EcfrSearchResult {
+  query: string;
+  results: EcfrSectionMatch[];
+  disclaimer: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -1838,6 +1903,15 @@ export const ListFdaRecallsCategory = {
 
 export type GetFdaIntelligenceParams = {
 packageId: number;
+};
+
+export type GetEcfrIntelligenceParams = {
+packageId: number;
+};
+
+export type SearchEcfrParams = {
+q: string;
+limit?: number;
 };
 
 export type ListRegulationsParams = {

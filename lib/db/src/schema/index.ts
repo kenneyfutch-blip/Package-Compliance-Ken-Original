@@ -20,5 +20,6 @@ export * from "./ai_providers";
 export * from "./reviews";
 export * from "./jobs";
 export * from "./compliance-memory";
+export * from "./ecfr";
 export * from "./policies";
 export * from "./policy_versions";

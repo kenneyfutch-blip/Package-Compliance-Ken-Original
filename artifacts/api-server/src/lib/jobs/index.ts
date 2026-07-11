@@ -4,6 +4,11 @@ import {
   SWEEP_INTERVAL_MS,
   runEscalationSweep,
 } from "../reviews/escalation";
+import {
+  ECFR_SYNC_TYPE,
+  ECFR_SYNC_INTERVAL_MS,
+  runEcfrSync,
+} from "../ecfr/sync";
 import { ensurePendingJob, ensureScheduledJob } from "./queue";
 import { registerJobHandler, startJobWorker } from "./worker";
 
@@ -24,11 +29,39 @@ export async function initJobs(): Promise<void> {
     return result;
   });
 
+  // Weekly eCFR content sync. Each run re-enqueues the next, mirroring the
+  // escalation-sweep pattern, so a single pending job keeps the cadence going.
+  registerJobHandler(ECFR_SYNC_TYPE, async () => {
+    const result = await runEcfrSync();
+    await ensurePendingJob({
+      type: ECFR_SYNC_TYPE,
+      runAt: new Date(Date.now() + ECFR_SYNC_INTERVAL_MS),
+    });
+    return {
+      parts: result.parts,
+      partsSynced: result.partsSynced,
+      sectionsStored: result.sectionsStored,
+      failures: result.failures,
+      at: result.at,
+    };
+  });
+
   startJobWorker();
 
   try {
     await ensureScheduledJob({ type: ESCALATION_SWEEP_TYPE });
   } catch (err) {
     logger.error({ err }, "Failed to schedule escalation sweep");
+  }
+
+  try {
+    // Schedule an initial sync shortly after startup so a fresh deploy populates
+    // eCFR content without waiting a week; recurring runs are weekly thereafter.
+    await ensureScheduledJob({
+      type: ECFR_SYNC_TYPE,
+      runAt: new Date(Date.now() + 30_000),
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to schedule eCFR sync");
   }
 }

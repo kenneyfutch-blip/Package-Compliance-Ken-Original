@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { ensureAuditImmutability } from "./lib/audit";
 import { initJobs } from "./lib/jobs";
 import { ensureMemoryIndexes } from "./lib/memory/engine";
+import { ensureEcfrIndexes } from "./lib/ecfr/engine";
 import { ensurePolicyIndexes } from "./lib/policies/engine";
 import { initMaintenance } from "./lib/maintenance/archive";
 import { backfillSupplierLinks } from "./lib/suppliers/link";
@@ -34,6 +35,9 @@ app.listen(port, (err) => {
 
   // Create the vector ANN index for Compliance Memory semantic search.
   void ensureMemoryIndexes();
+
+  // Create the vector ANN index for synced eCFR regulatory sections.
+  void ensureEcfrIndexes();
 
   // Create the vector ANN index for Internal Policy & Standards search.
   void ensurePolicyIndexes();

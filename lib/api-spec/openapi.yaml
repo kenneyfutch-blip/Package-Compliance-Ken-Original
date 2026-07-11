@@ -866,6 +866,75 @@ paths:
               schema:
                 $ref: "#/components/schemas/FdaIntelligence"
 
+  /ecfr/status:
+    get:
+      operationId: getEcfrStatus
+      tags: [regulations]
+      summary: eCFR regulatory data sync status & curated parts catalog (admin)
+      responses:
+        "200":
+          description: eCFR integration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EcfrStatus"
+
+  /ecfr/sync:
+    post:
+      operationId: syncEcfr
+      tags: [regulations]
+      summary: Trigger a refresh of synced eCFR content (admin)
+      responses:
+        "200":
+          description: eCFR sync result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EcfrSyncResult"
+
+  /ecfr/intelligence:
+    get:
+      operationId: getEcfrIntelligence
+      tags: [regulations]
+      summary: Applicable synced eCFR sections for a package
+      parameters:
+        - name: packageId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: eCFR intelligence for the package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EcfrIntelligence"
+
+  /ecfr/search:
+    get:
+      operationId: searchEcfr
+      tags: [regulations]
+      summary: Natural-language search over synced eCFR sections
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Matching eCFR sections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EcfrSearchResult"
+
   /regulations:
     get:
       operationId: listRegulations
@@ -2977,6 +3046,159 @@ components:
         message:
           type: string
           nullable: true
+        disclaimer:
+          type: string
+    EcfrCuratedPart:
+      type: object
+      required: [title, part, category, label]
+      properties:
+        title:
+          type: integer
+        part:
+          type: string
+        category:
+          type: string
+        label:
+          type: string
+    EcfrTitleCount:
+      type: object
+      required: [title, sections]
+      properties:
+        title:
+          type: integer
+        sections:
+          type: integer
+    EcfrStatus:
+      type: object
+      required:
+        [
+          configured,
+          reachable,
+          synced,
+          totalSections,
+          countsByTitle,
+          lastSyncedAt,
+          editionDate,
+          curatedParts,
+          checkedAt,
+          disclaimer,
+        ]
+      properties:
+        configured:
+          type: boolean
+        reachable:
+          type: boolean
+        synced:
+          type: boolean
+        totalSections:
+          type: integer
+        countsByTitle:
+          type: array
+          items:
+            $ref: "#/components/schemas/EcfrTitleCount"
+        lastSyncedAt:
+          type: string
+          nullable: true
+        editionDate:
+          type: string
+          nullable: true
+        curatedParts:
+          type: array
+          items:
+            $ref: "#/components/schemas/EcfrCuratedPart"
+        checkedAt:
+          type: string
+        disclaimer:
+          type: string
+    EcfrSyncFailure:
+      type: object
+      required: [part, error]
+      properties:
+        part:
+          type: string
+        error:
+          type: string
+    EcfrSyncResult:
+      type: object
+      required: [parts, partsSynced, sectionsStored, failures, at]
+      properties:
+        parts:
+          type: integer
+        partsSynced:
+          type: integer
+        sectionsStored:
+          type: integer
+        failures:
+          type: array
+          items:
+            $ref: "#/components/schemas/EcfrSyncFailure"
+        at:
+          type: string
+    EcfrSectionMatch:
+      type: object
+      required:
+        [citation, heading, snippet, url, title, part, editionDate, similarity]
+      properties:
+        citation:
+          type: string
+        heading:
+          type: string
+        snippet:
+          type: string
+        url:
+          type: string
+          nullable: true
+        title:
+          type: integer
+        part:
+          type: string
+        editionDate:
+          type: string
+          nullable: true
+        similarity:
+          type: number
+    EcfrIntelligence:
+      type: object
+      required:
+        [
+          detectedCategory,
+          categoryLabel,
+          searchTerm,
+          sections,
+          available,
+          message,
+          disclaimer,
+        ]
+      properties:
+        detectedCategory:
+          type: string
+          nullable: true
+        categoryLabel:
+          type: string
+        searchTerm:
+          type: string
+          nullable: true
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/EcfrSectionMatch"
+        available:
+          type: boolean
+        message:
+          type: string
+          nullable: true
+        disclaimer:
+          type: string
+    EcfrSearchResult:
+      type: object
+      required: [query, results, disclaimer]
+      properties:
+        query:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/EcfrSectionMatch"
         disclaimer:
           type: string
     HealthStatus:
