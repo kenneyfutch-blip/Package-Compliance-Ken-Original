@@ -449,6 +449,25 @@ export const ExtractArtworkTextResponse = zod.object({
 
 
 /**
+ * @summary Extract structured package metadata (product name, brand, UPC, net weight, country) from an uploaded packaging artwork image. Best-effort: unreadable fields come back empty.
+ */
+
+
+
+export const ExtractArtworkFieldsBody = zod.object({
+  "imageDataUrl": zod.string().min(1).describe('Data URL of the artwork image (data:image\/...;base64,...)')
+})
+
+export const ExtractArtworkFieldsResponse = zod.object({
+  "productName": zod.string(),
+  "brand": zod.string(),
+  "upc": zod.string(),
+  "netWeight": zod.string(),
+  "country": zod.string()
+}).describe('Best-effort structured fields extracted from packaging artwork for pre-filling the upload form. Any field that could not be confidently read is returned as an empty string.')
+
+
+/**
  * @summary Get a package with full compliance intelligence
  */
 export const GetPackageParams = zod.object({

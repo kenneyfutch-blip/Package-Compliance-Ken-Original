@@ -73,6 +73,7 @@ import type {
   OcrExtractResult,
   Package,
   PackageDetail,
+  PackageFieldsResult,
   PackageInput,
   PackageUpdate,
   PackageVersion,
@@ -1008,6 +1009,77 @@ export const useExtractArtworkText = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getExtractArtworkTextMutationOptions(options));
+    }
+
+export const getExtractArtworkFieldsUrl = () => {
+
+
+
+
+  return `/api/ocr/fields`
+}
+
+/**
+ * @summary Extract structured package metadata (product name, brand, UPC, net weight, country) from an uploaded packaging artwork image. Best-effort: unreadable fields come back empty.
+ */
+export const extractArtworkFields = async (ocrExtractInput: OcrExtractInput, options?: RequestInit): Promise<PackageFieldsResult> => {
+
+  return customFetch<PackageFieldsResult>(getExtractArtworkFieldsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ocrExtractInput)
+  }
+);}
+
+
+
+
+
+export const getExtractArtworkFieldsMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extractArtworkFields>>, TError,{data: BodyType<OcrExtractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof extractArtworkFields>>, TError,{data: BodyType<OcrExtractInput>}, TContext> => {
+
+const mutationKey = ['extractArtworkFields'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof extractArtworkFields>>, {data: BodyType<OcrExtractInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  extractArtworkFields(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExtractArtworkFieldsMutationResult = NonNullable<Awaited<ReturnType<typeof extractArtworkFields>>>
+    export type ExtractArtworkFieldsMutationBody = BodyType<OcrExtractInput>
+    export type ExtractArtworkFieldsMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Extract structured package metadata (product name, brand, UPC, net weight, country) from an uploaded packaging artwork image. Best-effort: unreadable fields come back empty.
+ */
+export const useExtractArtworkFields = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof extractArtworkFields>>, TError,{data: BodyType<OcrExtractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof extractArtworkFields>>,
+        TError,
+        {data: BodyType<OcrExtractInput>},
+        TContext
+      > => {
+      return useMutation(getExtractArtworkFieldsMutationOptions(options));
     }
 
 export const getGetPackageUrl = (id: number,) => {

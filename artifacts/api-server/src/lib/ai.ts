@@ -302,6 +302,78 @@ export async function extractTextFromImage(
   return response.choices[0]?.message?.content?.trim() ?? "";
 }
 
+export type ExtractedPackageFields = {
+  productName: string;
+  brand: string;
+  upc: string;
+  netWeight: string;
+  country: string;
+};
+
+/**
+ * Best-effort structured field extraction from a packaging artwork image, used
+ * to pre-fill the upload form. Returns empty strings for any field that cannot
+ * be confidently read (never throws for a missing field). UPC and brand are the
+ * least reliable to read, so they are only filled when clearly printed.
+ * Accepts a base64 data URL.
+ */
+export async function extractPackageFieldsFromImage(
+  imageDataUrl: string,
+): Promise<ExtractedPackageFields> {
+  const { client, model } = await resolveAiClient();
+
+  const system = `You extract structured metadata fields from a single retail product packaging artwork image, to pre-fill a data-entry form. Respond ONLY with valid minified JSON. Do not use emojis.
+
+Extract these fields, reading ONLY what is actually printed on the artwork (do not guess or invent values):
+- "productName": the product's name/title as shown on the principal display panel.
+- "brand": the brand or manufacturer brand name. This is often a logo and can be hard to read — only fill it when you are confident.
+- "upc": the 12-digit UPC number printed as digits beneath or beside the barcode. Only include the digits (no spaces). Barcodes are hard to read — only fill this when the printed digits are clearly legible; otherwise leave it empty.
+- "netWeight": the net quantity / net weight statement exactly as printed (e.g. "16 oz (454g)", "500 mL").
+- "country": the country of origin / country statement if printed (e.g. "USA", "Made in China").
+
+Rules:
+- For any field you cannot confidently read, return an empty string "".
+- Preserve the printed spelling and casing.
+- Respond with JSON of shape: {"productName":string,"brand":string,"upc":string,"netWeight":string,"country":string}`;
+
+  let parsed: any = {};
+  try {
+    const response = await client.chat.completions.create({
+      model,
+      messages: [
+        { role: "system", content: system },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "Extract the structured package metadata fields from this packaging artwork. Leave any field you cannot confidently read as an empty string.",
+            },
+            { type: "image_url", image_url: { url: imageDataUrl } },
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+      max_completion_tokens: 1024,
+    });
+    parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
+  } catch {
+    parsed = {};
+  }
+
+  const clean = (v: unknown): string =>
+    typeof v === "string" ? v.trim() : "";
+  const upc = clean(parsed?.upc).replace(/[^0-9]/g, "");
+
+  return {
+    productName: clean(parsed?.productName),
+    brand: clean(parsed?.brand),
+    upc,
+    netWeight: clean(parsed?.netWeight),
+    country: clean(parsed?.country),
+  };
+}
+
 export type CopilotCitation = {
   source: string;
   section: string | null;

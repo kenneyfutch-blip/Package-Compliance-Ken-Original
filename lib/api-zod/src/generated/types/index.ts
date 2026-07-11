@@ -85,6 +85,7 @@ export * from './ocrExtractInput';
 export * from './ocrExtractResult';
 export * from './package';
 export * from './packageDetail';
+export * from './packageFieldsResult';
 export * from './packageInput';
 export * from './packageUpdate';
 export * from './packageVersion';

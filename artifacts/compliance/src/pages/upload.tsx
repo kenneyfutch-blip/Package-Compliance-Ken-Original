@@ -6,6 +6,7 @@ import { z } from "zod"
 import {
   useCreatePackage,
   useExtractArtworkText,
+  useExtractArtworkFields,
   useCheckPackageDuplicates,
   getCheckPackageDuplicatesQueryKey,
   type Package,
@@ -78,9 +79,12 @@ export default function UploadPage() {
   const createPackage = useCreatePackage()
   const { uploadFile, isUploading } = useUpload()
   const extractText = useExtractArtworkText()
+  const extractFields = useExtractArtworkFields()
   const [dragActive, setDragActive] = useState(false)
   const [demoLoaded, setDemoLoaded] = useState(false)
   const [ocrError, setOcrError] = useState<string | null>(null)
+  // Metadata fields that were auto-filled from the artwork and should be reviewed.
+  const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set())
   const [artwork, setArtwork] = useState<{ name: string; type: string; url: string; preview: string | null } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -160,10 +164,47 @@ export default function UploadPage() {
     if (!res) return
     // objectPath like /objects/uploads/uuid -> stored as-is; served via /api/storage
     setArtwork({ name: file.name, type, url: res.objectPath, preview })
-    // For renderable images, auto-extract copy via OCR to pre-fill the analysis input.
+    // For renderable images, auto-extract copy via OCR to pre-fill the analysis
+    // input, and (best-effort) structured fields to pre-fill the metadata form.
     if (type === "png" || type === "jpg") {
+      let dataUrl: string
       try {
-        const dataUrl = await fileToDownscaledDataUrl(file)
+        dataUrl = await fileToDownscaledDataUrl(file)
+      } catch (err) {
+        setOcrError(err instanceof Error ? err.message : "Failed to read the image.")
+        return
+      }
+
+      // Kick off the best-effort field extraction alongside the OCR text read.
+      // It is fail-safe: unread fields come back empty and it never blocks the
+      // upload or surfaces an error.
+      const fieldsPromise = extractFields
+        .mutateAsync({ data: { imageDataUrl: dataUrl } })
+        .then((fields) => {
+          // Non-destructive: only fill metadata inputs the user hasn't touched.
+          const map: Array<[keyof UploadFormValues, string]> = [
+            ["name", fields.productName],
+            ["brand", fields.brand],
+            ["upc", fields.upc],
+            ["netWeight", fields.netWeight],
+            ["country", fields.country],
+          ]
+          const filled = new Set<string>()
+          for (const [field, value] of map) {
+            const v = value?.trim() ?? ""
+            const current = (watch(field) ?? "").toString().trim()
+            if (v && !current) {
+              setValue(field, v, { shouldValidate: true })
+              filled.add(field)
+            }
+          }
+          if (filled.size > 0) setAutoFilled((prev) => new Set([...prev, ...filled]))
+        })
+        .catch(() => {
+          // Field extraction is best-effort; swallow errors silently.
+        })
+
+      try {
         const result = await extractText.mutateAsync({ data: { imageDataUrl: dataUrl } })
         const text = result.text?.trim() ?? ""
         if (text) setValue("extractedText", text, { shouldValidate: true })
@@ -171,6 +212,7 @@ export default function UploadPage() {
       } catch (err) {
         setOcrError(err instanceof Error ? err.message : "Failed to read text from the image.")
       }
+      await fieldsPromise
     }
   }
 
@@ -207,6 +249,16 @@ export default function UploadPage() {
 
   const isPending = createPackage.isPending
 
+  // Subtle affordance for fields auto-filled from the artwork that need review.
+  const reviewClass = (field: string) =>
+    autoFilled.has(field) ? "border-amber-500/60 focus-visible:ring-amber-500/40" : ""
+  const ReviewHint = ({ field }: { field: string }) =>
+    autoFilled.has(field) ? (
+      <span className="text-[11px] text-amber-600 dark:text-amber-400 inline-flex items-center gap-1">
+        <Wand2 className="w-3 h-3" /> Auto-filled — review
+      </span>
+    ) : null
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
       <div className="flex justify-between items-end">
@@ -237,18 +289,25 @@ export default function UploadPage() {
                 {artwork.type.toUpperCase()} uploaded{!RENDERABLE.includes(artwork.type) ? " — tracked only (no visual proof rendering)" : " — ready for visual proofing"}
               </p>
               {(artwork.type === "png" || artwork.type === "jpg") && (
-                <div className="mt-1 text-xs">
-                  {extractText.isPending ? (
+                <div className="mt-1 text-xs space-y-0.5">
+                  {(extractText.isPending || extractFields.isPending) ? (
                     <span className="inline-flex items-center gap-1 text-primary"><Loader2 className="w-3 h-3 animate-spin" /> Extracting text with OCR…</span>
-                  ) : ocrError ? (
-                    <span className="text-destructive">{ocrError}</span>
-                  ) : watch("extractedText") ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><ScanText className="w-3 h-3" /> Text extracted — review it below.</span>
-                  ) : null}
+                  ) : (
+                    <>
+                      {ocrError ? (
+                        <span className="text-destructive">{ocrError}</span>
+                      ) : watch("extractedText") ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><ScanText className="w-3 h-3" /> Text extracted — review it below.</span>
+                      ) : null}
+                      {autoFilled.size > 0 && (
+                        <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><Wand2 className="w-3 h-3" /> Metadata auto-filled from artwork — review the highlighted fields.</span>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
-            <Button type="button" variant="ghost" size="icon" onClick={() => { setArtwork(null); setOcrError(null) }}><X className="w-4 h-4" /></Button>
+            <Button type="button" variant="ghost" size="icon" onClick={() => { setArtwork(null); setOcrError(null); setAutoFilled(new Set()) }}><X className="w-4 h-4" /></Button>
           </div>
         ) : (
           <div
@@ -311,18 +370,27 @@ export default function UploadPage() {
                   <Input id="sku" {...register("sku")} className={errors.sku ? "border-destructive" : ""} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="upc">UPC</Label>
-                  <Input id="upc" {...register("upc")} />
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="upc">UPC</Label>
+                    <ReviewHint field="upc" />
+                  </div>
+                  <Input id="upc" {...register("upc")} className={reviewClass("upc")} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="name">Product Name <span className="text-destructive">*</span></Label>
-                <Input id="name" {...register("name")} className={errors.name ? "border-destructive" : ""} />
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="name">Product Name <span className="text-destructive">*</span></Label>
+                  <ReviewHint field="name" />
+                </div>
+                <Input id="name" {...register("name")} className={errors.name ? "border-destructive" : reviewClass("name")} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="brand">Brand <span className="text-destructive">*</span></Label>
-                  <Input id="brand" {...register("brand")} className={errors.brand ? "border-destructive" : ""} />
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="brand">Brand <span className="text-destructive">*</span></Label>
+                    <ReviewHint field="brand" />
+                  </div>
+                  <Input id="brand" {...register("brand")} className={errors.brand ? "border-destructive" : reviewClass("brand")} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vendor">Vendor <span className="text-destructive">*</span></Label>
@@ -335,9 +403,19 @@ export default function UploadPage() {
                   <Input id="category" {...register("category")} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="country">Country</Label>
-                  <Input id="country" {...register("country")} />
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="country">Country</Label>
+                    <ReviewHint field="country" />
+                  </div>
+                  <Input id="country" {...register("country")} className={reviewClass("country")} />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="netWeight">Net Weight</Label>
+                  <ReviewHint field="netWeight" />
+                </div>
+                <Input id="netWeight" {...register("netWeight")} className={reviewClass("netWeight")} />
               </div>
             </CardContent>
           </Card>

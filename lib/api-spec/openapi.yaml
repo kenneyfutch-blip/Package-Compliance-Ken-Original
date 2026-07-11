@@ -306,6 +306,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /ocr/fields:
+    post:
+      operationId: extractArtworkFields
+      tags: [packages]
+      summary: >-
+        Extract structured package metadata (product name, brand, UPC, net
+        weight, country) from an uploaded packaging artwork image. Best-effort:
+        unreadable fields come back empty.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OcrExtractInput"
+      responses:
+        "200":
+          description: Extracted package fields (empty strings for unread fields)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageFieldsResult"
+        "400":
+          description: Invalid image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
   /packages/{id}:
     get:
       operationId: getPackage
@@ -3984,6 +4012,30 @@ components:
           type: string
       required:
         - text
+
+    PackageFieldsResult:
+      type: object
+      description: >-
+        Best-effort structured fields extracted from packaging artwork for
+        pre-filling the upload form. Any field that could not be confidently
+        read is returned as an empty string.
+      properties:
+        productName:
+          type: string
+        brand:
+          type: string
+        upc:
+          type: string
+        netWeight:
+          type: string
+        country:
+          type: string
+      required:
+        - productName
+        - brand
+        - upc
+        - netWeight
+        - country
 
     PackageInput:
       type: object

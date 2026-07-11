@@ -951,6 +951,17 @@ export interface OcrExtractResult {
   text: string;
 }
 
+/**
+ * Best-effort structured fields extracted from packaging artwork for pre-filling the upload form. Any field that could not be confidently read is returned as an empty string.
+ */
+export interface PackageFieldsResult {
+  productName: string;
+  brand: string;
+  upc: string;
+  netWeight: string;
+  country: string;
+}
+
 export interface PackageInput {
   /** @minLength 1 */
   sku: string;
