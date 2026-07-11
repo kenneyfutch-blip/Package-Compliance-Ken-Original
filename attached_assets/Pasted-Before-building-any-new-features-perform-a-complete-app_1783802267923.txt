@@ -1,0 +1,101 @@
+Before building any new features, perform a complete application architecture audit and gap analysis.
+
+====================================================
+PACKAGING COMPLIANCE PLATFORM FEATURE AUDIT
+====================================================
+
+Review the entire application and determine which of the following capabilities are already implemented, partially implemented, or missing.
+
+For each feature provide:
+
+Status:
+- Complete
+- Partially Complete
+- Missing
+
+Implementation Details:
+- Existing pages
+- Existing database tables
+- Existing APIs
+- Existing services
+- Existing background jobs
+- Existing UI components
+
+Gap Analysis:
+- What is missing
+- What needs enhancement
+- Recommended next steps
+
+Do not assume features exist.
+
+Inspect the actual codebase and architecture.
+
+====================================================
+AUDIT CATEGORY 1
+VERSION MANAGEMENT
+====================================================
+
+Verify:
+
+- Package Version Tracking
+- Version History
+- Version Comparison
+- Change Detection
+- V1 vs V2 Review
+- Change Logs
+
+Questions:
+
+Can users compare versions?
+
+Can the system identify:
+
+- Added Claims
+- Removed Claims
+- Ingredient Changes
+- Warning Changes
+- Regulatory Changes
+
+====================================================
+AUDIT CATEGORY 2
+AI CHANGE IMPACT ANALYZER
+====================================================
+
+Verify:
+
+Does the system automatically compare package revisions?
+
+Can AI identify:
+
+- Increased Risk
+- Reduced Risk
+- New Compliance Issues
+- New Claims
+- New Regulatory Requirements
+
+Can AI generate an impact summary?
+
+====================================================
+AUDIT CATEGORY 3
+DUPLICATE PACKAGE DETECTION
+====================================================
+
+Verify:
+
+Can the system detect:
+
+- Duplicate SKU
+- Duplicate UPC
+- Similar Packaging
+- Existing Reviews
+
+Can users accidentally create duplicate reviews?
+
+====================================================
+AUDIT CATEGORY 4
+SIMILARITY ENGINE
+====================================================
+
+Verify:
+
+Can the system
