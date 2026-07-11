@@ -29,6 +29,7 @@ import {
   normalizeEngine,
   isClaimEngine,
   CANONICAL_ENGINES,
+  hasDistinctFix,
 } from "@/lib/compliance"
 
 type Mode = "center" | "fixes" | "claims" | "memory"
@@ -184,7 +185,7 @@ export default function ViolationsView({ mode }: { mode: Mode }) {
                       </div>
                     )}
 
-                    {v.suggestedText && (
+                    {hasDistinctFix(v.detectedText, v.suggestedText) && (
                       <div className="rounded-lg border border-success/30 bg-success/5 p-3">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-semibold text-success uppercase tracking-wide">Suggested Fix</span>

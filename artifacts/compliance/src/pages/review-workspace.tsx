@@ -37,6 +37,7 @@ import {
   extractMentions, relativeTime, HUMAN_MARKUP_COLOR, fileTypeFromName,
 } from "@/lib/proof-utils"
 import { cn } from "@/lib/utils"
+import { hasDistinctFix } from "@/lib/compliance"
 import { LanguageReviewTab } from "@/components/language-review-tab"
 import { DocumentAiTab } from "@/components/document-ai-tab"
 
@@ -381,6 +382,15 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
             const meta = findingClassMeta(v.findingClass)
             const ann = annForViolation(v.id)
             const selected = ann && ann.id === selectedId
+            // Only a genuine correction when the suggestion actually differs
+            // from the detected text; otherwise fall back to a plain note so we
+            // never render a "X → X" no-op fix.
+            const isCorrection =
+              Boolean(v.detectedText?.trim()) &&
+              hasDistinctFix(v.detectedText, v.suggestedText)
+            const fixNote = isCorrection
+              ? null
+              : v.recommendation || (!v.detectedText ? v.suggestedText : null) || null
             return (
               <button key={v.id} type="button" onClick={() => ann && onSelect(ann.id)}
                 className={cn("w-full text-left p-3 rounded-lg border bg-card space-y-1.5 transition-colors", selected ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground/40")}>
@@ -397,12 +407,12 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
                   {v.confidence != null && <span className="text-[10px] text-muted-foreground">Confidence {v.confidence}%</span>}
                   {v.claimFlags?.map((f) => <Badge key={f} variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">{f}</Badge>)}
                 </div>
-                {(v.suggestedText || v.recommendation) && (
+                {(isCorrection || fixNote) && (
                   <div className="mt-1 p-2 bg-accent/50 rounded border border-border text-xs">
-                    {v.detectedText && v.suggestedText ? (
+                    {isCorrection ? (
                       <span className="font-mono"><span className="text-destructive line-through mr-2">{v.detectedText}</span><span className="text-success">{v.suggestedText}</span></span>
                     ) : (
-                      <span><span className="font-semibold text-muted-foreground">Fix: </span>{v.suggestedText ?? v.recommendation}</span>
+                      <span><span className="font-semibold text-muted-foreground">Fix: </span>{fixNote}</span>
                     )}
                   </div>
                 )}

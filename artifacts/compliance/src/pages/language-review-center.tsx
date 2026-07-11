@@ -27,7 +27,7 @@ import {
   XCircle,
   History,
 } from "lucide-react"
-import { severityMeta } from "@/lib/compliance"
+import { severityMeta, hasDistinctFix } from "@/lib/compliance"
 
 const ISSUE_TYPES = [
   "Spelling",
@@ -211,14 +211,21 @@ export default function LanguageReviewCenter() {
                     )}
                   </div>
 
-                  {f.originalText && (
+                  {f.originalText && hasDistinctFix(f.originalText, f.suggestedText) && (
                     <div className="text-sm">
                       <span className="text-muted-foreground">Original: </span>
                       <span className="font-medium text-destructive line-through">{f.originalText}</span>
                     </div>
                   )}
 
-                  {f.suggestedText && (
+                  {f.originalText && !hasDistinctFix(f.originalText, f.suggestedText) && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Reviewed copy: </span>
+                      <span className="font-medium">"{f.originalText}"</span>
+                    </div>
+                  )}
+
+                  {hasDistinctFix(f.originalText, f.suggestedText) && (
                     <div className="rounded-lg border border-success/30 bg-success/5 p-3">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-xs font-semibold text-success uppercase tracking-wide">Suggested Fix</span>
@@ -262,9 +269,9 @@ export default function LanguageReviewCenter() {
                           variant="outline"
                           className="h-8 gap-1.5 text-success border-success/30 hover:bg-success/10"
                           disabled={update.isPending}
-                          onClick={() => setStatusFor(f.id, "Approved", f.suggestedText ?? undefined)}
+                          onClick={() => setStatusFor(f.id, "Approved", hasDistinctFix(f.originalText, f.suggestedText) ? f.suggestedText ?? undefined : undefined)}
                         >
-                          <CheckCircle className="w-3.5 h-3.5" /> Approve fix
+                          <CheckCircle className="w-3.5 h-3.5" /> {hasDistinctFix(f.originalText, f.suggestedText) ? "Approve fix" : "Acknowledge"}
                         </Button>
                         <Button
                           size="sm"

@@ -80,6 +80,19 @@ export function gradePoints(grade?: string | null): number | null {
   return map[grade] ?? null
 }
 
+// A finding is only a genuine correction when it proposes replacement text that
+// actually differs from the original/detected text. Informational or compliant
+// notes often echo the original wording back as the "suggestion" — those must
+// not be shown as a strikethrough → fix pair, which reads as a no-op edit.
+export function hasDistinctFix(
+  original?: string | null,
+  suggested?: string | null,
+): boolean {
+  const s = (suggested ?? "").trim()
+  if (!s) return false
+  return s.toLowerCase() !== (original ?? "").trim().toLowerCase()
+}
+
 export function pointsToGrade(pts: number): string {
   if (pts >= 3.5) return "A"
   if (pts >= 2.5) return "B"
