@@ -13,3 +13,4 @@
 - [Compliance Memory & Scalability](compliance-memory-scalability.md) — self-contained hashed embedder + pgvector recall (org+supplier scoped, non-fatal); push-safe audit archiving in archive schema; governed-delete GUC; named dollar-quote tags in drizzle sql; SQL dashboards must match old JS semantics.
 - [Clerk web 401 stale session](clerk-web-401-stale-session.md) — "No access"/blank with __session cookie present + keys matching = stale token, not code bug; reload/restart client to fix.
 - [Schema push data loss](schema-push-data-loss.md) — drizzle push can drop/recreate a table and cascade-wipe dependents; seed.ts is the full-reset restore; watch row counts around schema changes.
+- [Package duplicate prevention](duplicate-prevention.md) — sku/upc intentionally non-unique; soft 409 guard (allowDuplicate bypass) + scoped lookup + client warning; debounced override must exact-match submitted ids.

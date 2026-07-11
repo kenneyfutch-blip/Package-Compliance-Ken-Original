@@ -1,9 +1,15 @@
-import { useRef, useState } from "react"
-import { useLocation } from "wouter"
+import { useEffect, useRef, useState } from "react"
+import { Link, useLocation } from "wouter"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { useCreatePackage, useExtractArtworkText } from "@workspace/api-client-react"
+import {
+  useCreatePackage,
+  useExtractArtworkText,
+  useCheckPackageDuplicates,
+  getCheckPackageDuplicatesQueryKey,
+  type Package,
+} from "@workspace/api-client-react"
 import { useUpload } from "@workspace/object-storage-web"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -11,7 +17,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { UploadCloud, Wand2, Loader2, Info, FileText, X, CheckCircle2, ScanText } from "lucide-react"
+import { UploadCloud, Wand2, Loader2, Info, FileText, X, CheckCircle2, ScanText, AlertTriangle } from "lucide-react"
 import { fileTypeFromName } from "@/lib/proof-utils"
 
 const ACCEPT = ".png,.jpg,.jpeg,.pdf,.ai,.indd"
@@ -89,12 +95,58 @@ export default function UploadPage() {
     }
   })
 
+  // Debounce the identifiers so we only hit the duplicate-check endpoint after
+  // the user pauses typing, not on every keystroke.
+  const skuValue = watch("sku")
+  const upcValue = watch("upc")
+  const [dupQuery, setDupQuery] = useState({ sku: "", upc: "" })
+  useEffect(() => {
+    const t = setTimeout(() => setDupQuery({ sku: skuValue?.trim() ?? "", upc: upcValue?.trim() ?? "" }), 400)
+    return () => clearTimeout(t)
+  }, [skuValue, upcValue])
+
+  const dupParams = { sku: dupQuery.sku || undefined, upc: dupQuery.upc || undefined }
+  const { data: dupData } = useCheckPackageDuplicates(dupParams, {
+    query: {
+      enabled: dupQuery.sku.length > 0 || dupQuery.upc.length > 0,
+      queryKey: getCheckPackageDuplicatesQueryKey(dupParams),
+    },
+  })
+
+  // Client-side detected matches (proactive warning) plus any surfaced by the
+  // server as a 409 backstop when the client check missed a late duplicate.
+  const [serverDuplicates, setServerDuplicates] = useState<Package[]>([])
+  const duplicates: Package[] = serverDuplicates.length > 0 ? serverDuplicates : (dupData?.matches ?? [])
+  const hasDuplicates = duplicates.length > 0
+
+  // Reset any server-surfaced conflict once the identifiers change.
+  useEffect(() => { setServerDuplicates([]) }, [dupQuery.sku, dupQuery.upc])
+
   const onSubmit = (data: UploadFormValues) => {
-    const payload = artwork ? { ...data, artworkUrl: artwork.url } : data
+    // Only treat the submit as an explicit override when the duplicates we're
+    // showing were computed for the EXACT identifiers now being submitted. If
+    // the user edited SKU/UPC within the debounce window, dupQuery is stale, so
+    // we withhold allowDuplicate and let the server's 409 guard re-check.
+    const submitSku = data.sku?.trim() ?? ""
+    const submitUpc = data.upc?.trim() ?? ""
+    const checkedCurrentValues = dupQuery.sku === submitSku && dupQuery.upc === submitUpc
+    const override = hasDuplicates && checkedCurrentValues
+    const payload = {
+      ...data,
+      ...(artwork ? { artworkUrl: artwork.url } : {}),
+      ...(override ? { allowDuplicate: true } : {}),
+    }
     createPackage.mutate({ data: payload }, {
       onSuccess: (res) => {
         setLocation(`/reviews/${res.id}`)
-      }
+      },
+      onError: (err: unknown) => {
+        // Backstop: a duplicate slipped past the client check (e.g. a race).
+        if (err && typeof err === "object" && (err as { status?: number }).status === 409) {
+          const body = (err as { data?: { duplicates?: Package[] } }).data
+          if (body?.duplicates?.length) setServerDuplicates(body.duplicates)
+        }
+      },
     })
   }
 
@@ -218,6 +270,34 @@ export default function UploadPage() {
           </div>
         )}
 
+        {hasDuplicates && (
+          <div className="border border-amber-500/40 bg-amber-500/10 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-amber-900 dark:text-amber-200">
+                  {duplicates.length === 1 ? "A matching package already exists" : `${duplicates.length} matching packages already exist`}
+                </p>
+                <p className="text-sm text-amber-800/80 dark:text-amber-200/70 mt-0.5">
+                  These records share this SKU or UPC. Creating another will produce a duplicate review. Confirm this is intentional before proceeding.
+                </p>
+                <ul className="mt-3 space-y-1.5">
+                  {duplicates.slice(0, 5).map((d) => (
+                    <li key={d.id} className="flex items-center gap-2 text-sm">
+                      <Link href={`/reviews/${d.id}`} className="font-medium text-primary hover:underline truncate">
+                        {d.name}
+                      </Link>
+                      <span className="text-muted-foreground shrink-0">
+                        SKU {d.sku}{d.upc ? ` · UPC ${d.upc}` : ""} · {d.status}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -285,9 +365,16 @@ export default function UploadPage() {
 
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={() => window.history.back()}>Cancel</Button>
-          <Button type="submit" disabled={isPending} className="min-w-[150px]">
+          <Button
+            type="submit"
+            disabled={isPending}
+            variant={hasDuplicates ? "destructive" : "default"}
+            className="min-w-[150px]"
+          >
             {isPending ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing...</>
+            ) : hasDuplicates ? (
+              "Upload Anyway"
             ) : (
               "Upload & Analyze"
             )}

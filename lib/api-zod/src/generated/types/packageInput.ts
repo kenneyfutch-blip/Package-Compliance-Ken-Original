@@ -25,4 +25,6 @@ export interface PackageInput {
   manufacturingRegion?: string;
   artworkUrl?: string;
   extractedText?: string;
+  /** When true, bypass the duplicate SKU/UPC guard and create anyway. */
+  allowDuplicate?: boolean;
 }

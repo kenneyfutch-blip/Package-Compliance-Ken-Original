@@ -185,6 +185,44 @@ router.get(
   },
 );
 
+// Look up existing packages in the caller's scope that collide with a proposed
+// SKU (case-insensitive) or UPC (exact). Reuses packageConds so the lookup is
+// org-scoped (and supplier-scoped for supplier users).
+async function findDuplicatePackages(
+  req: Request,
+  sku?: string | null,
+  upc?: string | null,
+): Promise<PackageRow[]> {
+  const trimmedSku = sku?.trim();
+  const trimmedUpc = upc?.trim();
+  const matchers: SQL[] = [];
+  if (trimmedSku) matchers.push(ilike(packagesTable.sku, trimmedSku));
+  if (trimmedUpc) matchers.push(eq(packagesTable.upc, trimmedUpc));
+  if (matchers.length === 0) return [];
+
+  return db
+    .select()
+    .from(packagesTable)
+    .where(and(...packageConds(req), or(...matchers)!))
+    .orderBy(desc(packagesTable.createdAt));
+}
+
+// GET /packages/duplicates — registered before /packages/:id so the literal
+// path is not captured by the :id param route.
+router.get(
+  "/packages/duplicates",
+  requirePermission("packages:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const { sku, upc } = req.query;
+    const matches = await findDuplicatePackages(
+      req,
+      typeof sku === "string" ? sku : undefined,
+      typeof upc === "string" ? upc : undefined,
+    );
+    res.json({ matches: matches.map(mapPackage) });
+  },
+);
+
 // POST /packages
 router.post(
   "/packages",
@@ -197,6 +235,23 @@ router.post(
     }
     const data = parsed.data;
     const organizationId = orgId(req);
+
+    // Duplicate guard: block accidental re-creation of a package with the same
+    // SKU/UPC unless the caller explicitly opts in. Protects the API/bulk paths
+    // too, not just the upload form.
+    if (!data.allowDuplicate) {
+      const duplicates = await findDuplicatePackages(req, data.sku, data.upc);
+      if (duplicates.length > 0) {
+        const skuMatch = duplicates.some(
+          (d) => d.sku.trim().toLowerCase() === data.sku.trim().toLowerCase(),
+        );
+        res.status(409).json({
+          error: `A package with this ${skuMatch ? "SKU" : "UPC"} already exists.`,
+          duplicates: duplicates.map(mapPackage),
+        });
+        return;
+      }
+    }
     // Link to the master supplier record by id (creating it on first sight) so
     // scoping and joins never rely on matching the free-text vendor name.
     const supplierId = await resolveSupplierId(organizationId, data.vendor);

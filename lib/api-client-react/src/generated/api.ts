@@ -37,6 +37,7 @@ import type {
   BulkAnalyzeResult,
   BulkLanguageReviewInput,
   BulkLanguageReviewResult,
+  CheckPackageDuplicatesParams,
   CommentReplyInput,
   CopilotAnswer,
   CopilotInput,
@@ -44,6 +45,8 @@ import type {
   DistributionItem,
   DocumentAiStatus,
   DocumentExtraction,
+  DuplicateConflict,
+  DuplicatePackageCheck,
   ErrorEnvelope,
   FdaIntelligence,
   FdaRecallResponse,
@@ -799,7 +802,7 @@ export const createPackage = async (packageInput: PackageInput, options?: Reques
 
 
 
-export const getCreatePackageMutationOptions = <TError = ErrorType<unknown>,
+export const getCreatePackageMutationOptions = <TError = ErrorType<DuplicateConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPackage>>, TError,{data: BodyType<PackageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createPackage>>, TError,{data: BodyType<PackageInput>}, TContext> => {
 
@@ -828,12 +831,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreatePackageMutationResult = NonNullable<Awaited<ReturnType<typeof createPackage>>>
     export type CreatePackageMutationBody = BodyType<PackageInput>
-    export type CreatePackageMutationError = ErrorType<unknown>
+    export type CreatePackageMutationError = ErrorType<DuplicateConflict>
 
     /**
  * @summary Upload a package for review (auto-runs AI analysis when artwork text is provided)
  */
-export const useCreatePackage = <TError = ErrorType<unknown>,
+export const useCreatePackage = <TError = ErrorType<DuplicateConflict>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPackage>>, TError,{data: BodyType<PackageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createPackage>>,
@@ -843,6 +846,90 @@ export const useCreatePackage = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreatePackageMutationOptions(options));
     }
+
+export const getCheckPackageDuplicatesUrl = (params?: CheckPackageDuplicatesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/packages/duplicates?${stringifiedParams}` : `/api/packages/duplicates`
+}
+
+/**
+ * @summary Check for existing packages with the same SKU or UPC
+ */
+export const checkPackageDuplicates = async (params?: CheckPackageDuplicatesParams, options?: RequestInit): Promise<DuplicatePackageCheck> => {
+
+  return customFetch<DuplicatePackageCheck>(getCheckPackageDuplicatesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCheckPackageDuplicatesQueryKey = (params?: CheckPackageDuplicatesParams,) => {
+    return [
+    `/api/packages/duplicates`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getCheckPackageDuplicatesQueryOptions = <TData = Awaited<ReturnType<typeof checkPackageDuplicates>>, TError = ErrorType<unknown>>(params?: CheckPackageDuplicatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkPackageDuplicates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCheckPackageDuplicatesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkPackageDuplicates>>> = ({ signal }) => checkPackageDuplicates(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof checkPackageDuplicates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CheckPackageDuplicatesQueryResult = NonNullable<Awaited<ReturnType<typeof checkPackageDuplicates>>>
+export type CheckPackageDuplicatesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Check for existing packages with the same SKU or UPC
+ */
+
+export function useCheckPackageDuplicates<TData = Awaited<ReturnType<typeof checkPackageDuplicates>>, TError = ErrorType<unknown>>(
+ params?: CheckPackageDuplicatesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkPackageDuplicates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCheckPackageDuplicatesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getExtractArtworkTextUrl = () => {
 

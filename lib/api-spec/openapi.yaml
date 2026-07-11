@@ -248,6 +248,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PackageDetail"
+        "409":
+          description: A package with the same SKU or UPC already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicateConflict"
+
+  /packages/duplicates:
+    get:
+      operationId: checkPackageDuplicates
+      tags: [packages]
+      summary: Check for existing packages with the same SKU or UPC
+      parameters:
+        - name: sku
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: upc
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching packages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DuplicatePackageCheck"
 
   /ocr:
     post:
@@ -3534,11 +3564,37 @@ components:
           type: string
         extractedText:
           type: string
+        allowDuplicate:
+          type: boolean
+          description: When true, bypass the duplicate SKU/UPC guard and create anyway.
       required:
         - sku
         - name
         - brand
         - vendor
+
+    DuplicatePackageCheck:
+      type: object
+      properties:
+        matches:
+          type: array
+          items:
+            $ref: "#/components/schemas/Package"
+      required:
+        - matches
+
+    DuplicateConflict:
+      type: object
+      properties:
+        error:
+          type: string
+        duplicates:
+          type: array
+          items:
+            $ref: "#/components/schemas/Package"
+      required:
+        - error
+        - duplicates
 
     PackageUpdate:
       type: object

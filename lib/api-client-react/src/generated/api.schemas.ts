@@ -876,6 +876,17 @@ export interface PackageInput {
   manufacturingRegion?: string;
   artworkUrl?: string;
   extractedText?: string;
+  /** When true, bypass the duplicate SKU/UPC guard and create anyway. */
+  allowDuplicate?: boolean;
+}
+
+export interface DuplicatePackageCheck {
+  matches: Package[];
+}
+
+export interface DuplicateConflict {
+  error: string;
+  duplicates: Package[];
 }
 
 export interface PackageUpdate {
@@ -1644,6 +1655,11 @@ category?: string;
 risk?: string;
 engine?: string;
 vendor?: string;
+};
+
+export type CheckPackageDuplicatesParams = {
+sku?: string;
+upc?: string;
 };
 
 export type ListLanguageFindingsParams = {

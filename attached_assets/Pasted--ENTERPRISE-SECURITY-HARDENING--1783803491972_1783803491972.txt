@@ -1,0 +1,301 @@
+====================================================
+ENTERPRISE SECURITY HARDENING
+====================================================
+
+This application contains regulatory, operational, supplier, audit, and compliance data.
+
+Implement enterprise-grade security controls across the platform.
+
+====================================================
+SECRETS MANAGEMENT
+====================================================
+
+Use Replit Secrets for all credentials.
+
+Never hardcode:
+
+- API Keys
+- Service Account Credentials
+- Database Passwords
+- OAuth Secrets
+- Tokens
+
+Store:
+
+OPENAI_API_KEY
+
+GOOGLE_PROJECT_ID
+
+DOCUMENT_AI_PROCESSOR_ID
+
+DOCUMENT_AI_SERVICE_ACCOUNT
+
+FDA_API_KEY
+
+DATABASE_URL
+
+REDIS_URL
+
+SESSION_SECRET
+
+JWT_SECRET
+
+All application services must load credentials from environment variables only.
+
+====================================================
+AUTHENTICATION
+====================================================
+
+Implement enterprise authentication.
+
+Support:
+
+- MFA Ready Architecture
+- Session Management
+- Password Policies
+- SSO Ready Architecture
+- OAuth Support
+- Role Based Access Control
+
+All endpoints must require authentication unless explicitly public.
+
+====================================================
+ROLE BASED ACCESS CONTROL
+====================================================
+
+Enforce RBAC at API and UI layers.
+
+Roles:
+
+Platform Administrator
+
+Tenant Administrator
+
+Compliance Director
+
+Compliance Manager
+
+Compliance Specialist
+
+Legal Reviewer
+
+Packaging Manager
+
+Designer
+
+Supplier User
+
+Executive Viewer
+
+Read Only User
+
+No user should access data outside assigned permissions.
+
+====================================================
+MULTI-TENANT SECURITY
+====================================================
+
+Implement tenant isolation.
+
+Every request must validate:
+
+- Tenant ID
+- User Permissions
+- Role
+- Resource Ownership
+
+Users must only access data authorized for their tenant and role.
+
+Prevent cross-tenant data exposure.
+
+====================================================
+AUDIT LOGGING
+====================================================
+
+Create immutable audit logs.
+
+Track:
+
+Login
+
+Logout
+
+User Creation
+
+Role Changes
+
+Permission Changes
+
+Review Approvals
+
+Review Rejections
+
+Severity Changes
+
+Policy Changes
+
+Package Uploads
+
+Version Uploads
+
+Regulatory Changes
+
+Store:
+
+User
+
+Timestamp
+
+Action
+
+Object Type
+
+Previous Value
+
+New Value
+
+IP Address
+
+Session ID
+
+====================================================
+API SECURITY
+====================================================
+
+Protect all APIs.
+
+Implement:
+
+Authentication
+
+Authorization
+
+Rate Limiting
+
+Input Validation
+
+Request Logging
+
+Error Handling
+
+Reject malformed requests.
+
+====================================================
+RATE LIMITING
+====================================================
+
+Protect public-facing APIs.
+
+Default:
+
+100 requests per 15 minutes per IP
+
+Create stricter limits for:
+
+Authentication Endpoints
+
+Upload Endpoints
+
+Document Processing Endpoints
+
+AI Analysis Endpoints
+
+====================================================
+INPUT VALIDATION
+====================================================
+
+Validate all incoming data.
+
+Validate:
+
+Query Parameters
+
+Request Bodies
+
+File Uploads
+
+Search Inputs
+
+User Management Actions
+
+Reject invalid requests.
+
+Prevent:
+
+SQL Injection
+
+NoSQL Injection
+
+Command Injection
+
+Cross Site Scripting
+
+Path Traversal
+
+====================================================
+DATABASE SECURITY
+====================================================
+
+Use PostgreSQL with SSL.
+
+Requirements:
+
+Parameterized Queries Only
+
+No Dynamic SQL
+
+Encrypted Connections
+
+Connection Pooling
+
+Least Privilege Accounts
+
+Separate Read/Write Access Where Possible
+
+====================================================
+FILE SECURITY
+====================================================
+
+Protect uploaded files.
+
+Scan uploads.
+
+Validate:
+
+File Type
+
+File Extension
+
+File Size
+
+File Signature
+
+Allow:
+
+PDF
+
+DOCX
+
+PNG
+
+JPG
+
+Approved File Types Only
+
+Store files in object storage.
+
+Do not expose direct storage URLs publicly.
+
+====================================================
+DOCUMENT AI SECURITY
+====================================================
+
+Google Document AI credentials must be stored securely.
+
+Never expose:
+
+- Service Account JSON
+- Processor IDs
+- Credentials
+
+Document

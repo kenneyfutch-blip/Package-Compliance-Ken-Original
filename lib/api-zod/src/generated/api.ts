@@ -195,7 +195,8 @@ export const CreatePackageBody = zod.object({
   "productType": zod.string().optional(),
   "manufacturingRegion": zod.string().optional(),
   "artworkUrl": zod.string().optional(),
-  "extractedText": zod.string().optional()
+  "extractedText": zod.string().optional(),
+  "allowDuplicate": zod.boolean().optional().describe('When true, bypass the duplicate SKU\/UPC guard and create anyway.')
 })
 
 export const CreatePackageResponse = zod.object({
@@ -380,6 +381,55 @@ export const CreatePackageResponse = zod.object({
   "readiness": zod.string(),
   "readinessScore": zod.number()
 })
+})
+
+
+/**
+ * @summary Check for existing packages with the same SKU or UPC
+ */
+export const CheckPackageDuplicatesQueryParams = zod.object({
+  "sku": zod.coerce.string().optional(),
+  "upc": zod.coerce.string().optional()
+})
+
+export const CheckPackageDuplicatesResponse = zod.object({
+  "matches": zod.array(zod.object({
+  "id": zod.number(),
+  "sku": zod.string(),
+  "upc": zod.string().nullish(),
+  "name": zod.string(),
+  "brand": zod.string(),
+  "vendor": zod.string(),
+  "category": zod.string(),
+  "country": zod.string().nullish(),
+  "netWeight": zod.string().nullish(),
+  "dimensions": zod.string().nullish(),
+  "packageType": zod.string().nullish(),
+  "productType": zod.string().nullish(),
+  "manufacturingRegion": zod.string().nullish(),
+  "status": zod.string(),
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "complianceStatus": zod.string(),
+  "reviewer": zod.string().nullish(),
+  "artworkUrl": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "languageScore": zod.number().nullish(),
+  "languageIssueCount": zod.number().optional(),
+  "languageCriticalCount": zod.number().optional(),
+  "languageAnalyzedAt": zod.coerce.date().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
+  "analyzedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "approvalStatus": zod.string()
+}))
 })
 
 
