@@ -25,19 +25,18 @@ router.get(
         ? parsedLimit
         : 10;
 
-    // Supplier users may only ever recall their own supplier's findings.
+    // Supplier users may only ever recall their own supplier's findings, scoped
+    // by supplier id (the authoritative link, not the vendor name).
     const ctx = getAuthContext(req);
-    const supplierName =
-      ctx.roleKey === "supplier_user"
-        ? (ctx.supplierName ?? "___no_supplier___")
-        : null;
+    const supplierId =
+      ctx.roleKey === "supplier_user" ? (ctx.supplierId ?? -1) : null;
 
     const results = await retrieveSimilarFindings({
       organizationId: orgId(req),
       queryText: query,
       limit: take,
       minSimilarity: 0.1,
-      supplierName,
+      supplierId,
     });
     res.json(results);
   },
@@ -52,12 +51,10 @@ router.get(
     // Supplier users may only ever see stats for their own supplier's findings,
     // never org-wide totals or the count of other suppliers.
     const ctx = getAuthContext(req);
-    const supplierName =
-      ctx.roleKey === "supplier_user"
-        ? (ctx.supplierName ?? "___no_supplier___")
-        : null;
+    const supplierId =
+      ctx.roleKey === "supplier_user" ? (ctx.supplierId ?? -1) : null;
     const supplierCond =
-      supplierName !== null ? sql` AND vendor = ${supplierName}` : sql``;
+      supplierId !== null ? sql` AND supplier_id = ${supplierId}` : sql``;
     const result = await db.execute(sql`
       SELECT
         COUNT(*)::int AS total,

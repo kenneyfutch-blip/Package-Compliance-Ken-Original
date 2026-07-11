@@ -51,11 +51,23 @@ export interface TeamWorkload {
 // Per-team and per-member active workload, capacity utilization, average review
 // time, and concrete rebalancing recommendations when one specialist is
 // overloaded relative to a lighter teammate.
-export async function computeWorkload(organizationId: number) {
+// When teamIds is a list, results are restricted to those teams (team-scoped
+// callers); when null the whole organization is reported (org-wide oversight).
+export async function computeWorkload(
+  organizationId: number,
+  teamIds: number[] | null = null,
+) {
   const teams = await db
     .select({ id: teamsTable.id, name: teamsTable.name })
     .from(teamsTable)
-    .where(eq(teamsTable.organizationId, organizationId))
+    .where(
+      teamIds === null
+        ? eq(teamsTable.organizationId, organizationId)
+        : and(
+            eq(teamsTable.organizationId, organizationId),
+            inArray(teamsTable.id, teamIds),
+          ),
+    )
     .orderBy(teamsTable.name);
 
   // Active counts + in-progress counts per member, org-wide.
@@ -163,18 +175,20 @@ export async function computeWorkload(organizationId: number) {
     };
   });
 
+  const unassignedConds: SQL[] = [
+    eq(reviewAssignmentsTable.organizationId, organizationId),
+    or(
+      eq(reviewAssignmentsTable.status, "Unassigned"),
+      isNull(reviewAssignmentsTable.assigneeUserId),
+    )!,
+  ];
+  if (teamIds !== null) {
+    unassignedConds.push(inArray(reviewAssignmentsTable.teamId, teamIds));
+  }
   const [{ c: unassignedCount } = { c: 0 }] = await db
     .select({ c: sql<number>`count(*)::int` })
     .from(reviewAssignmentsTable)
-    .where(
-      and(
-        eq(reviewAssignmentsTable.organizationId, organizationId),
-        or(
-          eq(reviewAssignmentsTable.status, "Unassigned"),
-          isNull(reviewAssignmentsTable.assigneeUserId),
-        ),
-      ),
-    );
+    .where(and(...unassignedConds));
 
   return {
     teams: teamsOut,
@@ -214,11 +228,24 @@ export async function listAssignments(
   // Extra package-scope predicates (e.g. supplier restriction) applied against
   // the joined packages table so callers only see assignments they may access.
   packageScope: SQL[] = [],
+  // Team scoping for internal callers: when set, restricts to assignments for
+  // the caller's own teams (plus any assigned directly to them). Null = no team
+  // restriction (org-wide oversight roles, or supplier callers handled by
+  // packageScope). See opsTeamScope in rbac/scope.ts.
+  teamScope: { teamIds: number[]; userId: number } | null = null,
 ) {
   const conds = [
     eq(reviewAssignmentsTable.organizationId, organizationId),
     ...packageScope,
   ];
+  if (teamScope !== null) {
+    conds.push(
+      or(
+        inArray(reviewAssignmentsTable.teamId, teamScope.teamIds),
+        eq(reviewAssignmentsTable.assigneeUserId, teamScope.userId),
+      )!,
+    );
+  }
   if (filters.status) conds.push(eq(reviewAssignmentsTable.status, filters.status));
   if (filters.teamId !== undefined)
     conds.push(eq(reviewAssignmentsTable.teamId, filters.teamId));
@@ -244,8 +271,18 @@ export async function listAssignments(
     .orderBy(desc(reviewAssignmentsTable.updatedAt));
 }
 
-// Aggregate SLA + review-time metrics for reporting dashboards.
-export async function computeMetrics(organizationId: number) {
+// Aggregate SLA + review-time metrics for reporting dashboards. When teamIds is
+// a list, metrics are restricted to those teams (team-scoped callers); when null
+// the whole organization is reported (org-wide oversight).
+export async function computeMetrics(
+  organizationId: number,
+  teamIds: number[] | null = null,
+) {
+  const metricsTeamCond =
+    teamIds === null ? undefined : inArray(reviewMetricsTable.teamId, teamIds);
+  const assignTeamCond =
+    teamIds === null ? undefined : inArray(reviewAssignmentsTable.teamId, teamIds);
+
   const [totals] = await db
     .select({
       totalCompleted: sql<number>`count(*)::int`,
@@ -254,7 +291,7 @@ export async function computeMetrics(organizationId: number) {
       slaBreached: sql<number>`count(*) filter (where ${reviewMetricsTable.metSla} is false)::int`,
     })
     .from(reviewMetricsTable)
-    .where(eq(reviewMetricsTable.organizationId, organizationId));
+    .where(and(eq(reviewMetricsTable.organizationId, organizationId), metricsTeamCond));
 
   const totalCompleted = totals?.totalCompleted ?? 0;
   const slaMet = totals?.slaMet ?? 0;
@@ -269,7 +306,7 @@ export async function computeMetrics(organizationId: number) {
       escalatedReviews: sql<number>`count(*) filter (where ${reviewAssignmentsTable.escalationLevel} > 0 and ${reviewAssignmentsTable.status} <> 'Completed')::int`,
     })
     .from(reviewAssignmentsTable)
-    .where(eq(reviewAssignmentsTable.organizationId, organizationId));
+    .where(and(eq(reviewAssignmentsTable.organizationId, organizationId), assignTeamCond));
 
   const byTeamRows = await db
     .select({
@@ -282,7 +319,7 @@ export async function computeMetrics(organizationId: number) {
     })
     .from(reviewMetricsTable)
     .leftJoin(teamsTable, eq(reviewMetricsTable.teamId, teamsTable.id))
-    .where(eq(reviewMetricsTable.organizationId, organizationId))
+    .where(and(eq(reviewMetricsTable.organizationId, organizationId), metricsTeamCond))
     .groupBy(reviewMetricsTable.teamId, teamsTable.name);
 
   const recentRows = await db
@@ -299,7 +336,7 @@ export async function computeMetrics(organizationId: number) {
     .leftJoin(packagesTable, eq(reviewMetricsTable.packageId, packagesTable.id))
     .leftJoin(teamsTable, eq(reviewMetricsTable.teamId, teamsTable.id))
     .leftJoin(usersTable, eq(reviewMetricsTable.assigneeUserId, usersTable.id))
-    .where(eq(reviewMetricsTable.organizationId, organizationId))
+    .where(and(eq(reviewMetricsTable.organizationId, organizationId), metricsTeamCond))
     .orderBy(desc(reviewMetricsTable.completedAt))
     .limit(15);
 

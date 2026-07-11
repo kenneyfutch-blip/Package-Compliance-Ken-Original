@@ -32,6 +32,7 @@ import {
   mapExtraction,
 } from "../lib/mappers";
 import { runExtraction } from "../lib/document-ai/service";
+import { resolveSupplierId } from "../lib/suppliers/link";
 import {
   applyAnalysis,
   buildDetail,
@@ -88,16 +89,14 @@ async function priorKnowledgeFor(
 ): Promise<string | undefined> {
   try {
     const ctx = getAuthContext(req);
-    const supplierName =
-      ctx.roleKey === "supplier_user"
-        ? (ctx.supplierName ?? "___no_supplier___")
-        : null;
+    const supplierId =
+      ctx.roleKey === "supplier_user" ? (ctx.supplierId ?? -1) : null;
     const similar = await retrieveSimilarFindings({
       organizationId: ctx.organizationId,
       queryText: packageQueryText(pkg),
       limit: 6,
       excludePackageId: pkg.id,
-      supplierName,
+      supplierId,
     });
     return formatMemoryForPrompt(similar) || undefined;
   } catch (err) {
@@ -198,6 +197,9 @@ router.post(
     }
     const data = parsed.data;
     const organizationId = orgId(req);
+    // Link to the master supplier record by id (creating it on first sight) so
+    // scoping and joins never rely on matching the free-text vendor name.
+    const supplierId = await resolveSupplierId(organizationId, data.vendor);
 
     const [inserted] = await db
       .insert(packagesTable)
@@ -208,6 +210,7 @@ router.post(
         name: data.name,
         brand: data.brand,
         vendor: data.vendor,
+        supplierId,
         category: data.category ?? "Uncategorized",
         country: data.country ?? null,
         netWeight: data.netWeight ?? null,

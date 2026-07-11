@@ -18,7 +18,8 @@ The enterprise foundation for Packaging Compliance AI: every user belongs to an 
 - Every user must belong to a team: provisioning adds users with no membership to a default "General" team (created on demand). Seed users get explicit teams.
 
 ## Scoping
-- `rbac/scope.ts` `packageConds(req)` / `canAccessPackage` are the scoping primitives. **supplier_user sees only packages where `vendor === their supplierName`** (resolved from `users.supplierId`). All package-derived reads (violations, dashboard, proofs) build from these.
+- `rbac/scope.ts` `packageConds(req)` / `canAccessPackage` are the scoping primitives. **supplier_user sees only packages where `packages.supplierId === ctx.supplierId`** (by FK id, NOT vendor name — see supplier-architecture.md for the deny-by-default null rule). All package-derived reads (violations, dashboard, proofs) build from these.
+- **Team-scoped ops data:** `AuthContext.teamIds` (from `team_members`, populated in `buildContext`) + `opsTeamScope(req)` in scope.ts gate workload/metrics/assignments to the caller's own teams. `opsTeamScope` returns null (no restriction) for org-wide roles (`platform_admin`, `compliance_director`, `executive_viewer`) and for `supplier_user` (handled by package scope instead); otherwise `{teamIds,userId}`. `reporting.ts` computeWorkload/computeMetrics take `teamIds:number[]|null` (null=org-wide); listAssignments takes a teamScope. `ops.ts` queue/health stays org-wide (already `org:manage`-gated).
 - **Decision:** `regulations` and `ai_providers` are intentionally GLOBAL (not org-scoped) — permission-gated only. **Why:** regulations are a shared reference library and ai_providers is platform config (write is admin-only); acceptable in a single-org deployment. If the product ever goes true multi-tenant, these need org scoping.
 
 ## Audit immutability
@@ -28,8 +29,8 @@ The enterprise foundation for Packaging Compliance AI: every user belongs to an 
 ## Frontend gating
 - `artifacts/compliance/src/lib/access.tsx` `requiredPermFor(path)` is the single source mapping a route path -> required permission. **Both** nav filtering (`layout.tsx`) and route gating (`App.tsx`) consult it, so they never drift. Add new gated pages there, not in two places.
 
-## Known gap (follow-up proposed)
-- `GET /storage/objects/*` is auth-gated but has **no per-object ACL** — any signed-in associate can read any file. Enforcing object->package->`canAccessPackage` was deferred (overlaps the proofing suite + object mapping is non-trivial).
+## Object download ACL (resolved)
+- `GET /storage/objects/*` now enforces per-object ACL: `resolveObjectOwner` maps the path back to its owning package/supplier record and `canAccessObjectOwner` applies org + supplier-id scoping before streaming (deny-by-default → 404 on unknown/out-of-scope). Owner descriptors carry `supplierId`, not vendor.
 
 ## Ops notes
 - `tsx` is not installed. To run the seed: bundle with esbuild via `artifacts/api-server/seed-build.mjs` (mirrors `build.mjs`, externalizes pino) then `node dist/seed.mjs`. Do NOT use `esbuild-plugin-pino` for the seed bundle — externalize `pino`/`pino-pretty` instead.

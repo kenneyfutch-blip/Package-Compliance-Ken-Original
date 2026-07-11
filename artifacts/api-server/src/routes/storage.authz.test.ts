@@ -28,6 +28,7 @@ function ctx(overrides: Partial<AuthContext> = {}): AuthContext {
     permissions: new Set<string>(),
     supplierId: null,
     supplierName: null,
+    teamIds: [],
     ...overrides,
   };
 }
@@ -54,7 +55,7 @@ function mockRes() {
 }
 
 function pkgOwner(overrides: Partial<Extract<ObjectOwner, { kind: "package" }>> = {}): ObjectOwner {
-  return { kind: "package", organizationId: 1, vendor: "Acme Co", ...overrides };
+  return { kind: "package", organizationId: 1, supplierId: 7, ...overrides };
 }
 
 function supplierOwner(
@@ -75,32 +76,52 @@ test("package object: cross-org download is denied (IDOR guard)", () => {
   assert.equal(canAccessObjectOwner(req, pkgOwner({ organizationId: 2 })), false);
 });
 
-test("package object: supplier user may download only their own vendor's artwork", () => {
+test("package object: supplier user may download only their own supplier's artwork", () => {
   const req = reqWith(
-    ctx({ roleKey: "supplier_user", supplierName: "Acme Co", organizationId: 1 }),
+    ctx({ roleKey: "supplier_user", supplierId: 7, organizationId: 1 }),
   );
   assert.equal(
-    canAccessObjectOwner(req, pkgOwner({ organizationId: 1, vendor: "Acme Co" })),
+    canAccessObjectOwner(req, pkgOwner({ organizationId: 1, supplierId: 7 })),
     true,
   );
 });
 
-test("package object: supplier user is denied another vendor's artwork", () => {
+test("package object: supplier user is denied another supplier's artwork", () => {
   const req = reqWith(
-    ctx({ roleKey: "supplier_user", supplierName: "Acme Co", organizationId: 1 }),
+    ctx({ roleKey: "supplier_user", supplierId: 7, organizationId: 1 }),
   );
   assert.equal(
-    canAccessObjectOwner(req, pkgOwner({ organizationId: 1, vendor: "Rival Inc" })),
+    canAccessObjectOwner(req, pkgOwner({ organizationId: 1, supplierId: 9 })),
     false,
   );
 });
 
 test("package object: supplier user is denied across organizations", () => {
   const req = reqWith(
-    ctx({ roleKey: "supplier_user", supplierName: "Acme Co", organizationId: 1 }),
+    ctx({ roleKey: "supplier_user", supplierId: 7, organizationId: 1 }),
   );
   assert.equal(
-    canAccessObjectOwner(req, pkgOwner({ organizationId: 2, vendor: "Acme Co" })),
+    canAccessObjectOwner(req, pkgOwner({ organizationId: 2, supplierId: 7 })),
+    false,
+  );
+});
+
+test("package object: unlinked supplier user is denied an unlinked package object (deny-by-default)", () => {
+  const req = reqWith(
+    ctx({ roleKey: "supplier_user", supplierId: null, organizationId: 1 }),
+  );
+  assert.equal(
+    canAccessObjectOwner(req, pkgOwner({ organizationId: 1, supplierId: null })),
+    false,
+  );
+});
+
+test("package object: linked supplier user is denied an unlinked package object", () => {
+  const req = reqWith(
+    ctx({ roleKey: "supplier_user", supplierId: 7, organizationId: 1 }),
+  );
+  assert.equal(
+    canAccessObjectOwner(req, pkgOwner({ organizationId: 1, supplierId: null })),
     false,
   );
 });

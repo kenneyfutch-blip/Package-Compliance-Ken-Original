@@ -4,6 +4,7 @@ import { ensureAuditImmutability } from "./lib/audit";
 import { initJobs } from "./lib/jobs";
 import { ensureMemoryIndexes } from "./lib/memory/engine";
 import { initMaintenance } from "./lib/maintenance/archive";
+import { backfillSupplierLinks } from "./lib/suppliers/link";
 
 const rawPort = process.env["PORT"];
 
@@ -32,6 +33,10 @@ app.listen(port, (err) => {
 
   // Create the vector ANN index for Compliance Memory semantic search.
   void ensureMemoryIndexes();
+
+  // Link legacy packages and memory rows to their master supplier record by id
+  // (idempotent, non-fatal) so supplier scoping no longer relies on vendor names.
+  void backfillSupplierLinks();
 
   // Start the durable background job worker and schedule the escalation sweep.
   void initJobs();

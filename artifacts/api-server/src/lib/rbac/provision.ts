@@ -139,6 +139,11 @@ async function buildContext(
 ): Promise<AuthContext> {
   const roleDef = getRoleDef(user.roleKey);
   const permissions = await resolvePermissions(user.id, user.roleKey);
+  const memberships = await db
+    .select({ teamId: teamMembersTable.teamId })
+    .from(teamMembersTable)
+    .where(eq(teamMembersTable.userId, user.id));
+  const teamIds = memberships.map((m) => m.teamId);
   let supplierName: string | null = null;
   if (user.supplierId != null) {
     const [supplier] = await db
@@ -158,6 +163,7 @@ async function buildContext(
     permissions,
     supplierId: user.supplierId ?? null,
     supplierName,
+    teamIds,
   };
 }
 

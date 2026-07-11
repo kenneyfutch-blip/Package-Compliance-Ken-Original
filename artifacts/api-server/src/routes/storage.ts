@@ -52,7 +52,7 @@ async function resolveObjectOwner(
     const [pkg] = await db
       .select({
         organizationId: packagesTable.organizationId,
-        vendor: packagesTable.vendor,
+        supplierId: packagesTable.supplierId,
       })
       .from(packagesTable)
       .where(eq(packagesTable.artworkUrl, objectPath))
@@ -61,7 +61,7 @@ async function resolveObjectOwner(
       return {
         kind: 'package',
         organizationId: pkg.organizationId,
-        vendor: pkg.vendor,
+        supplierId: pkg.supplierId,
       };
     }
   }
@@ -90,7 +90,7 @@ async function resolveObjectOwner(
     const [pkg] = await db
       .select({
         organizationId: packagesTable.organizationId,
-        vendor: packagesTable.vendor,
+        supplierId: packagesTable.supplierId,
       })
       .from(packagesTable)
       .where(eq(packagesTable.id, packageId))
@@ -99,7 +99,7 @@ async function resolveObjectOwner(
     return {
       kind: 'package',
       organizationId: pkg.organizationId,
-      vendor: pkg.vendor,
+      supplierId: pkg.supplierId,
     };
   }
 

@@ -30,6 +30,7 @@ function ctx(overrides: Partial<AuthContext> = {}): AuthContext {
     permissions: new Set<string>(),
     supplierId: null,
     supplierName: null,
+    teamIds: [],
     ...overrides,
   };
 }
@@ -45,6 +46,7 @@ function pkg(overrides: Partial<PackageRow> = {}): PackageRow {
     id: 1,
     organizationId: 1,
     vendor: "Acme Co",
+    supplierId: 7,
     ...overrides,
   } as unknown as PackageRow;
 }
@@ -76,32 +78,52 @@ test("canAccessPackage denies cross-org access (IDOR guard)", () => {
   assert.equal(canAccessPackage(req, pkg({ organizationId: 2 })), false);
 });
 
-test("canAccessPackage allows a supplier user only for their own vendor", () => {
+test("canAccessPackage allows a supplier user only for their own supplier", () => {
   const req = reqWith(
-    ctx({ roleKey: "supplier_user", supplierName: "Acme Co", organizationId: 1 }),
+    ctx({ roleKey: "supplier_user", supplierId: 7, organizationId: 1 }),
   );
   assert.equal(
-    canAccessPackage(req, pkg({ organizationId: 1, vendor: "Acme Co" })),
+    canAccessPackage(req, pkg({ organizationId: 1, supplierId: 7 })),
     true,
   );
 });
 
-test("canAccessPackage denies a supplier user another vendor's package", () => {
+test("canAccessPackage denies a supplier user another supplier's package", () => {
   const req = reqWith(
-    ctx({ roleKey: "supplier_user", supplierName: "Acme Co", organizationId: 1 }),
+    ctx({ roleKey: "supplier_user", supplierId: 7, organizationId: 1 }),
   );
   assert.equal(
-    canAccessPackage(req, pkg({ organizationId: 1, vendor: "Rival Inc" })),
+    canAccessPackage(req, pkg({ organizationId: 1, supplierId: 9 })),
     false,
   );
 });
 
 test("canAccessPackage denies a supplier user across organizations", () => {
   const req = reqWith(
-    ctx({ roleKey: "supplier_user", supplierName: "Acme Co", organizationId: 1 }),
+    ctx({ roleKey: "supplier_user", supplierId: 7, organizationId: 1 }),
   );
   assert.equal(
-    canAccessPackage(req, pkg({ organizationId: 2, vendor: "Acme Co" })),
+    canAccessPackage(req, pkg({ organizationId: 2, supplierId: 7 })),
+    false,
+  );
+});
+
+test("canAccessPackage denies an unlinked supplier user against an unlinked package (deny-by-default)", () => {
+  const req = reqWith(
+    ctx({ roleKey: "supplier_user", supplierId: null, organizationId: 1 }),
+  );
+  assert.equal(
+    canAccessPackage(req, pkg({ organizationId: 1, supplierId: null })),
+    false,
+  );
+});
+
+test("canAccessPackage denies a linked supplier user against an unlinked package", () => {
+  const req = reqWith(
+    ctx({ roleKey: "supplier_user", supplierId: 7, organizationId: 1 }),
+  );
+  assert.equal(
+    canAccessPackage(req, pkg({ organizationId: 1, supplierId: null })),
     false,
   );
 });
@@ -111,9 +133,9 @@ test("packageConds scopes internal roles to their org only", () => {
   assert.equal(conds.length, 1);
 });
 
-test("packageConds adds a vendor filter for supplier users", () => {
+test("packageConds adds a supplier filter for supplier users", () => {
   const conds = packageConds(
-    reqWith(ctx({ roleKey: "supplier_user", supplierName: "Acme Co" })),
+    reqWith(ctx({ roleKey: "supplier_user", supplierId: 7 })),
   );
   assert.equal(conds.length, 2);
 });

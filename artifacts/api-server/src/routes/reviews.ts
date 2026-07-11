@@ -10,7 +10,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { AssignPackageReviewBody } from "@workspace/api-zod";
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
-import { packageConds, canAccessPackage } from "../lib/rbac/scope";
+import { packageConds, canAccessPackage, opsTeamScope } from "../lib/rbac/scope";
 import { writeAudit } from "../lib/audit";
 import { mapReviewAssignment, mapReviewHistory } from "../lib/mappers";
 import { assignReview, autoAssignReview, getPackageAssignment } from "../lib/reviews/engine";
@@ -104,7 +104,10 @@ router.get(
   requirePermission("packages:read"),
   async (req: Request, res: Response): Promise<void> => {
     if (blockSupplierUsers(req, res)) return;
-    res.json(await computeWorkload(orgId(req)));
+    // Team-scoped roles see only their own teams' workload; org-wide oversight
+    // roles (admin/director/executive) see the whole organization.
+    const scope = opsTeamScope(req);
+    res.json(await computeWorkload(orgId(req), scope ? scope.teamIds : null));
   },
 );
 
@@ -114,7 +117,8 @@ router.get(
   requirePermission("reports:read"),
   async (req: Request, res: Response): Promise<void> => {
     if (blockSupplierUsers(req, res)) return;
-    res.json(await computeMetrics(orgId(req)));
+    const scope = opsTeamScope(req);
+    res.json(await computeMetrics(orgId(req), scope ? scope.teamIds : null));
   },
 );
 
@@ -140,8 +144,16 @@ router.get(
       filters.assigneeUserId = Number(assigneeUserId);
 
     // Scope to packages the caller may access (supplier users see only their own
-    // vendor's packages); packageConds targets the joined packages table.
-    const rows = await listAssignments(orgId(req), filters, packageConds(req));
+    // supplier's packages); packageConds targets the joined packages table.
+    // Additionally, team-scoped internal roles see only their own teams' (and
+    // their own) assignments; org-wide roles and supplier users are unrestricted
+    // here (the latter are already constrained by packageConds).
+    const rows = await listAssignments(
+      orgId(req),
+      filters,
+      packageConds(req),
+      opsTeamScope(req),
+    );
     res.json(
       rows.map((r) => ({
         assignment: mapReviewAssignment(r.assignment, {

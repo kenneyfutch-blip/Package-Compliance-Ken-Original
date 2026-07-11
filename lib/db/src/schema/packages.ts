@@ -33,7 +33,15 @@ export const packagesTable = pgTable("packages", {
   upc: text("upc"),
   name: text("name").notNull(),
   brand: text("brand").notNull(),
+  // Human-readable vendor name, kept for display and legacy filtering. The
+  // authoritative link to the master supplier record is supplierId; vendor is
+  // denormalized and can drift (e.g. a supplier rename), so authorization and
+  // joins must use supplierId, never this string.
   vendor: text("vendor").notNull(),
+  // Foreign key to the master supplier record (suppliers.id). Nullable so the
+  // column can be added without a backfill window; a startup backfill and the
+  // create paths populate it. This is the source of truth for supplier scoping.
+  supplierId: integer("supplier_id"),
   category: text("category").notNull().default("Uncategorized"),
   country: text("country"),
   netWeight: text("net_weight"),
@@ -82,6 +90,7 @@ export const packagesTable = pgTable("packages", {
   index("idx_packages_org_compliance").on(t.organizationId, t.complianceStatus),
   index("idx_packages_org_category").on(t.organizationId, t.category),
   index("idx_packages_org_vendor").on(t.organizationId, t.vendor),
+  index("idx_packages_org_supplier").on(t.organizationId, t.supplierId),
   index("idx_packages_sku").on(t.sku),
 ]);
 

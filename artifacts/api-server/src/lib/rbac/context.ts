@@ -13,6 +13,10 @@ export interface AuthContext {
   permissions: Set<string>;
   supplierId: number | null;
   supplierName: string | null;
+  // The teams this user belongs to (team_members). Used to scope team-level
+  // operations data (workload, metrics, assignments) so one team cannot see
+  // another team's data. Org-wide oversight roles ignore this (see scope.ts).
+  teamIds: number[];
 }
 
 type WithAuth = Request & { authContext?: AuthContext };

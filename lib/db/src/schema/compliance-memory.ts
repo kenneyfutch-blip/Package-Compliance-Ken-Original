@@ -32,7 +32,12 @@ export const complianceMemoryTable = pgTable(
     engine: text("engine").notNull(),
     severity: text("severity").notNull().default("minor"),
     category: text("category").notNull().default("Uncategorized"),
+    // Denormalized vendor name, kept for display only. Supplier scoping of recall
+    // must use supplierId (the authoritative link), not this string.
     vendor: text("vendor"),
+    // Foreign key to the master supplier record (suppliers.id). Populated on
+    // capture from the source package's supplierId and by the startup backfill.
+    supplierId: integer("supplier_id"),
     regulationRef: text("regulation_ref"),
     // The finding itself and the fix that resolved it.
     findingTitle: text("finding_title").notNull(),
@@ -59,6 +64,7 @@ export const complianceMemoryTable = pgTable(
     index("idx_cmem_org_category").on(t.organizationId, t.category),
     index("idx_cmem_org_engine").on(t.organizationId, t.engine),
     index("idx_cmem_vendor").on(t.vendor),
+    index("idx_cmem_org_supplier").on(t.organizationId, t.supplierId),
     index("idx_cmem_package").on(t.packageId),
     index("idx_cmem_created").on(t.createdAt),
   ],

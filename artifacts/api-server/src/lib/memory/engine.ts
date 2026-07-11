@@ -97,6 +97,7 @@ export async function captureFindingsForDecision(params: {
       severity: v.severity,
       category: pkg.category,
       vendor: pkg.vendor,
+      supplierId: pkg.supplierId,
       regulationRef: v.regulationRef,
       findingTitle: v.title,
       findingText: v.description,
@@ -141,10 +142,11 @@ export async function retrieveSimilarFindings(params: {
   excludePackageId?: number | null;
   minSimilarity?: number;
   approvedOnly?: boolean;
-  // When set, restricts recall to a single supplier's own findings (by vendor).
-  // Required for supplier_user callers so one supplier can never see another's
-  // findings, even within the same organization.
-  supplierName?: string | null;
+  // When set, restricts recall to a single supplier's own findings (by supplier
+  // id, the authoritative link — not the free-text vendor name). Required for
+  // supplier_user callers so one supplier can never see another's findings, even
+  // within the same organization.
+  supplierId?: number | null;
 }): Promise<SimilarFinding[]> {
   const {
     organizationId,
@@ -153,7 +155,7 @@ export async function retrieveSimilarFindings(params: {
     excludePackageId = null,
     minSimilarity = 0.12,
     approvedOnly = true,
-    supplierName = null,
+    supplierId = null,
   } = params;
 
   if (!queryText || !queryText.trim()) return [];
@@ -162,7 +164,7 @@ export async function retrieveSimilarFindings(params: {
 
   const conds = [sql`organization_id = ${organizationId}`, sql`embedding IS NOT NULL`];
   if (approvedOnly) conds.push(sql`approval_status = 'Approved'`);
-  if (supplierName !== null) conds.push(sql`vendor = ${supplierName}`);
+  if (supplierId !== null) conds.push(sql`supplier_id = ${supplierId}`);
   if (excludePackageId !== null) {
     conds.push(sql`(package_id IS NULL OR package_id <> ${excludePackageId})`);
   }

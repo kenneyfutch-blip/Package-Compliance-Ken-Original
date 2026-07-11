@@ -149,6 +149,7 @@ router.post(
           name: title,
           brand: supplier.name,
           vendor: supplier.name,
+          supplierId: supplier.id,
           category: category ?? "Uncategorized",
           country: supplier.country,
           status: "Uploaded",
