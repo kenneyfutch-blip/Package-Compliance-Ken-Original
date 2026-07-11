@@ -13,3 +13,5 @@ export * from "./audit_events";
 export * from "./notifications";
 export * from "./reports";
 export * from "./ai_providers";
+export * from "./reviews";
+export * from "./jobs";

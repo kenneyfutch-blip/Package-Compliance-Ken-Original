@@ -40,9 +40,11 @@ import {
   type AnalysisResult,
 } from "../lib/ai";
 import { logger } from "../lib/logger";
-import { requirePermission, orgId } from "../lib/rbac/context";
+import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 import { packageConds, canAccessPackage } from "../lib/rbac/scope";
 import { writeAudit } from "../lib/audit";
+import { autoAssignReview, completeReview } from "../lib/reviews/engine";
+import { matchTeamName } from "../lib/reviews/routing";
 
 const router: IRouter = Router();
 
@@ -308,6 +310,24 @@ router.post(
       }
     }
 
+    // Assignment layer: route the package to the right team by category and
+    // load-balance it onto the least-loaded specialist. Non-fatal — a failure
+    // here must not block package creation.
+    try {
+      const ctx = getAuthContext(req);
+      await autoAssignReview({
+        organizationId,
+        packageId: current.id,
+        category: current.category,
+        teamName: matchTeamName(current.category),
+        priority: (current.criticalCount ?? 0) > 0 ? "critical" : "normal",
+        actorUserId: ctx.userId,
+        actorName: ctx.name || ctx.email || "System",
+      });
+    } catch (err) {
+      logger.error({ err }, "Auto-assignment failed on create");
+    }
+
     res.status(201).json(await buildDetail(current));
   },
 );
@@ -398,6 +418,23 @@ router.patch(
         complianceStatus: updated!.complianceStatus,
       },
     });
+
+    // A human review decision (Approved / Needs Revision) closes the active
+    // assignment and captures its SLA + duration metrics for reporting.
+    if (data.status === "Approved" || data.status === "Needs Revision") {
+      try {
+        const ctx = getAuthContext(req);
+        await completeReview({
+          organizationId: orgId(req),
+          packageId: id,
+          actorUserId: ctx.userId,
+          actorName: ctx.name || ctx.email || "Unknown",
+          detail: `Review completed with decision: ${data.status}`,
+        });
+      } catch (err) {
+        logger.error({ err }, "Failed to complete review on decision");
+      }
+    }
 
     res.json(await buildDetail(updated!));
   },

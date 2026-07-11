@@ -2133,3 +2133,266 @@ export const TestAiProviderResponse = zod.object({
 })
 
 
+/**
+ * @summary Team and per-member review workload, capacity, and rebalancing recommendations
+ */
+export const GetReviewWorkloadResponse = zod.object({
+  "teams": zod.array(zod.object({
+  "teamId": zod.number(),
+  "teamName": zod.string(),
+  "memberCount": zod.number(),
+  "activeCount": zod.number(),
+  "capacity": zod.number(),
+  "utilization": zod.number(),
+  "avgReviewMinutes": zod.number().nullish(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "roleKey": zod.string(),
+  "activeCount": zod.number(),
+  "inProgressCount": zod.number(),
+  "capacity": zod.number(),
+  "utilization": zod.number(),
+  "avgReviewMinutes": zod.number().nullish(),
+  "overloaded": zod.boolean()
+})),
+  "recommendations": zod.array(zod.object({
+  "fromUserId": zod.number(),
+  "fromName": zod.string(),
+  "toUserId": zod.number(),
+  "toName": zod.string(),
+  "suggestedMoves": zod.number(),
+  "reason": zod.string()
+}))
+})),
+  "unassignedCount": zod.number(),
+  "generatedAt": zod.string()
+})
+
+
+/**
+ * @summary List review assignments, optionally filtered by status, team, or assignee
+ */
+export const ListReviewAssignmentsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "teamId": zod.coerce.number().optional(),
+  "assigneeUserId": zod.coerce.number().optional()
+})
+
+export const ListReviewAssignmentsResponseItem = zod.object({
+  "assignment": zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "assigneeUserId": zod.number().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "status": zod.string(),
+  "priority": zod.string(),
+  "slaHours": zod.number(),
+  "slaStatus": zod.enum(['none', 'on_track', 'at_risk', 'breached']),
+  "escalationLevel": zod.number(),
+  "autoRouted": zod.boolean(),
+  "assignedAt": zod.string().nullish(),
+  "dueAt": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "lastEscalatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "packageName": zod.string(),
+  "packageSku": zod.string().nullish(),
+  "category": zod.string(),
+  "criticalCount": zod.number(),
+  "complianceStatus": zod.string().nullish()
+})
+export const ListReviewAssignmentsResponse = zod.array(ListReviewAssignmentsResponseItem)
+
+
+/**
+ * @summary SLA performance and review-time metrics for reporting
+ */
+export const GetReviewMetricsResponse = zod.object({
+  "totalCompleted": zod.number(),
+  "avgReviewMinutes": zod.number().nullish(),
+  "slaMet": zod.number(),
+  "slaBreached": zod.number(),
+  "slaComplianceRate": zod.number().nullish(),
+  "openReviews": zod.number(),
+  "overdueReviews": zod.number(),
+  "escalatedReviews": zod.number(),
+  "byTeam": zod.array(zod.object({
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string(),
+  "completed": zod.number(),
+  "avgReviewMinutes": zod.number().nullish(),
+  "slaComplianceRate": zod.number().nullish()
+})),
+  "recent": zod.array(zod.object({
+  "packageId": zod.number(),
+  "packageName": zod.string(),
+  "teamName": zod.string().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "reviewMinutes": zod.number().nullish(),
+  "metSla": zod.boolean().nullish(),
+  "completedAt": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Current assignment and full ownership history for a package
+ */
+export const GetPackageAssignmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPackageAssignmentResponse = zod.object({
+  "packageId": zod.number(),
+  "packageName": zod.string(),
+  "assignment": zod.union([zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "assigneeUserId": zod.number().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "status": zod.string(),
+  "priority": zod.string(),
+  "slaHours": zod.number(),
+  "slaStatus": zod.enum(['none', 'on_track', 'at_risk', 'breached']),
+  "escalationLevel": zod.number(),
+  "autoRouted": zod.boolean(),
+  "assignedAt": zod.string().nullish(),
+  "dueAt": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "lastEscalatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),zod.null()]).optional(),
+  "history": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "assignmentId": zod.number().nullish(),
+  "action": zod.string(),
+  "fromTeamId": zod.number().nullish(),
+  "toTeamId": zod.number().nullish(),
+  "fromUserId": zod.number().nullish(),
+  "toUserId": zod.number().nullish(),
+  "actorUserId": zod.number().nullish(),
+  "actorName": zod.string(),
+  "detail": zod.string().nullish(),
+  "escalationLevel": zod.number().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Manually assign or reassign a package review to a team and/or member
+ */
+export const AssignPackageReviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AssignPackageReviewBody = zod.object({
+  "teamId": zod.number().nullish(),
+  "assigneeUserId": zod.number().nullish(),
+  "slaHours": zod.number().optional(),
+  "priority": zod.enum(['low', 'normal', 'high', 'critical']).optional()
+})
+
+export const AssignPackageReviewResponse = zod.object({
+  "packageId": zod.number(),
+  "packageName": zod.string(),
+  "assignment": zod.union([zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "assigneeUserId": zod.number().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "status": zod.string(),
+  "priority": zod.string(),
+  "slaHours": zod.number(),
+  "slaStatus": zod.enum(['none', 'on_track', 'at_risk', 'breached']),
+  "escalationLevel": zod.number(),
+  "autoRouted": zod.boolean(),
+  "assignedAt": zod.string().nullish(),
+  "dueAt": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "lastEscalatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),zod.null()]).optional(),
+  "history": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "assignmentId": zod.number().nullish(),
+  "action": zod.string(),
+  "fromTeamId": zod.number().nullish(),
+  "toTeamId": zod.number().nullish(),
+  "fromUserId": zod.number().nullish(),
+  "toUserId": zod.number().nullish(),
+  "actorUserId": zod.number().nullish(),
+  "actorName": zod.string(),
+  "detail": zod.string().nullish(),
+  "escalationLevel": zod.number().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Route a package to the correct team by category and balance onto the least-loaded member
+ */
+export const AutoAssignPackageReviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AutoAssignPackageReviewResponse = zod.object({
+  "packageId": zod.number(),
+  "packageName": zod.string(),
+  "assignment": zod.union([zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "assigneeUserId": zod.number().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "status": zod.string(),
+  "priority": zod.string(),
+  "slaHours": zod.number(),
+  "slaStatus": zod.enum(['none', 'on_track', 'at_risk', 'breached']),
+  "escalationLevel": zod.number(),
+  "autoRouted": zod.boolean(),
+  "assignedAt": zod.string().nullish(),
+  "dueAt": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "lastEscalatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),zod.null()]).optional(),
+  "history": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "assignmentId": zod.number().nullish(),
+  "action": zod.string(),
+  "fromTeamId": zod.number().nullish(),
+  "toTeamId": zod.number().nullish(),
+  "fromUserId": zod.number().nullish(),
+  "toUserId": zod.number().nullish(),
+  "actorUserId": zod.number().nullish(),
+  "actorName": zod.string(),
+  "detail": zod.string().nullish(),
+  "escalationLevel": zod.number().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+

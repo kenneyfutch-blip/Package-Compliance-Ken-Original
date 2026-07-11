@@ -34,6 +34,8 @@ tags:
     description: AI Language Review Engine — spelling, grammar, context, regulatory, marketing claims, and brand language
   - name: document-ai
     description: Google Document AI extraction — OCR text, page coordinates, and packaging component detection
+  - name: reviews
+    description: Review assignment, load balancing, SLA/workload reporting, and escalation
 paths:
   /healthz:
     get:
@@ -1374,6 +1376,144 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AiProviderTestResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /reviews/workload:
+    get:
+      operationId: getReviewWorkload
+      tags: [reviews]
+      summary: Team and per-member review workload, capacity, and rebalancing recommendations
+      responses:
+        "200":
+          description: Workload snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkloadResponse"
+
+  /reviews/assignments:
+    get:
+      operationId: listReviewAssignments
+      tags: [reviews]
+      summary: List review assignments, optionally filtered by status, team, or assignee
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: teamId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: assigneeUserId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Assignment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssignmentListItem"
+
+  /reviews/metrics:
+    get:
+      operationId: getReviewMetrics
+      tags: [reviews]
+      summary: SLA performance and review-time metrics for reporting
+      responses:
+        "200":
+          description: Metrics summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewMetricsSummary"
+
+  /packages/{id}/assignment:
+    get:
+      operationId: getPackageAssignment
+      tags: [reviews]
+      summary: Current assignment and full ownership history for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Assignment detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewAssignmentDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/{id}/assign:
+    post:
+      operationId: assignPackageReview
+      tags: [reviews]
+      summary: Manually assign or reassign a package review to a team and/or member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewAssignInput"
+      responses:
+        "200":
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewAssignmentDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/{id}/auto-assign:
+    post:
+      operationId: autoAssignPackageReview
+      tags: [reviews]
+      summary: Route a package to the correct team by category and balance onto the least-loaded member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated assignment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewAssignmentDetail"
         "404":
           description: Not found
           content:
@@ -3217,3 +3357,363 @@ components:
         - role
         - roleKey
         - permissions
+
+    ReviewAssignInput:
+      type: object
+      properties:
+        teamId:
+          type: integer
+          nullable: true
+        assigneeUserId:
+          type: integer
+          nullable: true
+        slaHours:
+          type: integer
+        priority:
+          type: string
+          enum: [low, normal, high, critical]
+
+    ReviewAssignment:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        teamId:
+          type: integer
+          nullable: true
+        teamName:
+          type: string
+          nullable: true
+        assigneeUserId:
+          type: integer
+          nullable: true
+        assigneeName:
+          type: string
+          nullable: true
+        status:
+          type: string
+        priority:
+          type: string
+        slaHours:
+          type: integer
+        slaStatus:
+          type: string
+          enum: [none, on_track, at_risk, breached]
+        escalationLevel:
+          type: integer
+        autoRouted:
+          type: boolean
+        assignedAt:
+          type: string
+          nullable: true
+        dueAt:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+          nullable: true
+        completedAt:
+          type: string
+          nullable: true
+        lastEscalatedAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - packageId
+        - status
+        - priority
+        - slaHours
+        - slaStatus
+        - escalationLevel
+        - autoRouted
+        - createdAt
+        - updatedAt
+
+    ReviewHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        assignmentId:
+          type: integer
+          nullable: true
+        action:
+          type: string
+        fromTeamId:
+          type: integer
+          nullable: true
+        toTeamId:
+          type: integer
+          nullable: true
+        fromUserId:
+          type: integer
+          nullable: true
+        toUserId:
+          type: integer
+          nullable: true
+        actorUserId:
+          type: integer
+          nullable: true
+        actorName:
+          type: string
+        detail:
+          type: string
+          nullable: true
+        escalationLevel:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - packageId
+        - action
+        - actorName
+        - createdAt
+
+    ReviewAssignmentDetail:
+      type: object
+      properties:
+        packageId:
+          type: integer
+        packageName:
+          type: string
+        assignment:
+          oneOf:
+            - $ref: "#/components/schemas/ReviewAssignment"
+            - type: "null"
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewHistoryEntry"
+      required:
+        - packageId
+        - packageName
+        - history
+
+    AssignmentListItem:
+      type: object
+      properties:
+        assignment:
+          $ref: "#/components/schemas/ReviewAssignment"
+        packageName:
+          type: string
+        packageSku:
+          type: string
+          nullable: true
+        category:
+          type: string
+        criticalCount:
+          type: integer
+        complianceStatus:
+          type: string
+          nullable: true
+      required:
+        - assignment
+        - packageName
+        - category
+        - criticalCount
+
+    MemberWorkload:
+      type: object
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        roleKey:
+          type: string
+        activeCount:
+          type: integer
+        inProgressCount:
+          type: integer
+        capacity:
+          type: integer
+        utilization:
+          type: number
+        avgReviewMinutes:
+          type: number
+          nullable: true
+        overloaded:
+          type: boolean
+      required:
+        - userId
+        - name
+        - roleKey
+        - activeCount
+        - inProgressCount
+        - capacity
+        - utilization
+        - overloaded
+
+    ReassignmentRecommendation:
+      type: object
+      properties:
+        fromUserId:
+          type: integer
+        fromName:
+          type: string
+        toUserId:
+          type: integer
+        toName:
+          type: string
+        suggestedMoves:
+          type: integer
+        reason:
+          type: string
+      required:
+        - fromUserId
+        - fromName
+        - toUserId
+        - toName
+        - suggestedMoves
+        - reason
+
+    TeamWorkload:
+      type: object
+      properties:
+        teamId:
+          type: integer
+        teamName:
+          type: string
+        memberCount:
+          type: integer
+        activeCount:
+          type: integer
+        capacity:
+          type: integer
+        utilization:
+          type: number
+        avgReviewMinutes:
+          type: number
+          nullable: true
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/MemberWorkload"
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReassignmentRecommendation"
+      required:
+        - teamId
+        - teamName
+        - memberCount
+        - activeCount
+        - capacity
+        - utilization
+        - members
+        - recommendations
+
+    WorkloadResponse:
+      type: object
+      properties:
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamWorkload"
+        unassignedCount:
+          type: integer
+        generatedAt:
+          type: string
+      required:
+        - teams
+        - unassignedCount
+        - generatedAt
+
+    ReviewMetricsTeam:
+      type: object
+      properties:
+        teamId:
+          type: integer
+          nullable: true
+        teamName:
+          type: string
+        completed:
+          type: integer
+        avgReviewMinutes:
+          type: number
+          nullable: true
+        slaComplianceRate:
+          type: number
+          nullable: true
+      required:
+        - teamName
+        - completed
+
+    ReviewMetricsRecent:
+      type: object
+      properties:
+        packageId:
+          type: integer
+        packageName:
+          type: string
+        teamName:
+          type: string
+          nullable: true
+        assigneeName:
+          type: string
+          nullable: true
+        reviewMinutes:
+          type: integer
+          nullable: true
+        metSla:
+          type: boolean
+          nullable: true
+        completedAt:
+          type: string
+          nullable: true
+      required:
+        - packageId
+        - packageName
+
+    ReviewMetricsSummary:
+      type: object
+      properties:
+        totalCompleted:
+          type: integer
+        avgReviewMinutes:
+          type: number
+          nullable: true
+        slaMet:
+          type: integer
+        slaBreached:
+          type: integer
+        slaComplianceRate:
+          type: number
+          nullable: true
+        openReviews:
+          type: integer
+        overdueReviews:
+          type: integer
+        escalatedReviews:
+          type: integer
+        byTeam:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewMetricsTeam"
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewMetricsRecent"
+      required:
+        - totalCompleted
+        - slaMet
+        - slaBreached
+        - openReviews
+        - overdueReviews
+        - escalatedReviews
+        - byTeam
+        - recent

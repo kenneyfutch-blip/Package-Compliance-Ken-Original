@@ -25,6 +25,7 @@ import type {
   AiProviderTestResult,
   AiProviderUpdate,
   ApiError,
+  AssignmentListItem,
   AuditEvent,
   BulkAnalyzeInput,
   BulkAnalyzeResult,
@@ -53,6 +54,7 @@ import type {
   ListLanguageFindingsParams,
   ListPackagesParams,
   ListRegulationsParams,
+  ListReviewAssignmentsParams,
   ListViolationsParams,
   Me,
   Notification,
@@ -72,6 +74,9 @@ import type {
   Report,
   ReportInput,
   ReprocessResult,
+  ReviewAssignInput,
+  ReviewAssignmentDetail,
+  ReviewMetricsSummary,
   Supplier,
   SupplierDetail,
   SupplierInput,
@@ -82,7 +87,8 @@ import type {
   UploadUrlResponse,
   UserAccount,
   VendorPerformanceItem,
-  ViolationWithPackage
+  ViolationWithPackage,
+  WorkloadResponse
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -4544,5 +4550,463 @@ export const useTestAiProvider = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getTestAiProviderMutationOptions(options));
+    }
+
+export const getGetReviewWorkloadUrl = () => {
+
+
+
+
+  return `/api/reviews/workload`
+}
+
+/**
+ * @summary Team and per-member review workload, capacity, and rebalancing recommendations
+ */
+export const getReviewWorkload = async ( options?: RequestInit): Promise<WorkloadResponse> => {
+
+  return customFetch<WorkloadResponse>(getGetReviewWorkloadUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReviewWorkloadQueryKey = () => {
+    return [
+    `/api/reviews/workload`
+    ] as const;
+    }
+
+
+export const getGetReviewWorkloadQueryOptions = <TData = Awaited<ReturnType<typeof getReviewWorkload>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewWorkload>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReviewWorkloadQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewWorkload>>> = ({ signal }) => getReviewWorkload({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReviewWorkload>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReviewWorkloadQueryResult = NonNullable<Awaited<ReturnType<typeof getReviewWorkload>>>
+export type GetReviewWorkloadQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Team and per-member review workload, capacity, and rebalancing recommendations
+ */
+
+export function useGetReviewWorkload<TData = Awaited<ReturnType<typeof getReviewWorkload>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewWorkload>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReviewWorkloadQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListReviewAssignmentsUrl = (params?: ListReviewAssignmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reviews/assignments?${stringifiedParams}` : `/api/reviews/assignments`
+}
+
+/**
+ * @summary List review assignments, optionally filtered by status, team, or assignee
+ */
+export const listReviewAssignments = async (params?: ListReviewAssignmentsParams, options?: RequestInit): Promise<AssignmentListItem[]> => {
+
+  return customFetch<AssignmentListItem[]>(getListReviewAssignmentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListReviewAssignmentsQueryKey = (params?: ListReviewAssignmentsParams,) => {
+    return [
+    `/api/reviews/assignments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListReviewAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listReviewAssignments>>, TError = ErrorType<unknown>>(params?: ListReviewAssignmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReviewAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListReviewAssignmentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReviewAssignments>>> = ({ signal }) => listReviewAssignments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReviewAssignments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListReviewAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listReviewAssignments>>>
+export type ListReviewAssignmentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List review assignments, optionally filtered by status, team, or assignee
+ */
+
+export function useListReviewAssignments<TData = Awaited<ReturnType<typeof listReviewAssignments>>, TError = ErrorType<unknown>>(
+ params?: ListReviewAssignmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReviewAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListReviewAssignmentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetReviewMetricsUrl = () => {
+
+
+
+
+  return `/api/reviews/metrics`
+}
+
+/**
+ * @summary SLA performance and review-time metrics for reporting
+ */
+export const getReviewMetrics = async ( options?: RequestInit): Promise<ReviewMetricsSummary> => {
+
+  return customFetch<ReviewMetricsSummary>(getGetReviewMetricsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReviewMetricsQueryKey = () => {
+    return [
+    `/api/reviews/metrics`
+    ] as const;
+    }
+
+
+export const getGetReviewMetricsQueryOptions = <TData = Awaited<ReturnType<typeof getReviewMetrics>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewMetrics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReviewMetricsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewMetrics>>> = ({ signal }) => getReviewMetrics({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReviewMetrics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReviewMetricsQueryResult = NonNullable<Awaited<ReturnType<typeof getReviewMetrics>>>
+export type GetReviewMetricsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary SLA performance and review-time metrics for reporting
+ */
+
+export function useGetReviewMetrics<TData = Awaited<ReturnType<typeof getReviewMetrics>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewMetrics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReviewMetricsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPackageAssignmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/assignment`
+}
+
+/**
+ * @summary Current assignment and full ownership history for a package
+ */
+export const getPackageAssignment = async (id: number, options?: RequestInit): Promise<ReviewAssignmentDetail> => {
+
+  return customFetch<ReviewAssignmentDetail>(getGetPackageAssignmentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPackageAssignmentQueryKey = (id: number,) => {
+    return [
+    `/api/packages/${id}/assignment`
+    ] as const;
+    }
+
+
+export const getGetPackageAssignmentQueryOptions = <TData = Awaited<ReturnType<typeof getPackageAssignment>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPackageAssignment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPackageAssignmentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPackageAssignment>>> = ({ signal }) => getPackageAssignment(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPackageAssignment>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPackageAssignmentQueryResult = NonNullable<Awaited<ReturnType<typeof getPackageAssignment>>>
+export type GetPackageAssignmentQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Current assignment and full ownership history for a package
+ */
+
+export function useGetPackageAssignment<TData = Awaited<ReturnType<typeof getPackageAssignment>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPackageAssignment>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPackageAssignmentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAssignPackageReviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/assign`
+}
+
+/**
+ * @summary Manually assign or reassign a package review to a team and/or member
+ */
+export const assignPackageReview = async (id: number,
+    reviewAssignInput: ReviewAssignInput, options?: RequestInit): Promise<ReviewAssignmentDetail> => {
+
+  return customFetch<ReviewAssignmentDetail>(getAssignPackageReviewUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(reviewAssignInput)
+  }
+);}
+
+
+
+
+
+export const getAssignPackageReviewMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignPackageReview>>, TError,{id: number;data: BodyType<ReviewAssignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assignPackageReview>>, TError,{id: number;data: BodyType<ReviewAssignInput>}, TContext> => {
+
+const mutationKey = ['assignPackageReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignPackageReview>>, {id: number;data: BodyType<ReviewAssignInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  assignPackageReview(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignPackageReviewMutationResult = NonNullable<Awaited<ReturnType<typeof assignPackageReview>>>
+    export type AssignPackageReviewMutationBody = BodyType<ReviewAssignInput>
+    export type AssignPackageReviewMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Manually assign or reassign a package review to a team and/or member
+ */
+export const useAssignPackageReview = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignPackageReview>>, TError,{id: number;data: BodyType<ReviewAssignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assignPackageReview>>,
+        TError,
+        {id: number;data: BodyType<ReviewAssignInput>},
+        TContext
+      > => {
+      return useMutation(getAssignPackageReviewMutationOptions(options));
+    }
+
+export const getAutoAssignPackageReviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/auto-assign`
+}
+
+/**
+ * @summary Route a package to the correct team by category and balance onto the least-loaded member
+ */
+export const autoAssignPackageReview = async (id: number, options?: RequestInit): Promise<ReviewAssignmentDetail> => {
+
+  return customFetch<ReviewAssignmentDetail>(getAutoAssignPackageReviewUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAutoAssignPackageReviewMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof autoAssignPackageReview>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof autoAssignPackageReview>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['autoAssignPackageReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof autoAssignPackageReview>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  autoAssignPackageReview(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AutoAssignPackageReviewMutationResult = NonNullable<Awaited<ReturnType<typeof autoAssignPackageReview>>>
+
+    export type AutoAssignPackageReviewMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Route a package to the correct team by category and balance onto the least-loaded member
+ */
+export const useAutoAssignPackageReview = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof autoAssignPackageReview>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof autoAssignPackageReview>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAutoAssignPackageReviewMutationOptions(options));
     }
 

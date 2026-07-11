@@ -14,6 +14,7 @@ import proofsRouter from "./proofs";
 import storageRouter from "./storage";
 import fdaRouter from "./fda";
 import meRouter from "./me";
+import reviewsRouter from "./reviews";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -35,5 +36,6 @@ router.use(documentAiRouter);
 router.use(proofsRouter);
 router.use(storageRouter);
 router.use(fdaRouter);
+router.use(reviewsRouter);
 
 export default router;

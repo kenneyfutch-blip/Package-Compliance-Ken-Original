@@ -8,10 +8,58 @@ import type {
   ReportRow,
   UserRow,
   DocumentExtractionRow,
+  ReviewAssignmentRow,
+  ReviewHistoryRow,
 } from "@workspace/db";
+import { slaStatusFor } from "./reviews/engine";
 
 function iso(d: Date | null | undefined): string | null {
   return d ? new Date(d).toISOString() : null;
+}
+
+export function mapReviewAssignment(
+  a: ReviewAssignmentRow,
+  extra?: { teamName?: string | null; assigneeName?: string | null },
+) {
+  return {
+    id: a.id,
+    packageId: a.packageId,
+    teamId: a.teamId,
+    teamName: extra?.teamName ?? null,
+    assigneeUserId: a.assigneeUserId,
+    assigneeName: extra?.assigneeName ?? null,
+    status: a.status,
+    priority: a.priority,
+    slaHours: a.slaHours,
+    slaStatus: slaStatusFor(a),
+    escalationLevel: a.escalationLevel,
+    autoRouted: a.autoRouted,
+    assignedAt: iso(a.assignedAt),
+    dueAt: iso(a.dueAt),
+    startedAt: iso(a.startedAt),
+    completedAt: iso(a.completedAt),
+    lastEscalatedAt: iso(a.lastEscalatedAt),
+    createdAt: iso(a.createdAt)!,
+    updatedAt: iso(a.updatedAt)!,
+  };
+}
+
+export function mapReviewHistory(h: ReviewHistoryRow) {
+  return {
+    id: h.id,
+    packageId: h.packageId,
+    assignmentId: h.assignmentId,
+    action: h.action,
+    fromTeamId: h.fromTeamId,
+    toTeamId: h.toTeamId,
+    fromUserId: h.fromUserId,
+    toUserId: h.toUserId,
+    actorUserId: h.actorUserId,
+    actorName: h.actorName,
+    detail: h.detail,
+    escalationLevel: h.escalationLevel,
+    createdAt: iso(h.createdAt)!,
+  };
 }
 
 export function mapPackage(p: PackageRow) {

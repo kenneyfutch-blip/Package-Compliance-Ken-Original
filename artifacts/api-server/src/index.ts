@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureAuditImmutability } from "./lib/audit";
+import { initJobs } from "./lib/jobs";
 
 const rawPort = process.env["PORT"];
 
@@ -26,4 +27,7 @@ app.listen(port, (err) => {
 
   // Guarantee the audit trail is append-only at the database layer.
   void ensureAuditImmutability();
+
+  // Start the durable background job worker and schedule the escalation sweep.
+  void initJobs();
 });
