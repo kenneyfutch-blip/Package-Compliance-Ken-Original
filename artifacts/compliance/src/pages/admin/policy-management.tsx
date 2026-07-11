@@ -244,7 +244,8 @@ export default function PolicyManagement() {
   const updatePolicy = useUpdatePolicy()
   const reprocessPolicy = useReprocessPolicy()
   const createVersion = useCreatePolicyVersion()
-  const { uploadFile, isUploading } = useUpload()
+  const [uploadErr, setUploadErr] = useState<string | null>(null)
+  const { uploadFile, isUploading } = useUpload({ onError: (e) => setUploadErr(e.message) })
 
   const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -260,8 +261,10 @@ export default function PolicyManagement() {
   const onPickFile = async (files: FileList | null) => {
     const file = files?.[0]
     if (!file) return
+    setUploadErr(null)
     const res = await uploadFile(file)
     if (res) setDoc({ name: file.name, url: res.objectPath, contentType: file.type || "application/octet-stream" })
+    // On failure onError has already set a friendly, retryable message.
   }
 
   const openCreate = () => {
@@ -370,6 +373,7 @@ export default function PolicyManagement() {
                   <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv" onChange={(e) => onPickFile(e.target.files)} />
                 </label>
               )}
+              {uploadErr && <p className="mt-2 text-xs text-destructive">{uploadErr}</p>}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>

@@ -11,13 +11,14 @@ import {
   getCheckPackageDuplicatesQueryKey,
   type Package,
 } from "@workspace/api-client-react"
-import { useUpload } from "@workspace/object-storage-web"
+import { useUpload, MAX_UPLOAD_LABEL } from "@workspace/object-storage-web"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { UploadCloud, Wand2, Loader2, Info, FileText, X, CheckCircle2, ScanText, AlertTriangle } from "lucide-react"
 import { fileTypeFromName } from "@/lib/proof-utils"
 
@@ -77,7 +78,7 @@ type UploadFormValues = z.infer<typeof uploadSchema>
 export default function UploadPage() {
   const [, setLocation] = useLocation()
   const createPackage = useCreatePackage()
-  const { uploadFile, isUploading } = useUpload()
+  const { uploadFile, isUploading, error: uploadError, progress: uploadProgress } = useUpload()
   const extractText = useExtractArtworkText()
   const extractFields = useExtractArtworkFields()
   const [dragActive, setDragActive] = useState(false)
@@ -321,10 +322,28 @@ export default function UploadPage() {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               {isUploading ? <Loader2 className="w-8 h-8 text-primary animate-spin" /> : <UploadCloud className="w-8 h-8 text-primary" />}
             </div>
-            <h3 className="text-lg font-semibold mb-1">{isUploading ? "Uploading…" : "Drag and drop artwork here"}</h3>
-            <p className="text-sm text-muted-foreground mb-4">PNG, JPG, PDF render as proofs · AI, INDD tracked only · up to 50MB</p>
-            <div className="flex items-center gap-4 justify-center">
-              <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}>Browse Files</Button>
+            <h3 className="text-lg font-semibold mb-1">{isUploading ? `Uploading… ${uploadProgress}%` : "Drag and drop artwork here"}</h3>
+            <p className="text-sm text-muted-foreground mb-4">PNG, JPG, PDF render as proofs · AI, INDD tracked only · up to {MAX_UPLOAD_LABEL}</p>
+            {isUploading ? (
+              <div className="max-w-xs mx-auto mb-2">
+                <Progress value={uploadProgress} className="h-2" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-4 justify-center">
+                <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}>Browse Files</Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {uploadError && !isUploading && (
+          <div className="border border-destructive/40 bg-destructive/10 rounded-xl p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-destructive">Upload failed</p>
+                <p className="text-muted-foreground">{uploadError.message}{uploadError.retryable ? " You can try uploading again." : ""}</p>
+              </div>
             </div>
           </div>
         )}

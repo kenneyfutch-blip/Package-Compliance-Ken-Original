@@ -724,10 +724,14 @@ function CopilotPanel({ packageId, pkg }: { packageId: number; pkg: Pkg }) {
 // ---------------------------------------------------------------------------
 function AddVersionButton({ packageId, onAdded }: { packageId: number; onAdded: (versionId: number) => void }) {
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const { uploadFile, isUploading } = useUpload()
+  const [error, setError] = React.useState<string | null>(null)
+  // Surface the hook's friendly upload error via onError so we don't read a
+  // stale error value from an earlier render inside the click handler.
+  const { uploadFile, isUploading, progress: uploadProgress } = useUpload({
+    onError: (e) => setError(e.message),
+  })
   const extractText = useExtractArtworkText()
   const createVersion = useCreatePackageVersion()
-  const [error, setError] = React.useState<string | null>(null)
   const busy = isUploading || extractText.isPending || createVersion.isPending
 
   const handleFile = async (files: FileList | null) => {
@@ -737,7 +741,7 @@ function AddVersionButton({ packageId, onAdded }: { packageId: number; onAdded: 
     try {
       const type = fileTypeFromName(file.name)
       const res = await uploadFile(file)
-      if (!res) { setError("Upload failed."); return }
+      if (!res) return // onError already set a friendly message
       let extractedText: string | undefined
       if (type === "png" || type === "jpg") {
         try {
@@ -775,7 +779,7 @@ function AddVersionButton({ packageId, onAdded }: { packageId: number; onAdded: 
       />
       <Button variant="outline" className="gap-2 h-9" disabled={busy} onClick={() => inputRef.current?.click()}>
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FilePlus className="w-4 h-4" />}
-        Add Version
+        {isUploading ? `Uploading ${uploadProgress}%` : "Add Version"}
       </Button>
       {error && <span className="text-[10px] text-destructive mt-0.5 max-w-[190px] text-right">{error}</span>}
     </div>

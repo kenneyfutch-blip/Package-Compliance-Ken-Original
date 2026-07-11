@@ -32,6 +32,9 @@ const objectStorageService = new ObjectStorageService();
 // vectors when a file is later served back from storage. The allowlist covers
 // the formats the product actually uses (packaging artwork incl. Adobe .ai/
 // .indd, PDFs, images, Office docs, and plain-text policy files).
+// Authoritative upload size gate. The client mirrors this value in
+// lib/object-storage-web/src/upload-config.ts (MAX_UPLOAD_BYTES) so the UI can
+// display and pre-validate the same limit — keep the two in lockstep.
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 MB
 const ALLOWED_UPLOAD_CONTENT_TYPES = new Set<string>([
   "application/pdf",

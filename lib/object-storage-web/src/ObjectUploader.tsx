@@ -7,6 +7,8 @@ import '@uppy/dashboard/css/style.min.css';
 
 import AwsS3 from '@uppy/aws-s3';
 
+import { MAX_UPLOAD_BYTES } from './upload-config';
+
 interface ObjectUploaderProps {
   maxNumberOfFiles?: number;
   maxFileSize?: number;
@@ -47,7 +49,7 @@ interface ObjectUploaderProps {
  * @param props - Component props
  * @param props.maxNumberOfFiles - Maximum number of files allowed to be uploaded
  *   (default: 1)
- * @param props.maxFileSize - Maximum file size in bytes (default: 10MB)
+ * @param props.maxFileSize - Maximum file size in bytes (default: 100MB, the app-wide limit)
  * @param props.onGetUploadParameters - Function to get upload parameters for each file.
  *   Receives the UppyFile object with file.name, file.size, file.type properties.
  *   Use these to request per-file presigned URLs from your backend. Returns method,
@@ -60,7 +62,7 @@ interface ObjectUploaderProps {
  */
 export function ObjectUploader({
   maxNumberOfFiles = 1,
-  maxFileSize = 10485760, // 10MB default
+  maxFileSize = MAX_UPLOAD_BYTES, // app-wide 100MB limit (mirrors the server)
   onGetUploadParameters,
   onComplete,
   buttonClassName,

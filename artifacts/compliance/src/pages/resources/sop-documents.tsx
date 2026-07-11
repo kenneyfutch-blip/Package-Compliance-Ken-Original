@@ -101,17 +101,17 @@ function FilePicker({
   onClear: () => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const { uploadFile, isUploading } = useUpload()
   const { toast } = useToast()
+  const { uploadFile, isUploading } = useUpload({
+    // Surface the hook's specific, friendly reason (e.g. "file too large") — not a generic message.
+    onError: (e) => toast({ title: "Upload failed", description: e.message, variant: "destructive" }),
+  })
 
   const handle = async (files: FileList | null) => {
     const f = files?.[0]
     if (!f) return
     const res = await uploadFile(f)
-    if (!res) {
-      toast({ title: "Upload failed", description: "Could not upload the file. Please try again.", variant: "destructive" })
-      return
-    }
+    if (!res) return // onError already toasted a friendly message
     onPicked({
       name: f.name,
       url: res.objectPath,
