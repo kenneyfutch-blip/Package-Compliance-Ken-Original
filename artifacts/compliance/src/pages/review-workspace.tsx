@@ -12,6 +12,7 @@ import {
   ArrowRight, PenLine
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { FdaIntelligenceTab } from "@/components/fda-intelligence-tab"
 
 export default function ReviewWorkspace() {
   const { id } = useParams()
@@ -165,6 +166,7 @@ export default function ReviewWorkspace() {
 
               <TabsList className="w-full justify-start rounded-none border-b-0 h-auto p-0 bg-transparent gap-6">
                 <TabsTrigger value="violations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">Violations</TabsTrigger>
+                <TabsTrigger value="fda" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">FDA Intelligence</TabsTrigger>
                 <TabsTrigger value="ocr" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">Extracted Data</TabsTrigger>
                 <TabsTrigger value="copilot" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">AI Copilot</TabsTrigger>
               </TabsList>
@@ -244,6 +246,10 @@ export default function ReviewWorkspace() {
                     )}
                   </>
                 )}
+              </TabsContent>
+
+              <TabsContent value="fda" className="m-0 p-4">
+                <FdaIntelligenceTab packageId={packageId} />
               </TabsContent>
 
               <TabsContent value="ocr" className="m-0 p-4 space-y-4">

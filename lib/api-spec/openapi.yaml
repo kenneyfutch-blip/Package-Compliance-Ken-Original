@@ -715,6 +715,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/FdaRecallResponse"
 
+  /fda/status:
+    get:
+      operationId: getFdaStatus
+      tags: [regulations]
+      summary: FDA integration status & category-to-source catalog (admin)
+      responses:
+        "200":
+          description: FDA integration status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FdaStatus"
+
+  /fda/intelligence:
+    get:
+      operationId: getFdaIntelligence
+      tags: [regulations]
+      summary: Assemble applicable FDA regulatory intelligence for a package
+      parameters:
+        - name: packageId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: FDA intelligence for the package
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FdaIntelligence"
+
   /regulations:
     get:
       operationId: listRegulations
@@ -1114,6 +1146,157 @@ components:
             $ref: "#/components/schemas/FdaRecall"
         total:
           type: integer
+        disclaimer:
+          type: string
+    FdaSource:
+      type: object
+      required: [id, label, description]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+    FdaFinding:
+      type: object
+      required: [source, title, detail]
+      properties:
+        source:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        severity:
+          type: string
+        date:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+    FdaLabelExample:
+      type: object
+      required: [title, description]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        url:
+          type: string
+          nullable: true
+    FdaReference:
+      type: object
+      required: [code, title]
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+    FdaLink:
+      type: object
+      required: [label, url]
+      properties:
+        label:
+          type: string
+        url:
+          type: string
+    FdaCatalogEntry:
+      type: object
+      required: [category, label, sources, references, links]
+      properties:
+        category:
+          type: string
+        label:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaSource"
+        references:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaReference"
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaLink"
+    FdaStatus:
+      type: object
+      required: [configured, reachable, checkedAt, catalog, disclaimer]
+      properties:
+        configured:
+          type: boolean
+        reachable:
+          type: boolean
+        checkedAt:
+          type: string
+        catalog:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaCatalogEntry"
+        disclaimer:
+          type: string
+    FdaIntelligence:
+      type: object
+      required:
+        [
+          detectedCategory,
+          categoryLabel,
+          searchTerm,
+          applicableSources,
+          warnings,
+          findings,
+          labelExamples,
+          references,
+          sourceLinks,
+          available,
+          degraded,
+          message,
+          disclaimer,
+        ]
+      properties:
+        detectedCategory:
+          type: string
+          nullable: true
+        categoryLabel:
+          type: string
+        searchTerm:
+          type: string
+          nullable: true
+        applicableSources:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaSource"
+        warnings:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaFinding"
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaFinding"
+        labelExamples:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaLabelExample"
+        references:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaReference"
+        sourceLinks:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaLink"
+        available:
+          type: boolean
+        degraded:
+          type: boolean
+        message:
+          type: string
+          nullable: true
         disclaimer:
           type: string
     HealthStatus:

@@ -38,6 +38,7 @@ import TrendAnalysis from "@/pages/trend-analysis"
 import RegulatoryLibrary from "@/pages/regulatory-library"
 import RegulatoryUpdates from "@/pages/regulatory-updates"
 import FdaRecalls from "@/pages/fda-recalls"
+import FdaSources from "@/pages/fda-sources"
 import SupplierPortal from "@/pages/supplier-portal"
 
 const queryClient = new QueryClient()
@@ -223,6 +224,7 @@ function AppRoutes() {
 
         {/* Regulatory Intelligence */}
         <Route path="/regulatory/recalls" component={FdaRecalls} />
+        <Route path="/regulatory/sources" component={FdaSources} />
         <Route path="/regulatory/:agency">
           {(params) => {
             const cfg = REG_LIBS[params.agency ?? ""] ?? {

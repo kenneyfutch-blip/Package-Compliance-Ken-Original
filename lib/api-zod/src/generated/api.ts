@@ -1059,6 +1059,86 @@ export const ListFdaRecallsResponse = zod.object({
 
 
 /**
+ * @summary FDA integration status & category-to-source catalog (admin)
+ */
+export const GetFdaStatusResponse = zod.object({
+  "configured": zod.boolean(),
+  "reachable": zod.boolean(),
+  "checkedAt": zod.string(),
+  "catalog": zod.array(zod.object({
+  "category": zod.string(),
+  "label": zod.string(),
+  "sources": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string()
+})),
+  "references": zod.array(zod.object({
+  "code": zod.string(),
+  "title": zod.string()
+})),
+  "links": zod.array(zod.object({
+  "label": zod.string(),
+  "url": zod.string()
+}))
+})),
+  "disclaimer": zod.string()
+})
+
+
+/**
+ * @summary Assemble applicable FDA regulatory intelligence for a package
+ */
+export const GetFdaIntelligenceQueryParams = zod.object({
+  "packageId": zod.coerce.number()
+})
+
+export const GetFdaIntelligenceResponse = zod.object({
+  "detectedCategory": zod.string().nullable(),
+  "categoryLabel": zod.string(),
+  "searchTerm": zod.string().nullable(),
+  "applicableSources": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "description": zod.string()
+})),
+  "warnings": zod.array(zod.object({
+  "source": zod.string(),
+  "title": zod.string(),
+  "detail": zod.string(),
+  "severity": zod.string().optional(),
+  "date": zod.string().nullish(),
+  "url": zod.string().nullish()
+})),
+  "findings": zod.array(zod.object({
+  "source": zod.string(),
+  "title": zod.string(),
+  "detail": zod.string(),
+  "severity": zod.string().optional(),
+  "date": zod.string().nullish(),
+  "url": zod.string().nullish()
+})),
+  "labelExamples": zod.array(zod.object({
+  "title": zod.string(),
+  "description": zod.string(),
+  "url": zod.string().nullish()
+})),
+  "references": zod.array(zod.object({
+  "code": zod.string(),
+  "title": zod.string()
+})),
+  "sourceLinks": zod.array(zod.object({
+  "label": zod.string(),
+  "url": zod.string()
+})),
+  "available": zod.boolean(),
+  "degraded": zod.boolean(),
+  "message": zod.string().nullable(),
+  "disclaimer": zod.string()
+})
+
+
+/**
  * @summary Browse the regulatory knowledge base
  */
 export const ListRegulationsQueryParams = zod.object({

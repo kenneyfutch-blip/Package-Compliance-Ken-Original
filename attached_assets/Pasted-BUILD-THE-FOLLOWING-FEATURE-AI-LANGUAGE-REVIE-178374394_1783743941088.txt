@@ -1,0 +1,612 @@
+BUILD THE FOLLOWING FEATURE:
+
+====================================================
+AI LANGUAGE REVIEW ENGINE
+====================================================
+
+Create an enterprise-grade AI Language Review Engine as a core module of the Packaging Compliance Platform.
+
+This module should work alongside FDA, EPA, FTC, USDA, CPSC, eCFR, and Internal Compliance Reviews.
+
+The purpose of this module is to identify language, spelling, grammar, contextual wording, packaging copy, marketing language, and compliance language issues before packaging is approved for production.
+
+This is NOT a traditional spell checker.
+
+This should function as an AI-powered packaging language reviewer.
+
+====================================================
+NAVIGATION
+====================================================
+
+Add a new section under:
+
+AI COMPLIANCE
+
+  Violations Center
+  Language Review
+  Recommended Fixes
+  Compliance Memory
+  Compliance Heatmaps
+  Claim Reviews
+
+====================================================
+REVIEW WORKSPACE
+====================================================
+
+Inside every package review create a new tab.
+
+Tabs:
+
+Compliance Findings
+
+AI Recommendations
+
+Language Review
+
+Regulations
+
+Review History
+
+====================================================
+LANGUAGE REVIEW TAB
+====================================================
+
+Display:
+
+Language Score
+
+Spelling Issues
+
+Grammar Issues
+
+Contextual Errors
+
+Regulatory Language Issues
+
+Marketing Claim Issues
+
+Brand Language Issues
+
+Confidence Score
+
+Severity Breakdown
+
+====================================================
+LANGUAGE SCORE
+====================================================
+
+Generate a Language Quality Score.
+
+Scale:
+
+100 = Excellent
+
+90-99 = Minor Issues
+
+80-89 = Needs Review
+
+70-79 = Significant Issues
+
+Below 70 = High Risk
+
+Display:
+
+Language Score
+
+Issue Count
+
+Severity Count
+
+====================================================
+LAYER 1 — SPELLING DETECTION
+====================================================
+
+Detect:
+
+Misspelled Words
+
+Typographical Errors
+
+Packaging Copy Errors
+
+Examples:
+
+Ingrediants
+
+Nutriton
+
+Refridgerate
+
+Recylable
+
+Display:
+
+Original Text
+
+Suggested Correction
+
+Issue Severity
+
+Confidence Score
+
+====================================================
+LAYER 2 — GRAMMAR DETECTION
+====================================================
+
+Detect:
+
+Grammar Errors
+
+Sentence Structure Issues
+
+Punctuation Issues
+
+Pluralization Issues
+
+Examples:
+
+Keep product away childrens.
+
+Suggested:
+
+Keep product away from children.
+
+====================================================
+LAYER 3 — CONTEXTUAL LANGUAGE ANALYSIS
+====================================================
+
+Use GPT-5 reasoning.
+
+Do NOT rely solely on dictionary validation.
+
+Evaluate:
+
+Product Category
+
+Packaging Purpose
+
+Marketing Intent
+
+Regulatory Context
+
+Examples:
+
+Hair Die
+
+Suggested:
+
+Hair Dye
+
+Reason:
+
+Context indicates hair color product.
+
+----------------------------------------------------
+
+Big Summer Sail
+
+Suggested:
+
+Big Summer Sale
+
+Reason:
+
+Retail promotion context.
+
+----------------------------------------------------
+
+Their
+
+There
+
+They're
+
+Determine contextual correctness.
+
+====================================================
+LAYER 4 — REGULATORY LANGUAGE VALIDATION
+====================================================
+
+Validate extracted text against:
+
+FDA
+
+EPA
+
+FTC
+
+USDA
+
+CPSC
+
+Internal SOPs
+
+Approved Language Library
+
+Detect:
+
+Missing Statements
+
+Improper Warnings
+
+Missing Allergen Language
+
+Non-Compliant Text
+
+Examples:
+
+Contains Soy Lecithin
+
+Issue:
+
+Missing Allergen Declaration
+
+Suggested:
+
+Contains: Soy
+
+Severity:
+
+Critical
+
+====================================================
+LAYER 5 — MARKETING CLAIM REVIEW
+====================================================
+
+Detect:
+
+Natural
+
+Organic
+
+Clinically Proven
+
+Doctor Recommended
+
+Safe
+
+Non Toxic
+
+Healthy
+
+Chemical Free
+
+Kills 99.9% Of Germs
+
+Eco Friendly
+
+Environmentally Friendly
+
+Determine:
+
+FDA Review Required
+
+EPA Review Required
+
+FTC Review Required
+
+Legal Review Required
+
+Generate:
+
+Claim Risk Score
+
+====================================================
+LAYER 6 — BRAND LANGUAGE VALIDATION
+====================================================
+
+Validate against:
+
+Internal Brand Standards
+
+Dollar Tree Packaging Standards
+
+Internal Approved Terminology
+
+Vendor Requirements
+
+Flag:
+
+Unapproved Copy
+
+Brand Violations
+
+Approval Required
+
+====================================================
+AI RECOMMENDATION ENGINE
+====================================================
+
+For every finding:
+
+Display:
+
+Issue
+
+Severity
+
+Confidence
+
+Reason
+
+Suggested Fix
+
+Applicable Regulation
+
+Historical Resolution
+
+Example:
+
+Issue:
+
+Missing Soy Allergen Statement
+
+Reason:
+
+Soy detected in ingredients.
+
+Suggested Fix:
+
+Contains: Soy
+
+Applicable Regulation:
+
+FDA Food Allergen Labeling Requirement
+
+Historical Usage:
+
+Applied successfully in 1,245 approved reviews.
+
+====================================================
+COMPLIANCE MEMORY INTEGRATION
+====================================================
+
+Store all findings in Compliance Memory.
+
+Store:
+
+Package
+
+Issue
+
+Suggested Fix
+
+Final Resolution
+
+Approval Outcome
+
+Reviewer
+
+Date
+
+Future reviews should surface historical fixes.
+
+====================================================
+ANNOTATED PACKAGE VIEWER
+====================================================
+
+Display language findings directly on packaging.
+
+Highlight:
+
+Spelling Issues
+
+Grammar Issues
+
+Contextual Errors
+
+Regulatory Language Issues
+
+Color Coding:
+
+Red = Critical
+
+Orange = Major
+
+Yellow = Minor
+
+Blue = AI Suggestion
+
+Users can click issues and view details.
+
+====================================================
+BULK REVIEW SUPPORT
+====================================================
+
+Language Review must support bulk processing.
+
+Display:
+
+SKU
+
+Language Score
+
+Issue Count
+
+Critical Count
+
+Status
+
+Example:
+
+SKU 12345
+
+Language Score: 96
+
+Status: Passed
+
+----------------------------------------------------
+
+SKU 56789
+
+Language Score: 72
+
+Critical Issues: 3
+
+Status: Needs Review
+
+Allow:
+
+Filter By Language Score
+
+Filter By Issue Type
+
+Filter By Severity
+
+====================================================
+DASHBOARD WIDGET
+====================================================
+
+Add Dashboard Widget:
+
+Language Quality
+
+Display:
+
+Average Language Score
+
+Critical Language Findings
+
+Grammar Issues
+
+Spelling Issues
+
+Contextual Errors
+
+Regulatory Language Errors
+
+====================================================
+DATABASE TABLE
+====================================================
+
+Create Table:
+
+language_findings
+
+Fields:
+
+id
+
+review_id
+
+package_id
+
+issue_type
+
+severity
+
+original_text
+
+suggested_text
+
+reason
+
+regulation_reference
+
+confidence_score
+
+status
+
+approved_fix
+
+created_at
+
+updated_at
+
+Issue Types:
+
+Spelling
+
+Grammar
+
+Context
+
+Regulatory
+
+Marketing Claim
+
+Brand Language
+
+====================================================
+REPORTING
+====================================================
+
+Include Language Review in:
+
+Compliance Reports
+
+PDF Reports
+
+Executive Reports
+
+Bulk Review Reports
+
+Annotated Exports
+
+Display:
+
+Language Score
+
+Risk Level
+
+Findings
+
+Recommendations
+
+====================================================
+PERFORMANCE REQUIREMENTS
+====================================================
+
+Support:
+
+50 Active Users
+
+500 Concurrent Reviews
+
+50,000+ Reviews
+
+Bulk Processing
+
+Async AI Analysis
+
+Queued Processing
+
+Background Review Jobs
+
+====================================================
+SUCCESS CRITERIA
+====================================================
+
+The AI Language Review Engine should perform significantly better than a traditional spell checker.
+
+The engine must evaluate:
+
+Spelling
+
+Grammar
+
+Context
+
+Packaging Intent
+
+Marketing Language
+
+Regulatory Language
+
+Brand Language
+
+Compliance Language
+
+The goal is for a compliance specialist to immediately understand:
+
+What is wrong
+
+Why it is wrong
+
+What regulation applies
+
+How to fix it
+
+Whether the package should be approved
+
+The Language Review Engine should become a first-class compliance module alongside FDA, EPA, and regulatory review workflows.

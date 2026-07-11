@@ -35,7 +35,10 @@ import type {
   CreateProofInput,
   DashboardStats,
   DistributionItem,
+  FdaIntelligence,
   FdaRecallResponse,
+  FdaStatus,
+  GetFdaIntelligenceParams,
   HealthStatus,
   ListFdaRecallsParams,
   ListPackagesParams,
@@ -2180,6 +2183,167 @@ export function useListFdaRecalls<TData = Awaited<ReturnType<typeof listFdaRecal
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListFdaRecallsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetFdaStatusUrl = () => {
+
+
+
+
+  return `/api/fda/status`
+}
+
+/**
+ * @summary FDA integration status & category-to-source catalog (admin)
+ */
+export const getFdaStatus = async ( options?: RequestInit): Promise<FdaStatus> => {
+
+  return customFetch<FdaStatus>(getGetFdaStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFdaStatusQueryKey = () => {
+    return [
+    `/api/fda/status`
+    ] as const;
+    }
+
+
+export const getGetFdaStatusQueryOptions = <TData = Awaited<ReturnType<typeof getFdaStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFdaStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFdaStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFdaStatus>>> = ({ signal }) => getFdaStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFdaStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFdaStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getFdaStatus>>>
+export type GetFdaStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary FDA integration status & category-to-source catalog (admin)
+ */
+
+export function useGetFdaStatus<TData = Awaited<ReturnType<typeof getFdaStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFdaStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFdaStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetFdaIntelligenceUrl = (params: GetFdaIntelligenceParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fda/intelligence?${stringifiedParams}` : `/api/fda/intelligence`
+}
+
+/**
+ * @summary Assemble applicable FDA regulatory intelligence for a package
+ */
+export const getFdaIntelligence = async (params: GetFdaIntelligenceParams, options?: RequestInit): Promise<FdaIntelligence> => {
+
+  return customFetch<FdaIntelligence>(getGetFdaIntelligenceUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFdaIntelligenceQueryKey = (params?: GetFdaIntelligenceParams,) => {
+    return [
+    `/api/fda/intelligence`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetFdaIntelligenceQueryOptions = <TData = Awaited<ReturnType<typeof getFdaIntelligence>>, TError = ErrorType<unknown>>(params: GetFdaIntelligenceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFdaIntelligence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFdaIntelligenceQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFdaIntelligence>>> = ({ signal }) => getFdaIntelligence(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFdaIntelligence>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFdaIntelligenceQueryResult = NonNullable<Awaited<ReturnType<typeof getFdaIntelligence>>>
+export type GetFdaIntelligenceQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Assemble applicable FDA regulatory intelligence for a package
+ */
+
+export function useGetFdaIntelligence<TData = Awaited<ReturnType<typeof getFdaIntelligence>>, TError = ErrorType<unknown>>(
+ params: GetFdaIntelligenceParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFdaIntelligence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFdaIntelligenceQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

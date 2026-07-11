@@ -84,6 +84,7 @@ const NAV: NavEntry[] = [
       { name: "USDA Library", href: "/regulatory/usda" },
       { name: "Internal SOP", href: "/regulatory/sop", icon: BookOpen },
       { name: "FDA Recalls", href: "/regulatory/recalls", icon: ShieldAlert },
+      { name: "Regulatory Sources", href: "/regulatory/sources", icon: ShieldCheck },
       { name: "Regulatory Updates", href: "/regulatory-updates", icon: Radio },
     ],
   },

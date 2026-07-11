@@ -25,6 +25,69 @@ export interface FdaRecallResponse {
   disclaimer: string;
 }
 
+export interface FdaSource {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface FdaFinding {
+  source: string;
+  title: string;
+  detail: string;
+  severity?: string;
+  date?: string | null;
+  url?: string | null;
+}
+
+export interface FdaLabelExample {
+  title: string;
+  description: string;
+  url?: string | null;
+}
+
+export interface FdaReference {
+  code: string;
+  title: string;
+}
+
+export interface FdaLink {
+  label: string;
+  url: string;
+}
+
+export interface FdaCatalogEntry {
+  category: string;
+  label: string;
+  sources: FdaSource[];
+  references: FdaReference[];
+  links: FdaLink[];
+}
+
+export interface FdaStatus {
+  configured: boolean;
+  reachable: boolean;
+  checkedAt: string;
+  catalog: FdaCatalogEntry[];
+  disclaimer: string;
+}
+
+export interface FdaIntelligence {
+  detectedCategory: string | null;
+  categoryLabel: string;
+  searchTerm: string | null;
+  applicableSources: FdaSource[];
+  warnings: FdaFinding[];
+  findings: FdaFinding[];
+  labelExamples: FdaLabelExample[];
+  references: FdaReference[];
+  sourceLinks: FdaLink[];
+  available: boolean;
+  degraded: boolean;
+  message: string | null;
+  disclaimer: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -650,6 +713,10 @@ export const ListFdaRecallsCategory = {
   drug: 'drug',
   device: 'device',
 } as const;
+
+export type GetFdaIntelligenceParams = {
+packageId: number;
+};
 
 export type ListRegulationsParams = {
 search?: string;
