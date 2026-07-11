@@ -36,6 +36,25 @@ export async function requireAuth(
   const auth = getAuth(req);
   const userId = auth?.userId;
   if (!userId) {
+    // TEMP DEBUG: understand why the Clerk session isn't validating on the API.
+    const cookieHeader = req.headers.cookie ?? "";
+    const cookieNames = cookieHeader
+      .split(";")
+      .map((c) => c.split("=")[0]?.trim())
+      .filter(Boolean);
+    req.log?.warn(
+      {
+        hasCookieHeader: cookieHeader.length > 0,
+        cookieNames,
+        hasAuthHeader: Boolean(req.headers.authorization),
+        host: req.headers.host,
+        xForwardedHost: req.headers["x-forwarded-host"],
+        origin: req.headers.origin,
+        authReason: (auth as { reason?: string } | null)?.reason,
+        authSessionId: (auth as { sessionId?: string } | null)?.sessionId,
+      },
+      "requireAuth: no userId from getAuth",
+    );
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
