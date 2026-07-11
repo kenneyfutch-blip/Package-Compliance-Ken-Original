@@ -25,6 +25,52 @@ import { canAccessObjectOwner, type ObjectOwner } from '../lib/rbac/scope';
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
 
+// Server-side upload gate. The actual bytes are uploaded directly to object
+// storage via a presigned URL, so this validates the declared metadata before
+// a URL is ever issued: enforces a size ceiling and an approved-type allowlist.
+// Script/HTML/SVG types are intentionally excluded — those are the stored-XSS
+// vectors when a file is later served back from storage. The allowlist covers
+// the formats the product actually uses (packaging artwork incl. Adobe .ai/
+// .indd, PDFs, images, Office docs, and plain-text policy files).
+const MAX_UPLOAD_BYTES = 100 * 1024 * 1024; // 100 MB
+const ALLOWED_UPLOAD_CONTENT_TYPES = new Set<string>([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "text/plain",
+  "text/csv",
+  "application/csv",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/msword",
+  "application/postscript", // .ai / .eps
+  "application/illustrator", // .ai
+  "application/x-indesign", // .indd
+  "application/octet-stream", // fallback browsers send for .ai / .indd binaries
+]);
+
+function validateUpload(
+  name: string,
+  size: number,
+  contentType: string,
+): string | null {
+  if (!Number.isFinite(size) || size <= 0) return "Invalid file size";
+  if (size > MAX_UPLOAD_BYTES) {
+    return `File exceeds the ${Math.floor(MAX_UPLOAD_BYTES / (1024 * 1024))}MB upload limit`;
+  }
+  const type = contentType.split(";")[0]!.trim().toLowerCase();
+  if (!ALLOWED_UPLOAD_CONTENT_TYPES.has(type)) {
+    return "File type is not allowed";
+  }
+  // Block obviously dangerous double-extensions / traversal in the file name.
+  if (/[\\/]|\.\.|\.(exe|sh|bat|cmd|js|mjs|html?|svg|php|com|scr)$/i.test(name)) {
+    return "File name is not allowed";
+  }
+  return null;
+}
+
 /**
  * Reverse-map a private object path (/objects/...) to the record that owns it,
  * so private downloads can be authorized with the same tenant/supplier scoping
@@ -149,6 +195,12 @@ router.post(
 
     try {
       const { name, size, contentType } = parsed.data;
+
+      const validationError = validateUpload(name, size, contentType);
+      if (validationError) {
+        res.status(415).json({ error: validationError });
+        return;
+      }
 
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       const objectPath =

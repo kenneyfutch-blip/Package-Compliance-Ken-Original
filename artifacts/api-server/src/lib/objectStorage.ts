@@ -38,6 +38,31 @@ export class ObjectNotFoundError extends Error {
   }
 }
 
+// Content types safe to render inline in the browser. Anything else is served
+// as an attachment download so uploaded HTML/SVG/scripts can never execute in
+// the app's origin, regardless of the type declared at upload time.
+const SAFE_INLINE_CONTENT_TYPES = new Set<string>([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
+]);
+
+function sanitizeServedContentType(rawContentType: string): {
+  contentType: string;
+  forceDownload: boolean;
+} {
+  const base = rawContentType.split(';')[0]!.trim().toLowerCase();
+  if (SAFE_INLINE_CONTENT_TYPES.has(base)) {
+    return { contentType: base, forceDownload: false };
+  }
+  // Unknown/dangerous types: strip the type and force a download.
+  return { contentType: 'application/octet-stream', forceDownload: true };
+}
+
 export class ObjectStorageService {
   constructor() {}
 
@@ -99,11 +124,21 @@ export class ObjectStorageService {
     const nodeStream = file.createReadStream();
     const webStream = Readable.toWeb(nodeStream) as ReadableStream;
 
+    const served = sanitizeServedContentType(
+      (metadata.contentType as string) || 'application/octet-stream',
+    );
     const headers: Record<string, string> = {
-      'Content-Type':
-        (metadata.contentType as string) || 'application/octet-stream',
+      'Content-Type': served.contentType,
+      // Never let the browser MIME-sniff a stored file into an executable type.
+      'X-Content-Type-Options': 'nosniff',
       'Cache-Control': `${isPublic ? 'public' : 'private'}, max-age=${cacheTtlSec}`,
     };
+    // Anything not in the safe-to-render allowlist is forced to download rather
+    // than render inline, neutralizing stored-XSS from HTML/SVG/script uploads
+    // even if the bytes don't match the type declared at upload time.
+    if (served.forceDownload) {
+      headers['Content-Disposition'] = 'attachment';
+    }
     if (metadata.size) {
       headers['Content-Length'] = String(metadata.size);
     }

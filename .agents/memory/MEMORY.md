@@ -15,3 +15,4 @@
 - [Schema push data loss](schema-push-data-loss.md) — drizzle push can drop/recreate a table and cascade-wipe dependents; seed.ts is the full-reset restore; watch row counts around schema changes.
 - [Package duplicate prevention](duplicate-prevention.md) — sku/upc intentionally non-unique; soft 409 guard (allowDuplicate bypass) + scoped lookup + client warning; debounced override must exact-match submitted ids.
 - [Internal Policy & Standards Engine](policy-engine.md) — org policies as first-class "Internal Standard" rules; authored summary is authoritative (doc optional); non-fatal recall; version publish needs row-lock + unique index; single index-create call.
+- [API security hardening](security-hardening.md) — rate limiter keyed by user/IP (baseUrl+path, strip trailing slash); upload allowlist must keep .ai/.indd; stored-XSS fixed at SERVE time not upload; helmet CORP cross-origin.

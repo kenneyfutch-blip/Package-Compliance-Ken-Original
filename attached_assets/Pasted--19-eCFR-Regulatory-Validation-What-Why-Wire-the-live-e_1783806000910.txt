@@ -1,0 +1,48 @@
+#19 - eCFR Regulatory Validation
+What & Why
+Wire the live eCFR (Electronic Code of Federal Regulations) service into the package review pipeline so every analysis is validated against the actual text of Title 21 (FDA — food, cosmetics, OTC drugs, supplements, health) and Title 40 (EPA — cleaning products, disinfectants, pesticides, hazardous products). Today the AI reasons against a small hand-seeded regulations knowledge base plus openFDA data; this adds the CFR itself as a regulatory source of truth, enriching analysis exactly like the existing FDA checks. Because full CFR titles are far too large to fetch on every review, the content is synced locally on a schedule and recalled semantically at analysis time.
+
+Done looks like
+On the Integrations page, a new "eCFR Regulatory Data" status card shows whether content is synced, when it last synced, how many sections are stored per title, the CFR edition date, and live reachability — with a "Sync now" action for admins.
+After a package is analyzed, its review workspace shows an "eCFR Regulations" tab (beside the existing FDA Intelligence tab) listing the specific CFR sections that apply to that product, each with its citation (e.g. "21 CFR 101.9"), heading, and a relevance snippet, plus links back into the regulation text.
+AI-generated violations cite real CFR sections pulled from the synced content, and the analysis reflects requirements found in Title 21 / Title 40 relevant to the product's category.
+A natural-language regulatory search ("allergen declaration requirements", "EPA requirements for disinfectants") returns matching CFR sections from local content.
+Reviews never fail or hang when eCFR is unreachable or unsynced — analysis degrades gracefully to the existing behavior.
+Content refreshes automatically on a weekly background job; nothing queries eCFR during an individual review.
+Out of scope
+Mirroring entire CFR titles in full — only a curated set of labeling-relevant parts are synced (Title 21 Parts 101, 201, 701, 111; Title 40 Parts 156, 152). Additional parts can be added later.
+Replacing or removing the existing hand-seeded regulations table/seed or the FDA integration — eCFR is additive and runs alongside them.
+A standalone CFR browser/reader UI beyond the status card, the per-package tab, and search (the app already has a regulations library page).
+A new chatbot; existing finding/citation surfaces are reused rather than building a separate copilot.
+Steps
+eCFR service layer — Add an lib/ecfr/ service that mirrors the FDA service structure: a client that fetches the CFR edition list and targeted part XML with a timeout and in-process cache; a parser that turns CFR section XML into {citation, heading, text} records; a category→title/parts router; and a per-package intelligence aggregator. Fetching MUST be by individual part (verified ~sub-MB, sub-second) — never a full title — and must fail safe.
+Local storage + embeddings — Add a global ecfr_sections table (title, part, section, citation, heading, text, category tag, pgvector embedding, sync timestamp) following the existing compliance-memory pgvector conventions (same 512-dim embedder, HNSW cosine index created at startup). Store synced sections with embeddings for semantic recall.
+Sync job — Add an ecfr_sync background job that fetches the curated parts, parses, embeds, and idempotently upserts sections; register it in the job system with a weekly recurring reschedule and a startup schedule, mirroring the escalation-sweep pattern. Add an admin-triggerable sync endpoint.
+Analysis enrichment — In the package analysis flow, recall the most relevant synced CFR sections for the package (by detected category + semantic similarity to the extracted artwork text) and inject them into the AI prompt alongside the existing regulations knowledge base and compliance memory. Recall must be non-fatal and must never block create/analyze.
+API endpoints + codegen — Add GET /ecfr/status, GET /ecfr/intelligence?packageId=, GET /ecfr/search?q=, and POST /ecfr/sync to the OpenAPI spec and regenerate the client/zod. Endpoints are auth-gated; status/sync are admin-scoped, intelligence/search use read permission. eCFR content is public federal data (global, not tenant-scoped), but every endpoint still requires authentication.
+Frontend — Add the eCFR status card to the Integrations page and the per-package "eCFR Regulations" tab to the review workspace, consuming the new endpoints via generated hooks. No emojis; use the app's existing card/tab styling and the artifact base-path for API calls.
+Constraints & notes
+Never fetch full CFR titles live; only synced local content is read during a review. The weekly job is the only thing that hits eCFR.
+Reuse the existing hashed embedder and pgvector patterns (512-dim, HNSW vector_cosine_ops); do not introduce an external embeddings provider.
+eCFR content is global public data — the ecfr_sections table is not org-scoped, matching the existing global regulations table. All access endpoints still require auth.
+After editing the OpenAPI spec, regenerate codegen; if consumers typecheck against stale generated dist, clear the affected lib dist + *.tsbuildinfo and rebuild.
+All new work stays within the existing api-server and compliance artifacts; no new artifact.
+Relevant files
+artifacts/api-server/src/lib/fda/client.ts
+artifacts/api-server/src/lib/fda/intelligence.ts
+artifacts/api-server/src/lib/fda/router.ts
+artifacts/api-server/src/routes/fda.ts
+artifacts/api-server/src/lib/ai.ts:94-180
+artifacts/api-server/src/lib/packageService.ts:84-338
+artifacts/api-server/src/routes/packages.ts:86-353
+artifacts/api-server/src/lib/memory/embedding.ts
+artifacts/api-server/src/lib/memory/engine.ts:41-119
+artifacts/api-server/src/lib/jobs/index.ts
+artifacts/api-server/src/lib/jobs/queue.ts
+artifacts/api-server/src/lib/jobs/worker.ts
+lib/db/src/schema/regulations.ts
+lib/db/src/schema/compliance-memory.ts
+lib/api-spec/openapi.yaml
+artifacts/compliance/src/components/fda-intelligence-tab.tsx
+artifacts/compliance/src/pages/admin/integrations.tsx
+artifacts/compliance/src/pages/review-workspace.tsx
