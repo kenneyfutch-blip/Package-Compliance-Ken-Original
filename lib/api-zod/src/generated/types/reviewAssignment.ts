@@ -14,12 +14,17 @@ export interface ReviewAssignment {
   teamName?: string | null;
   assigneeUserId?: number | null;
   assigneeName?: string | null;
+  backupUserId?: number | null;
+  backupName?: string | null;
+  managerUserId?: number | null;
+  managerName?: string | null;
   status: string;
   priority: string;
   slaHours: number;
   slaStatus: ReviewAssignmentSlaStatus;
   escalationLevel: number;
   autoRouted: boolean;
+  lastActivityAt?: string | null;
   assignedAt?: string | null;
   dueAt?: string | null;
   startedAt?: string | null;

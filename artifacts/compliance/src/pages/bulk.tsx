@@ -10,14 +10,11 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
   Search, Loader2, BrainCircuit, Eye, CheckCircle, ShieldCheck, XCircle,
-  UserPlus, FileDown, ChevronDown, Languages,
+  UserPlus, FileDown, Languages,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { REVIEWERS } from "@/lib/proof-utils"
+import { BulkAssignDialog } from "@/components/bulk-assign-dialog"
 
 const APPROVAL_STYLE: Record<string, string> = {
   Approved: "bg-success/10 text-success border-success/20",
@@ -31,6 +28,7 @@ const APPROVAL_STYLE: Record<string, string> = {
 export default function BulkQueuePage() {
   const [search, setSearch] = useState("")
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [assignOpen, setAssignOpen] = useState(false)
 
   const { data: packages = [], isLoading, refetch } = useListPackages({ search })
   const bulkAnalyze = useBulkAnalyze()
@@ -97,14 +95,9 @@ export default function BulkQueuePage() {
               <Button size="sm" variant="outline" className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" disabled={busy} onClick={() => runAction("reject")}>
                 <XCircle className="w-4 h-4" /> Reject
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" className="gap-1.5" disabled={busy}><UserPlus className="w-4 h-4" /> Assign <ChevronDown className="w-3.5 h-3.5" /></Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="max-h-64 overflow-y-auto">
-                  {REVIEWERS.map((r) => <DropdownMenuItem key={r} onClick={() => runAction("assign", r)}>{r}</DropdownMenuItem>)}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button size="sm" variant="outline" className="gap-1.5" disabled={busy} onClick={() => setAssignOpen(true)}>
+                <UserPlus className="w-4 h-4" /> Assign
+              </Button>
               <Button size="sm" variant="outline" className="gap-1.5" disabled={exportProof.isPending} onClick={exportSelected}>
                 {exportProof.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} Export
               </Button>
@@ -174,6 +167,13 @@ export default function BulkQueuePage() {
           </Table>
         </CardContent>
       </Card>
+
+      <BulkAssignDialog
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
+        packageIds={ids}
+        onAssigned={done}
+      />
     </div>
   )
 }

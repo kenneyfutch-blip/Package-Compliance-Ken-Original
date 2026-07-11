@@ -1,13 +1,16 @@
 import {
   db,
   reviewAssignmentsTable,
+  reviewHistoryTable,
   reviewMetricsTable,
   teamsTable,
   teamMembersTable,
   usersTable,
   packagesTable,
 } from "@workspace/db";
+import { mapReviewAssignment } from "../mappers";
 import { and, asc, desc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import {
   ACTIVE_STATUSES,
   DEFAULT_CAPACITY,
@@ -252,6 +255,9 @@ export async function listAssignments(
   if (filters.assigneeUserId !== undefined)
     conds.push(eq(reviewAssignmentsTable.assigneeUserId, filters.assigneeUserId));
 
+  const backupUsers = alias(usersTable, "backup_users");
+  const managerUsers = alias(usersTable, "manager_users");
+
   return db
     .select({
       assignment: reviewAssignmentsTable,
@@ -262,13 +268,493 @@ export async function listAssignments(
       complianceStatus: packagesTable.complianceStatus,
       teamName: teamsTable.name,
       assigneeName: usersTable.name,
+      backupName: backupUsers.name,
+      managerName: managerUsers.name,
     })
     .from(reviewAssignmentsTable)
     .innerJoin(packagesTable, eq(reviewAssignmentsTable.packageId, packagesTable.id))
     .leftJoin(teamsTable, eq(reviewAssignmentsTable.teamId, teamsTable.id))
     .leftJoin(usersTable, eq(reviewAssignmentsTable.assigneeUserId, usersTable.id))
+    .leftJoin(backupUsers, eq(reviewAssignmentsTable.backupUserId, backupUsers.id))
+    .leftJoin(managerUsers, eq(reviewAssignmentsTable.managerUserId, managerUsers.id))
     .where(and(...conds))
     .orderBy(desc(reviewAssignmentsTable.updatedAt));
+}
+
+function startOfToday(now: Date): Date {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// Personal workload snapshot for the signed-in reviewer: live queue metrics,
+// their active assignments (ordered by urgency), and their recent ownership
+// activity. Always scoped to a single user — never leaks other reviewers' work.
+export async function computeMyWork(organizationId: number, userId: number) {
+  const now = new Date();
+  const today = startOfToday(now);
+
+  const [live] = await db
+    .select({
+      assigned: sql<number>`count(*) filter (where ${reviewAssignmentsTable.status} in ('Assigned','InProgress','Escalated'))::int`,
+      inProgress: sql<number>`count(*) filter (where ${reviewAssignmentsTable.status} = 'InProgress')::int`,
+      escalated: sql<number>`count(*) filter (where ${reviewAssignmentsTable.escalationLevel} > 0 and ${reviewAssignmentsTable.status} <> 'Completed')::int`,
+      overdue: sql<number>`count(*) filter (where ${reviewAssignmentsTable.status} in ('Assigned','InProgress','Escalated') and ${reviewAssignmentsTable.dueAt} < ${now})::int`,
+      dueToday: sql<number>`count(*) filter (where ${reviewAssignmentsTable.status} in ('Assigned','InProgress','Escalated') and ${reviewAssignmentsTable.dueAt} >= ${now} and ${reviewAssignmentsTable.dueAt} < ${new Date(today.getTime() + 86_400_000)})::int`,
+    })
+    .from(reviewAssignmentsTable)
+    .where(
+      and(
+        eq(reviewAssignmentsTable.organizationId, organizationId),
+        eq(reviewAssignmentsTable.assigneeUserId, userId),
+      ),
+    );
+
+  const [perf] = await db
+    .select({
+      completedToday: sql<number>`count(*) filter (where ${reviewMetricsTable.completedAt} >= ${today})::int`,
+      avg: sql<string | null>`avg(${reviewMetricsTable.reviewMinutes})`,
+      slaMet: sql<number>`count(*) filter (where ${reviewMetricsTable.metSla} is true)::int`,
+      slaTotal: sql<number>`count(*) filter (where ${reviewMetricsTable.metSla} is not null)::int`,
+    })
+    .from(reviewMetricsTable)
+    .where(
+      and(
+        eq(reviewMetricsTable.organizationId, organizationId),
+        eq(reviewMetricsTable.assigneeUserId, userId),
+      ),
+    );
+
+  const slaTotal = perf?.slaTotal ?? 0;
+
+  const queueRows = await listAssignments(
+    organizationId,
+    { assigneeUserId: userId },
+    [],
+    null,
+  );
+  const activeQueue = queueRows.filter((r) =>
+    ACTIVE_STATUSES.includes(r.assignment.status),
+  );
+  activeQueue.sort((a, b) => {
+    const ad = a.assignment.dueAt ? new Date(a.assignment.dueAt).getTime() : Infinity;
+    const bd = b.assignment.dueAt ? new Date(b.assignment.dueAt).getTime() : Infinity;
+    return ad - bd;
+  });
+
+  const historyRows = await db
+    .select({
+      id: reviewHistoryTable.id,
+      packageId: reviewHistoryTable.packageId,
+      packageName: packagesTable.name,
+      action: reviewHistoryTable.action,
+      detail: reviewHistoryTable.detail,
+      reason: reviewHistoryTable.reason,
+      comments: reviewHistoryTable.comments,
+      actorName: reviewHistoryTable.actorName,
+      createdAt: reviewHistoryTable.createdAt,
+    })
+    .from(reviewHistoryTable)
+    .leftJoin(packagesTable, eq(reviewHistoryTable.packageId, packagesTable.id))
+    .where(
+      and(
+        eq(reviewHistoryTable.organizationId, organizationId),
+        or(
+          eq(reviewHistoryTable.actorUserId, userId),
+          eq(reviewHistoryTable.toUserId, userId),
+        ),
+      ),
+    )
+    .orderBy(desc(reviewHistoryTable.createdAt))
+    .limit(15);
+
+  return {
+    metrics: {
+      assigned: live?.assigned ?? 0,
+      inProgress: live?.inProgress ?? 0,
+      overdue: live?.overdue ?? 0,
+      dueToday: live?.dueToday ?? 0,
+      escalated: live?.escalated ?? 0,
+      completedToday: perf?.completedToday ?? 0,
+      slaComplianceRate:
+        slaTotal > 0 ? Math.round(((perf?.slaMet ?? 0) / slaTotal) * 100) / 100 : null,
+      avgReviewMinutes:
+        perf?.avg === null || perf?.avg === undefined
+          ? null
+          : Math.round(Number(perf.avg)),
+    },
+    queue: activeQueue.map((r) => ({
+      assignment: mapAssignmentRow(r),
+      packageName: r.packageName,
+      packageSku: r.packageSku,
+      category: r.category,
+      criticalCount: r.criticalCount,
+      complianceStatus: r.complianceStatus,
+    })),
+    recentActivity: historyRows.map((h) => ({
+      id: h.id,
+      packageId: h.packageId,
+      packageName: h.packageName ?? `Package ${h.packageId}`,
+      action: h.action,
+      detail: h.detail,
+      reason: h.reason,
+      comments: h.comments,
+      actorName: h.actorName,
+      createdAt: (h.createdAt ? new Date(h.createdAt) : new Date()).toISOString(),
+    })),
+    generatedAt: now.toISOString(),
+  };
+}
+
+// Shared DTO shaping for a listAssignments row so my-work + assignment lists
+// emit the same assignment shape (with backup/manager names) the client expects.
+function mapAssignmentRow(r: Awaited<ReturnType<typeof listAssignments>>[number]) {
+  return mapReviewAssignment(r.assignment, {
+    teamName: r.teamName,
+    assigneeName: r.assigneeName,
+    backupName: r.backupName,
+    managerName: r.managerName,
+  });
+}
+
+export interface OversightMember {
+  userId: number;
+  name: string;
+  email: string | null;
+  roleKey: string;
+  teamNames: string[];
+  assigned: number;
+  inProgress: number;
+  open: number;
+  completedToday: number;
+  critical: number;
+  overdue: number;
+  escalated: number;
+  capacity: number;
+  utilization: number;
+  avgReviewMinutes: number | null;
+  slaComplianceRate: number | null;
+  lastActivityAt: string | null;
+  status: "idle" | "available" | "busy" | "overloaded";
+}
+
+export interface OversightTeam {
+  teamId: number;
+  teamName: string;
+  memberCount: number;
+  assigned: number;
+  open: number;
+  completed: number;
+  critical: number;
+  overdue: number;
+  capacity: number;
+  utilization: number;
+  avgReviewMinutes: number | null;
+  slaComplianceRate: number | null;
+}
+
+// Manager-facing ownership + workload view: one row per reviewer (across all
+// their teams) and one row per team. Team-scoped for managers, org-wide for
+// oversight roles. Mirrors computeWorkload's scoping contract.
+export async function computeOversight(
+  organizationId: number,
+  teamIds: number[] | null = null,
+): Promise<{ members: OversightMember[]; teams: OversightTeam[]; generatedAt: string }> {
+  const now = new Date();
+  const today = startOfToday(now);
+  const assignTeamCond =
+    teamIds === null ? undefined : inArray(reviewAssignmentsTable.teamId, teamIds);
+  const metricsTeamCond =
+    teamIds === null ? undefined : inArray(reviewMetricsTable.teamId, teamIds);
+
+  // Live assignment rows joined with package critical counts, aggregated in JS.
+  const activeRows = await db
+    .select({
+      assigneeUserId: reviewAssignmentsTable.assigneeUserId,
+      teamId: reviewAssignmentsTable.teamId,
+      status: reviewAssignmentsTable.status,
+      escalationLevel: reviewAssignmentsTable.escalationLevel,
+      dueAt: reviewAssignmentsTable.dueAt,
+      updatedAt: reviewAssignmentsTable.updatedAt,
+      criticalCount: packagesTable.criticalCount,
+    })
+    .from(reviewAssignmentsTable)
+    .innerJoin(packagesTable, eq(reviewAssignmentsTable.packageId, packagesTable.id))
+    .where(
+      and(
+        eq(reviewAssignmentsTable.organizationId, organizationId),
+        inArray(reviewAssignmentsTable.status, ACTIVE_STATUSES),
+        assignTeamCond,
+      ),
+    );
+
+  interface Agg {
+    assigned: number;
+    inProgress: number;
+    escalated: number;
+    overdue: number;
+    critical: number;
+    lastActivityAt: number | null;
+  }
+  const emptyAgg = (): Agg => ({
+    assigned: 0,
+    inProgress: 0,
+    escalated: 0,
+    overdue: 0,
+    critical: 0,
+    lastActivityAt: null,
+  });
+  const byUser = new Map<number, Agg>();
+  const byTeamLive = new Map<number, Agg>();
+  const bump = (map: Map<number, Agg>, key: number | null, r: (typeof activeRows)[number]) => {
+    if (key === null) return;
+    const a = map.get(key) ?? emptyAgg();
+    a.assigned += 1;
+    if (r.status === "InProgress") a.inProgress += 1;
+    if ((r.escalationLevel ?? 0) > 0) a.escalated += 1;
+    if (r.dueAt && new Date(r.dueAt).getTime() < now.getTime()) a.overdue += 1;
+    if ((r.criticalCount ?? 0) > 0) a.critical += 1;
+    const u = r.updatedAt ? new Date(r.updatedAt).getTime() : null;
+    if (u && (a.lastActivityAt === null || u > a.lastActivityAt)) a.lastActivityAt = u;
+    map.set(key, a);
+  };
+  for (const r of activeRows) {
+    bump(byUser, r.assigneeUserId, r);
+    bump(byTeamLive, r.teamId, r);
+  }
+
+  // Per-user completed-today + all-time avg/sla from metrics.
+  const perfRows = await db
+    .select({
+      assigneeUserId: reviewMetricsTable.assigneeUserId,
+      completedToday: sql<number>`count(*) filter (where ${reviewMetricsTable.completedAt} >= ${today})::int`,
+      avg: sql<string | null>`avg(${reviewMetricsTable.reviewMinutes})`,
+      slaMet: sql<number>`count(*) filter (where ${reviewMetricsTable.metSla} is true)::int`,
+      slaTotal: sql<number>`count(*) filter (where ${reviewMetricsTable.metSla} is not null)::int`,
+    })
+    .from(reviewMetricsTable)
+    .where(and(eq(reviewMetricsTable.organizationId, organizationId), metricsTeamCond))
+    .groupBy(reviewMetricsTable.assigneeUserId);
+  const perfByUser = new Map<
+    number,
+    { completedToday: number; avg: number | null; slaMet: number; slaTotal: number }
+  >();
+  for (const r of perfRows) {
+    if (r.assigneeUserId === null) continue;
+    perfByUser.set(r.assigneeUserId, {
+      completedToday: r.completedToday,
+      avg: r.avg === null ? null : Math.round(Number(r.avg)),
+      slaMet: r.slaMet,
+      slaTotal: r.slaTotal,
+    });
+  }
+
+  // Users (active) in scope, with their team memberships. When team-scoped, only
+  // members of those teams; otherwise all active users on any team.
+  const memberRows = await db
+    .select({
+      userId: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      roleKey: usersTable.roleKey,
+      teamId: teamMembersTable.teamId,
+      teamName: teamsTable.name,
+    })
+    .from(teamMembersTable)
+    .innerJoin(usersTable, eq(teamMembersTable.userId, usersTable.id))
+    .leftJoin(teamsTable, eq(teamMembersTable.teamId, teamsTable.id))
+    .where(
+      and(
+        eq(usersTable.organizationId, organizationId),
+        eq(usersTable.active, true),
+        teamIds === null ? undefined : inArray(teamMembersTable.teamId, teamIds),
+      ),
+    )
+    .orderBy(usersTable.id);
+
+  const memberMap = new Map<number, OversightMember>();
+  for (const m of memberRows) {
+    let entry = memberMap.get(m.userId);
+    if (!entry) {
+      const agg = byUser.get(m.userId) ?? emptyAgg();
+      const perf = perfByUser.get(m.userId);
+      const slaTotal = perf?.slaTotal ?? 0;
+      entry = {
+        userId: m.userId,
+        name: m.name,
+        email: m.email,
+        roleKey: m.roleKey,
+        teamNames: [],
+        assigned: agg.assigned,
+        inProgress: agg.inProgress,
+        open: agg.assigned,
+        completedToday: perf?.completedToday ?? 0,
+        critical: agg.critical,
+        overdue: agg.overdue,
+        escalated: agg.escalated,
+        capacity: DEFAULT_CAPACITY,
+        utilization:
+          DEFAULT_CAPACITY > 0
+            ? Math.round((agg.assigned / DEFAULT_CAPACITY) * 100) / 100
+            : 0,
+        avgReviewMinutes: perf?.avg ?? null,
+        slaComplianceRate:
+          slaTotal > 0 ? Math.round(((perf?.slaMet ?? 0) / slaTotal) * 100) / 100 : null,
+        lastActivityAt:
+          agg.lastActivityAt !== null ? new Date(agg.lastActivityAt).toISOString() : null,
+        status:
+          agg.assigned === 0
+            ? "idle"
+            : agg.assigned > DEFAULT_CAPACITY
+              ? "overloaded"
+              : agg.assigned >= Math.ceil(DEFAULT_CAPACITY * 0.75)
+                ? "busy"
+                : "available",
+      };
+      memberMap.set(m.userId, entry);
+    }
+    if (m.teamName && !entry.teamNames.includes(m.teamName)) {
+      entry.teamNames.push(m.teamName);
+    }
+  }
+  const members = Array.from(memberMap.values());
+
+  // Teams: live aggregates + completed / avg / sla from metrics.
+  const teams = await db
+    .select({ id: teamsTable.id, name: teamsTable.name })
+    .from(teamsTable)
+    .where(
+      teamIds === null
+        ? eq(teamsTable.organizationId, organizationId)
+        : and(
+            eq(teamsTable.organizationId, organizationId),
+            inArray(teamsTable.id, teamIds),
+          ),
+    )
+    .orderBy(teamsTable.name);
+
+  const teamMetricRows = await db
+    .select({
+      teamId: reviewMetricsTable.teamId,
+      completed: sql<number>`count(*)::int`,
+      avg: sql<string | null>`avg(${reviewMetricsTable.reviewMinutes})`,
+      slaMet: sql<number>`count(*) filter (where ${reviewMetricsTable.metSla} is true)::int`,
+      slaTotal: sql<number>`count(*) filter (where ${reviewMetricsTable.metSla} is not null)::int`,
+    })
+    .from(reviewMetricsTable)
+    .where(and(eq(reviewMetricsTable.organizationId, organizationId), metricsTeamCond))
+    .groupBy(reviewMetricsTable.teamId);
+  const teamMetricMap = new Map(teamMetricRows.map((r) => [r.teamId, r]));
+
+  const memberCountByTeam = new Map<number, number>();
+  for (const m of memberRows) {
+    if (m.teamId === null) continue;
+    memberCountByTeam.set(m.teamId, (memberCountByTeam.get(m.teamId) ?? 0) + 1);
+  }
+
+  const teamsOut: OversightTeam[] = teams.map((t) => {
+    const live = byTeamLive.get(t.id) ?? emptyAgg();
+    const tm = teamMetricMap.get(t.id);
+    const memberCount = memberCountByTeam.get(t.id) ?? 0;
+    const capacity = memberCount * DEFAULT_CAPACITY;
+    const slaTotal = tm?.slaTotal ?? 0;
+    return {
+      teamId: t.id,
+      teamName: t.name,
+      memberCount,
+      assigned: live.assigned,
+      open: live.assigned,
+      completed: tm?.completed ?? 0,
+      critical: live.critical,
+      overdue: live.overdue,
+      capacity,
+      utilization:
+        capacity > 0 ? Math.round((live.assigned / capacity) * 100) / 100 : 0,
+      avgReviewMinutes:
+        tm?.avg === null || tm?.avg === undefined ? null : Math.round(Number(tm.avg)),
+      slaComplianceRate:
+        slaTotal > 0 ? Math.round(((tm?.slaMet ?? 0) / slaTotal) * 100) / 100 : null,
+    };
+  });
+
+  return { members, teams: teamsOut, generatedAt: now.toISOString() };
+}
+
+export interface AssignmentRecommendation {
+  requestedUserId: number | null;
+  requestedName: string | null;
+  requestedActiveCount: number;
+  capacity: number;
+  overCapacity: boolean;
+  suggested: {
+    userId: number;
+    name: string;
+    activeCount: number;
+    capacity: number;
+    teamNames: string[];
+  }[];
+  reason: string;
+}
+
+// Suggest better-balanced assignees. If the chosen reviewer is at/over capacity
+// (or none was chosen), returns the least-loaded members in scope so the UI can
+// steer the assignment toward a lighter teammate.
+export async function recommendAssignee(
+  organizationId: number,
+  opts: { assigneeUserId?: number; teamId?: number },
+  teamIds: number[] | null = null,
+): Promise<AssignmentRecommendation> {
+  const oversight = await computeOversight(organizationId, teamIds);
+  let pool = oversight.members;
+  if (opts.teamId !== undefined) {
+    // Restrict to members of the requested team (by team name membership).
+    const teamName = oversight.teams.find((t) => t.teamId === opts.teamId)?.teamName;
+    if (teamName) pool = pool.filter((m) => m.teamNames.includes(teamName));
+  }
+
+  const requested =
+    opts.assigneeUserId !== undefined
+      ? (oversight.members.find((m) => m.userId === opts.assigneeUserId) ?? null)
+      : null;
+  const capacity = DEFAULT_CAPACITY;
+  const requestedActiveCount = requested?.assigned ?? 0;
+  const overCapacity = requested ? requested.assigned >= capacity : false;
+
+  const suggested = [...pool]
+    .filter((m) => m.userId !== opts.assigneeUserId && m.assigned < capacity)
+    .sort((a, b) => a.assigned - b.assigned)
+    .slice(0, 3)
+    .map((m) => ({
+      userId: m.userId,
+      name: m.name,
+      activeCount: m.assigned,
+      capacity,
+      teamNames: m.teamNames,
+    }));
+
+  let reason: string;
+  if (!requested && opts.assigneeUserId === undefined) {
+    reason =
+      suggested.length > 0
+        ? `${suggested[0]!.name} has the lightest load (${suggested[0]!.activeCount} active).`
+        : "No available reviewers found in scope.";
+  } else if (overCapacity) {
+    reason = `${requested?.name ?? "This reviewer"} is at capacity (${requestedActiveCount}/${capacity}).${
+      suggested.length > 0 ? ` Consider ${suggested[0]!.name} (${suggested[0]!.activeCount} active).` : ""
+    }`;
+  } else {
+    reason = `${requested?.name ?? "This reviewer"} has capacity (${requestedActiveCount}/${capacity}).`;
+  }
+
+  return {
+    requestedUserId: requested?.userId ?? null,
+    requestedName: requested?.name ?? null,
+    requestedActiveCount,
+    capacity,
+    overCapacity,
+    suggested,
+    reason,
+  };
 }
 
 // Aggregate SLA + review-time metrics for reporting dashboards. When teamIds is

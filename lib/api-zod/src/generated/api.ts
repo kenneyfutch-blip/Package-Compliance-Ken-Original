@@ -2507,6 +2507,8 @@ export const ListAuditEventsResponse = zod.array(ListAuditEventsResponseItem)
  */
 export const ListNotificationsResponseItem = zod.object({
   "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "packageId": zod.number().nullish(),
   "title": zod.string(),
   "message": zod.string(),
   "type": zod.string(),
@@ -2525,6 +2527,8 @@ export const MarkNotificationReadParams = zod.object({
 
 export const MarkNotificationReadResponse = zod.object({
   "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "packageId": zod.number().nullish(),
   "title": zod.string(),
   "message": zod.string(),
   "type": zod.string(),
@@ -3889,12 +3893,17 @@ export const ListReviewAssignmentsResponseItem = zod.object({
   "teamName": zod.string().nullish(),
   "assigneeUserId": zod.number().nullish(),
   "assigneeName": zod.string().nullish(),
+  "backupUserId": zod.number().nullish(),
+  "backupName": zod.string().nullish(),
+  "managerUserId": zod.number().nullish(),
+  "managerName": zod.string().nullish(),
   "status": zod.string(),
   "priority": zod.string(),
   "slaHours": zod.number(),
   "slaStatus": zod.enum(['none', 'on_track', 'at_risk', 'breached']),
   "escalationLevel": zod.number(),
   "autoRouted": zod.boolean(),
+  "lastActivityAt": zod.string().nullish(),
   "assignedAt": zod.string().nullish(),
   "dueAt": zod.string().nullish(),
   "startedAt": zod.string().nullish(),
@@ -3960,12 +3969,17 @@ export const GetPackageAssignmentResponse = zod.object({
   "teamName": zod.string().nullish(),
   "assigneeUserId": zod.number().nullish(),
   "assigneeName": zod.string().nullish(),
+  "backupUserId": zod.number().nullish(),
+  "backupName": zod.string().nullish(),
+  "managerUserId": zod.number().nullish(),
+  "managerName": zod.string().nullish(),
   "status": zod.string(),
   "priority": zod.string(),
   "slaHours": zod.number(),
   "slaStatus": zod.enum(['none', 'on_track', 'at_risk', 'breached']),
   "escalationLevel": zod.number(),
   "autoRouted": zod.boolean(),
+  "lastActivityAt": zod.string().nullish(),
   "assignedAt": zod.string().nullish(),
   "dueAt": zod.string().nullish(),
   "startedAt": zod.string().nullish(),
@@ -3986,6 +4000,8 @@ export const GetPackageAssignmentResponse = zod.object({
   "actorUserId": zod.number().nullish(),
   "actorName": zod.string(),
   "detail": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "comments": zod.string().nullish(),
   "escalationLevel": zod.number().nullish(),
   "createdAt": zod.string()
 }))
@@ -4002,8 +4018,12 @@ export const AssignPackageReviewParams = zod.object({
 export const AssignPackageReviewBody = zod.object({
   "teamId": zod.number().nullish(),
   "assigneeUserId": zod.number().nullish(),
+  "backupUserId": zod.number().nullish(),
+  "managerUserId": zod.number().nullish(),
   "slaHours": zod.number().optional(),
-  "priority": zod.enum(['low', 'normal', 'high', 'critical']).optional()
+  "priority": zod.enum(['low', 'normal', 'high', 'critical']).optional(),
+  "reason": zod.string().optional(),
+  "comments": zod.string().optional()
 })
 
 export const AssignPackageReviewResponse = zod.object({
@@ -4016,12 +4036,17 @@ export const AssignPackageReviewResponse = zod.object({
   "teamName": zod.string().nullish(),
   "assigneeUserId": zod.number().nullish(),
   "assigneeName": zod.string().nullish(),
+  "backupUserId": zod.number().nullish(),
+  "backupName": zod.string().nullish(),
+  "managerUserId": zod.number().nullish(),
+  "managerName": zod.string().nullish(),
   "status": zod.string(),
   "priority": zod.string(),
   "slaHours": zod.number(),
   "slaStatus": zod.enum(['none', 'on_track', 'at_risk', 'breached']),
   "escalationLevel": zod.number(),
   "autoRouted": zod.boolean(),
+  "lastActivityAt": zod.string().nullish(),
   "assignedAt": zod.string().nullish(),
   "dueAt": zod.string().nullish(),
   "startedAt": zod.string().nullish(),
@@ -4042,6 +4067,8 @@ export const AssignPackageReviewResponse = zod.object({
   "actorUserId": zod.number().nullish(),
   "actorName": zod.string(),
   "detail": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "comments": zod.string().nullish(),
   "escalationLevel": zod.number().nullish(),
   "createdAt": zod.string()
 }))
@@ -4065,12 +4092,17 @@ export const AutoAssignPackageReviewResponse = zod.object({
   "teamName": zod.string().nullish(),
   "assigneeUserId": zod.number().nullish(),
   "assigneeName": zod.string().nullish(),
+  "backupUserId": zod.number().nullish(),
+  "backupName": zod.string().nullish(),
+  "managerUserId": zod.number().nullish(),
+  "managerName": zod.string().nullish(),
   "status": zod.string(),
   "priority": zod.string(),
   "slaHours": zod.number(),
   "slaStatus": zod.enum(['none', 'on_track', 'at_risk', 'breached']),
   "escalationLevel": zod.number(),
   "autoRouted": zod.boolean(),
+  "lastActivityAt": zod.string().nullish(),
   "assignedAt": zod.string().nullish(),
   "dueAt": zod.string().nullish(),
   "startedAt": zod.string().nullish(),
@@ -4091,8 +4123,164 @@ export const AutoAssignPackageReviewResponse = zod.object({
   "actorUserId": zod.number().nullish(),
   "actorName": zod.string(),
   "detail": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "comments": zod.string().nullish(),
   "escalationLevel": zod.number().nullish(),
   "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Personal review queue, workload metrics, and recent activity for the signed-in reviewer
+ */
+export const GetMyWorkResponse = zod.object({
+  "metrics": zod.object({
+  "assigned": zod.number(),
+  "inProgress": zod.number(),
+  "overdue": zod.number(),
+  "dueToday": zod.number(),
+  "escalated": zod.number(),
+  "completedToday": zod.number(),
+  "slaComplianceRate": zod.number().nullish(),
+  "avgReviewMinutes": zod.number().nullish()
+}),
+  "queue": zod.array(zod.object({
+  "assignment": zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "teamId": zod.number().nullish(),
+  "teamName": zod.string().nullish(),
+  "assigneeUserId": zod.number().nullish(),
+  "assigneeName": zod.string().nullish(),
+  "backupUserId": zod.number().nullish(),
+  "backupName": zod.string().nullish(),
+  "managerUserId": zod.number().nullish(),
+  "managerName": zod.string().nullish(),
+  "status": zod.string(),
+  "priority": zod.string(),
+  "slaHours": zod.number(),
+  "slaStatus": zod.enum(['none', 'on_track', 'at_risk', 'breached']),
+  "escalationLevel": zod.number(),
+  "autoRouted": zod.boolean(),
+  "lastActivityAt": zod.string().nullish(),
+  "assignedAt": zod.string().nullish(),
+  "dueAt": zod.string().nullish(),
+  "startedAt": zod.string().nullish(),
+  "completedAt": zod.string().nullish(),
+  "lastEscalatedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}),
+  "packageName": zod.string(),
+  "packageSku": zod.string().nullish(),
+  "category": zod.string(),
+  "criticalCount": zod.number(),
+  "complianceStatus": zod.string().nullish()
+})),
+  "recentActivity": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "packageName": zod.string(),
+  "action": zod.string(),
+  "detail": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "comments": zod.string().nullish(),
+  "actorName": zod.string(),
+  "createdAt": zod.string()
+})),
+  "generatedAt": zod.string()
+})
+
+
+/**
+ * @summary Per-member and per-team review ownership, workload, and SLA for managers
+ */
+export const GetReviewOversightResponse = zod.object({
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "roleKey": zod.string(),
+  "teamNames": zod.array(zod.string()),
+  "assigned": zod.number(),
+  "inProgress": zod.number(),
+  "open": zod.number(),
+  "completedToday": zod.number(),
+  "critical": zod.number(),
+  "overdue": zod.number(),
+  "escalated": zod.number(),
+  "capacity": zod.number(),
+  "utilization": zod.number(),
+  "avgReviewMinutes": zod.number().nullish(),
+  "slaComplianceRate": zod.number().nullish(),
+  "lastActivityAt": zod.string().nullish(),
+  "status": zod.enum(['idle', 'available', 'busy', 'overloaded'])
+})),
+  "teams": zod.array(zod.object({
+  "teamId": zod.number(),
+  "teamName": zod.string(),
+  "memberCount": zod.number(),
+  "assigned": zod.number(),
+  "open": zod.number(),
+  "completed": zod.number(),
+  "critical": zod.number(),
+  "overdue": zod.number(),
+  "capacity": zod.number(),
+  "utilization": zod.number(),
+  "avgReviewMinutes": zod.number().nullish(),
+  "slaComplianceRate": zod.number().nullish()
+})),
+  "generatedAt": zod.string()
+})
+
+
+/**
+ * @summary Suggest better-balanced assignees when a chosen reviewer is over capacity
+ */
+export const RecommendReviewAssigneeQueryParams = zod.object({
+  "assigneeUserId": zod.coerce.number().optional(),
+  "teamId": zod.coerce.number().optional(),
+  "category": zod.coerce.string().optional()
+})
+
+export const RecommendReviewAssigneeResponse = zod.object({
+  "requestedUserId": zod.number().nullish(),
+  "requestedName": zod.string().nullish(),
+  "requestedActiveCount": zod.number(),
+  "capacity": zod.number(),
+  "overCapacity": zod.boolean(),
+  "suggested": zod.array(zod.object({
+  "userId": zod.number(),
+  "name": zod.string(),
+  "activeCount": zod.number(),
+  "capacity": zod.number(),
+  "teamNames": zod.array(zod.string())
+})),
+  "reason": zod.string()
+})
+
+
+/**
+ * @summary Assign or reassign many package reviews at once
+ */
+export const BulkAssignReviewsBody = zod.object({
+  "packageIds": zod.array(zod.number()),
+  "assigneeUserId": zod.number().nullish(),
+  "teamId": zod.number().nullish(),
+  "managerUserId": zod.number().nullish(),
+  "backupUserId": zod.number().nullish(),
+  "priority": zod.enum(['low', 'normal', 'high', 'critical']).optional(),
+  "slaHours": zod.number().optional(),
+  "reason": zod.string().optional(),
+  "comments": zod.string().optional()
+})
+
+export const BulkAssignReviewsResponse = zod.object({
+  "assigned": zod.number(),
+  "failed": zod.array(zod.object({
+  "packageId": zod.number(),
+  "error": zod.string()
 }))
 })
 

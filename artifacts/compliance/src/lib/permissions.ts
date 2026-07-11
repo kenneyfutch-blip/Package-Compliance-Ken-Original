@@ -11,6 +11,7 @@ export function requiredPermFor(path: string): string | null {
 
   if (p === "/") return "dashboard:read"
   if (p === "/upload") return "packages:write"
+  if (p === "/my-work" || p === "/my-dashboard") return "packages:read"
   if (p.startsWith("/proofing")) return "proofs:read"
   if (p === "/bulk" || p === "/fast-review") return "packages:read"
   if (p === "/reviews" || p.startsWith("/reviews/")) return "packages:read"
@@ -31,6 +32,9 @@ export function requiredPermFor(path: string): string | null {
   if (p === "/operations/teams") return "teams:read"
   if (p === "/operations/audit") return "audit:read"
   if (p === "/operations/system") return "org:manage"
+  // Workload & SLA is manager-facing ownership oversight, not user admin. Must
+  // come before the generic /operations/ → users:read fallback.
+  if (p === "/operations/workload") return "reports:read"
   if (p.startsWith("/operations/")) return "users:read"
   if (p === "/audit") return "audit:read"
   if (p === "/admin/dashboard") return "org:manage"

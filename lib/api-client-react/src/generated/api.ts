@@ -30,11 +30,14 @@ import type {
   ApiError,
   ApprovalDecisionInput,
   AssignmentListItem,
+  AssignmentRecommendation,
   AuditEvent,
   BulkActionInput,
   BulkActionResult,
   BulkAnalyzeInput,
   BulkAnalyzeResult,
+  BulkAssignInput,
+  BulkAssignResult,
   BulkLanguageReviewInput,
   BulkLanguageReviewResult,
   CheckPackageDuplicatesParams,
@@ -73,9 +76,11 @@ import type {
   ListSupplierSubmissionsParams,
   ListViolationsParams,
   Me,
+  MyWorkResponse,
   Notification,
   OcrExtractInput,
   OcrExtractResult,
+  OversightResponse,
   Package,
   PackageDetail,
   PackageFieldsResult,
@@ -91,6 +96,7 @@ import type {
   PolicyVersionInput,
   ProofExport,
   QueueMetrics,
+  RecommendReviewAssigneeParams,
   Regulation,
   RegulationInput,
   Report,
@@ -7236,6 +7242,315 @@ export const useAutoAssignPackageReview = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getAutoAssignPackageReviewMutationOptions(options));
+    }
+
+export const getGetMyWorkUrl = () => {
+
+
+
+
+  return `/api/reviews/my-work`
+}
+
+/**
+ * @summary Personal review queue, workload metrics, and recent activity for the signed-in reviewer
+ */
+export const getMyWork = async ( options?: RequestInit): Promise<MyWorkResponse> => {
+
+  return customFetch<MyWorkResponse>(getGetMyWorkUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyWorkQueryKey = () => {
+    return [
+    `/api/reviews/my-work`
+    ] as const;
+    }
+
+
+export const getGetMyWorkQueryOptions = <TData = Awaited<ReturnType<typeof getMyWork>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyWork>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyWorkQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyWork>>> = ({ signal }) => getMyWork({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyWork>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyWorkQueryResult = NonNullable<Awaited<ReturnType<typeof getMyWork>>>
+export type GetMyWorkQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Personal review queue, workload metrics, and recent activity for the signed-in reviewer
+ */
+
+export function useGetMyWork<TData = Awaited<ReturnType<typeof getMyWork>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyWork>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyWorkQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetReviewOversightUrl = () => {
+
+
+
+
+  return `/api/reviews/oversight`
+}
+
+/**
+ * @summary Per-member and per-team review ownership, workload, and SLA for managers
+ */
+export const getReviewOversight = async ( options?: RequestInit): Promise<OversightResponse> => {
+
+  return customFetch<OversightResponse>(getGetReviewOversightUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReviewOversightQueryKey = () => {
+    return [
+    `/api/reviews/oversight`
+    ] as const;
+    }
+
+
+export const getGetReviewOversightQueryOptions = <TData = Awaited<ReturnType<typeof getReviewOversight>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewOversight>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReviewOversightQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewOversight>>> = ({ signal }) => getReviewOversight({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReviewOversight>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReviewOversightQueryResult = NonNullable<Awaited<ReturnType<typeof getReviewOversight>>>
+export type GetReviewOversightQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Per-member and per-team review ownership, workload, and SLA for managers
+ */
+
+export function useGetReviewOversight<TData = Awaited<ReturnType<typeof getReviewOversight>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewOversight>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReviewOversightQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRecommendReviewAssigneeUrl = (params?: RecommendReviewAssigneeParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/reviews/recommend?${stringifiedParams}` : `/api/reviews/recommend`
+}
+
+/**
+ * @summary Suggest better-balanced assignees when a chosen reviewer is over capacity
+ */
+export const recommendReviewAssignee = async (params?: RecommendReviewAssigneeParams, options?: RequestInit): Promise<AssignmentRecommendation> => {
+
+  return customFetch<AssignmentRecommendation>(getRecommendReviewAssigneeUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getRecommendReviewAssigneeQueryKey = (params?: RecommendReviewAssigneeParams,) => {
+    return [
+    `/api/reviews/recommend`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getRecommendReviewAssigneeQueryOptions = <TData = Awaited<ReturnType<typeof recommendReviewAssignee>>, TError = ErrorType<unknown>>(params?: RecommendReviewAssigneeParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof recommendReviewAssignee>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getRecommendReviewAssigneeQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof recommendReviewAssignee>>> = ({ signal }) => recommendReviewAssignee(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof recommendReviewAssignee>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type RecommendReviewAssigneeQueryResult = NonNullable<Awaited<ReturnType<typeof recommendReviewAssignee>>>
+export type RecommendReviewAssigneeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Suggest better-balanced assignees when a chosen reviewer is over capacity
+ */
+
+export function useRecommendReviewAssignee<TData = Awaited<ReturnType<typeof recommendReviewAssignee>>, TError = ErrorType<unknown>>(
+ params?: RecommendReviewAssigneeParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof recommendReviewAssignee>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getRecommendReviewAssigneeQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getBulkAssignReviewsUrl = () => {
+
+
+
+
+  return `/api/reviews/bulk-assign`
+}
+
+/**
+ * @summary Assign or reassign many package reviews at once
+ */
+export const bulkAssignReviews = async (bulkAssignInput: BulkAssignInput, options?: RequestInit): Promise<BulkAssignResult> => {
+
+  return customFetch<BulkAssignResult>(getBulkAssignReviewsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkAssignInput)
+  }
+);}
+
+
+
+
+
+export const getBulkAssignReviewsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkAssignReviews>>, TError,{data: BodyType<BulkAssignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkAssignReviews>>, TError,{data: BodyType<BulkAssignInput>}, TContext> => {
+
+const mutationKey = ['bulkAssignReviews'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkAssignReviews>>, {data: BodyType<BulkAssignInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkAssignReviews(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkAssignReviewsMutationResult = NonNullable<Awaited<ReturnType<typeof bulkAssignReviews>>>
+    export type BulkAssignReviewsMutationBody = BodyType<BulkAssignInput>
+    export type BulkAssignReviewsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Assign or reassign many package reviews at once
+ */
+export const useBulkAssignReviews = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkAssignReviews>>, TError,{data: BodyType<BulkAssignInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkAssignReviews>>,
+        TError,
+        {data: BodyType<BulkAssignInput>},
+        TContext
+      > => {
+      return useMutation(getBulkAssignReviewsMutationOptions(options));
     }
 
 export const getListPoliciesUrl = (params?: ListPoliciesParams,) => {

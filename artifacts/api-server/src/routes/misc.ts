@@ -5,13 +5,13 @@ import {
   notificationsTable,
   reportsTable,
 } from "@workspace/db";
-import { and, desc, eq, gte, ilike, lte, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNull, lte, or, type SQL } from "drizzle-orm";
 import {
   mapAuditEvent,
   mapNotification,
   mapReport,
 } from "../lib/mappers";
-import { requirePermission, orgId } from "../lib/rbac/context";
+import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 
 const router: IRouter = Router();
 
@@ -68,10 +68,21 @@ router.get(
   "/notifications",
   requirePermission("notifications:read"),
   async (req: Request, res: Response): Promise<void> => {
+    // Return org-wide notifications (userId IS NULL) plus those targeted at the
+    // signed-in user. Per-user rows for other users stay private.
+    const userId = getAuthContext(req).userId;
     const rows = await db
       .select()
       .from(notificationsTable)
-      .where(eq(notificationsTable.organizationId, orgId(req)))
+      .where(
+        and(
+          eq(notificationsTable.organizationId, orgId(req)),
+          or(
+            isNull(notificationsTable.userId),
+            eq(notificationsTable.userId, userId),
+          ),
+        ),
+      )
       .orderBy(desc(notificationsTable.createdAt));
     res.json(rows.map(mapNotification));
   },
@@ -82,6 +93,7 @@ router.patch(
   requirePermission("notifications:read"),
   async (req: Request, res: Response): Promise<void> => {
     const id = parseId(req.params["id"]);
+    const userId = getAuthContext(req).userId;
     const [existing] = await db
       .select()
       .from(notificationsTable)
@@ -89,6 +101,10 @@ router.patch(
         and(
           eq(notificationsTable.id, id),
           eq(notificationsTable.organizationId, orgId(req)),
+          or(
+            isNull(notificationsTable.userId),
+            eq(notificationsTable.userId, userId),
+          ),
         ),
       );
     if (!existing) {

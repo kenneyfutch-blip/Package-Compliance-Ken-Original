@@ -1,8 +1,20 @@
-import { useGetReviewWorkload, useGetReviewMetrics } from "@workspace/api-client-react"
+import { useGetReviewMetrics, useGetReviewOversight } from "@workspace/api-client-react"
+import type { OversightMember } from "@workspace/api-client-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Gauge, Loader2, AlertTriangle, Timer, ShieldCheck, ArrowRightLeft } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { initialsFor } from "@/components/review-ownership"
+import {
+  Gauge,
+  Loader2,
+  AlertTriangle,
+  Timer,
+  ShieldCheck,
+  Users,
+  UserRound,
+} from "lucide-react"
 
 function pct(n: number | null | undefined): string {
   return n == null ? "—" : `${Math.round(n * 100)}%`
@@ -24,8 +36,15 @@ function Stat({ label, value, tone }: { label: string; value: string | number; t
   )
 }
 
+const STATUS_META: Record<OversightMember["status"], { label: string; className: string }> = {
+  idle: { label: "Idle", className: "text-muted-foreground border-border" },
+  available: { label: "Available", className: "text-success border-success/40" },
+  busy: { label: "Busy", className: "text-warning border-warning/40" },
+  overloaded: { label: "Overloaded", className: "text-destructive border-destructive/40" },
+}
+
 export default function WorkloadDashboard() {
-  const { data: workload, isLoading } = useGetReviewWorkload()
+  const { data: oversight, isLoading } = useGetReviewOversight()
   const { data: metrics } = useGetReviewMetrics()
 
   return (
@@ -34,7 +53,7 @@ export default function WorkloadDashboard() {
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <Gauge className="w-7 h-7 text-primary" /> Workload & SLA
         </h1>
-        <p className="text-muted-foreground mt-1">Live team capacity, reviewer load, and service-level performance.</p>
+        <p className="text-muted-foreground mt-1">Review ownership, reviewer load, team capacity, and service-level performance.</p>
       </div>
 
       {metrics && (
@@ -48,69 +67,104 @@ export default function WorkloadDashboard() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-      ) : !workload || workload.teams.length === 0 ? (
-        <Card><CardContent className="py-16 text-center text-muted-foreground">No team workload to show yet.</CardContent></Card>
+      ) : !oversight ? (
+        <Card><CardContent className="py-16 text-center text-muted-foreground">No workload data to show yet.</CardContent></Card>
       ) : (
-        <div className="space-y-4">
-          {workload.unassignedCount > 0 && (
-            <Card className="border-warning/40">
-              <CardContent className="p-4 flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-warning" />
-                <span className="text-sm font-medium">{workload.unassignedCount} package(s) are waiting to be assigned.</span>
-              </CardContent>
-            </Card>
-          )}
+        <Tabs defaultValue="reviewers">
+          <TabsList>
+            <TabsTrigger value="reviewers" className="gap-2"><UserRound className="w-4 h-4" />Reviewers</TabsTrigger>
+            <TabsTrigger value="teams" className="gap-2"><Users className="w-4 h-4" />Teams</TabsTrigger>
+          </TabsList>
 
-          {workload.teams.map((t) => {
-            const util = Math.round(t.utilization * 100)
-            const tone = util >= 100 ? "text-destructive" : util >= 80 ? "text-warning" : "text-success"
-            return (
-              <Card key={t.teamId}>
-                <CardHeader>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <CardTitle className="flex items-center gap-2">{t.teamName}
-                      <Badge variant="secondary">{t.memberCount} members</Badge>
-                    </CardTitle>
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="flex items-center gap-1 text-muted-foreground"><Timer className="w-4 h-4" />Avg {mins(t.avgReviewMinutes)}</span>
-                      <span className={`font-semibold ${tone}`}>{t.activeCount}/{t.capacity} active</span>
-                    </div>
-                  </div>
-                  <div className="pt-2">
-                    <Progress value={Math.min(util, 100)} />
-                    <div className="text-xs text-muted-foreground mt-1">{util}% utilized</div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {t.members.map((m) => {
-                      const mu = Math.round(m.utilization * 100)
-                      return (
-                        <div key={m.userId} className={`rounded-lg border p-3 ${m.overloaded ? "border-destructive/40 bg-destructive/5" : "border-border"}`}>
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm">{m.name}</span>
-                            {m.overloaded && <Badge variant="destructive" className="gap-1"><AlertTriangle className="w-3 h-3" />Overloaded</Badge>}
+          <TabsContent value="reviewers" className="mt-4">
+            {oversight.members.length === 0 ? (
+              <Card><CardContent className="py-14 text-center text-muted-foreground">No reviewers in scope.</CardContent></Card>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {oversight.members.map((m) => {
+                  const meta = STATUS_META[m.status]
+                  const util = Math.round(m.utilization * 100)
+                  return (
+                    <Card key={m.userId} className={m.status === "overloaded" ? "border-destructive/40" : ""}>
+                      <CardContent className="p-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{initialsFor(m.name)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium truncate">{m.name}</div>
+                            <div className="text-xs text-muted-foreground truncate">{m.teamNames.join(", ") || "No team"}</div>
                           </div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {m.activeCount}/{m.capacity} active · {m.inProgressCount} in progress · {mu}%
+                          <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
+                        </div>
+
+                        <div>
+                          <Progress value={Math.min(util, 100)} />
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                            <span>{m.assigned}/{m.capacity} active</span>
+                            <span>{util}% utilized</span>
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
-                  {t.recommendations.length > 0 && (
-                    <div className="rounded-lg bg-accent/40 p-3 space-y-1.5">
-                      <div className="flex items-center gap-2 text-sm font-medium"><ArrowRightLeft className="w-4 h-4 text-primary" />Rebalancing suggestions</div>
-                      {t.recommendations.map((r, i) => (
-                        <div key={i} className="text-xs text-muted-foreground">{r.reason}</div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                          <div><div className="font-semibold text-sm">{m.inProgress}</div><div className="text-muted-foreground">In progress</div></div>
+                          <div><div className={`font-semibold text-sm ${m.overdue > 0 ? "text-destructive" : ""}`}>{m.overdue}</div><div className="text-muted-foreground">Overdue</div></div>
+                          <div><div className={`font-semibold text-sm ${m.escalated > 0 ? "text-warning" : ""}`}>{m.escalated}</div><div className="text-muted-foreground">Escalated</div></div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border/60 pt-2">
+                          <span className="flex items-center gap-1"><ShieldCheck className="w-3.5 h-3.5" />{pct(m.slaComplianceRate)} SLA</span>
+                          <span className="flex items-center gap-1"><Timer className="w-3.5 h-3.5" />Avg {mins(m.avgReviewMinutes)}</span>
+                          <span>{m.completedToday} done today</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="teams" className="mt-4">
+            {oversight.teams.length === 0 ? (
+              <Card><CardContent className="py-14 text-center text-muted-foreground">No teams to show.</CardContent></Card>
+            ) : (
+              <div className="space-y-4">
+                {oversight.teams.map((t) => {
+                  const util = Math.round(t.utilization * 100)
+                  const tone = util >= 100 ? "text-destructive" : util >= 80 ? "text-warning" : "text-success"
+                  return (
+                    <Card key={t.teamId}>
+                      <CardHeader>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <CardTitle className="flex items-center gap-2">{t.teamName}
+                            <Badge variant="secondary">{t.memberCount} members</Badge>
+                          </CardTitle>
+                          <div className="flex items-center gap-4 text-sm">
+                            <span className="flex items-center gap-1 text-muted-foreground"><Timer className="w-4 h-4" />Avg {mins(t.avgReviewMinutes)}</span>
+                            <span className={`font-semibold ${tone}`}>{t.assigned}/{t.capacity} active</span>
+                          </div>
+                        </div>
+                        <div className="pt-2">
+                          <Progress value={Math.min(util, 100)} />
+                          <div className="text-xs text-muted-foreground mt-1">{util}% utilized</div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                          <div><div className="font-semibold">{t.open}</div><div className="text-xs text-muted-foreground">Open</div></div>
+                          <div><div className={`font-semibold ${t.overdue > 0 ? "text-destructive" : ""}`}>{t.overdue}</div><div className="text-xs text-muted-foreground">Overdue</div></div>
+                          <div><div className={`font-semibold ${t.critical > 0 ? "text-destructive" : ""}`}>{t.critical}</div><div className="text-xs text-muted-foreground">Critical</div></div>
+                          <div><div className="font-semibold text-success">{pct(t.slaComplianceRate)}</div><div className="text-xs text-muted-foreground">SLA on time</div></div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
 
       {metrics && metrics.byTeam.length > 0 && (
@@ -130,6 +184,18 @@ export default function WorkloadDashboard() {
                 </span>
               </div>
             ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {oversight && oversight.members.some((m) => m.status === "overloaded") && (
+        <Card className="border-warning/40">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-warning shrink-0" />
+            <span className="text-sm">
+              {oversight.members.filter((m) => m.status === "overloaded").map((m) => m.name).join(", ")} {" "}
+              {oversight.members.filter((m) => m.status === "overloaded").length === 1 ? "is" : "are"} over capacity — consider rebalancing their reviews.
+            </span>
           </CardContent>
         </Card>
       )}

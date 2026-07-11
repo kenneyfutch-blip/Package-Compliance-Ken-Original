@@ -6,20 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface ReviewHistoryEntry {
+export interface MyActivityItem {
   id: number;
   packageId: number;
-  assignmentId?: number | null;
+  packageName: string;
   action: string;
-  fromTeamId?: number | null;
-  toTeamId?: number | null;
-  fromUserId?: number | null;
-  toUserId?: number | null;
-  actorUserId?: number | null;
-  actorName: string;
   detail?: string | null;
   reason?: string | null;
   comments?: string | null;
-  escalationLevel?: number | null;
+  actorName: string;
   createdAt: string;
 }

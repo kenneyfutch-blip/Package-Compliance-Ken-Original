@@ -21,6 +21,13 @@ export const reviewAssignmentsTable = pgTable("review_assignments", {
   teamId: integer("team_id"),
   // Individual specialist the work is balanced onto. Null while only team-routed.
   assigneeUserId: integer("assignee_user_id"),
+  // Optional secondary reviewer who can step in for the primary assignee. Does
+  // not affect the one-active-assignment invariant (still exactly one row per
+  // package); purely an ownership annotation for visibility.
+  backupUserId: integer("backup_user_id"),
+  // The manager accountable for this review. Notified on escalation / approval
+  // and surfaced in the ownership indicator so responsibility is never unclear.
+  managerUserId: integer("manager_user_id"),
   // Unassigned | Assigned | InProgress | Completed | Escalated
   status: text("status").notNull().default("Unassigned"),
   // low | normal | high | critical — drives the SLA window.
@@ -68,6 +75,10 @@ export const reviewHistoryTable = pgTable("review_history", {
   actorUserId: integer("actor_user_id"),
   actorName: text("actor_name").notNull().default("System"),
   detail: text("detail"),
+  // Why the (re)assignment happened (e.g. "rebalancing", "specialist match")
+  // and any free-text note the actor added; both surfaced in assignment history.
+  reason: text("reason"),
+  comments: text("comments"),
   escalationLevel: integer("escalation_level"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

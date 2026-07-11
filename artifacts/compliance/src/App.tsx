@@ -21,6 +21,8 @@ import NotFound from "@/pages/not-found"
 import Dashboard from "@/pages/dashboard"
 import Landing from "@/pages/landing"
 import UploadPage from "@/pages/upload"
+import MyWorkPage from "@/pages/my-work"
+import MyDashboardPage from "@/pages/my-dashboard"
 import BulkQueuePage from "@/pages/bulk"
 import ReviewWorkspace from "@/pages/review-workspace"
 import AdminPage from "@/pages/admin"
@@ -218,6 +220,8 @@ function AppRoutes() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/upload" component={UploadPage} />
+        <Route path="/my-work" component={MyWorkPage} />
+        <Route path="/my-dashboard" component={MyDashboardPage} />
 
         {/* Review Queue */}
         <Route path="/reviews">

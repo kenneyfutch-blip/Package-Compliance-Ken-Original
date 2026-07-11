@@ -5,15 +5,16 @@
  * Packaging Compliance AI API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { ReviewAssignInputPriority } from './reviewAssignInputPriority';
+import type { BulkAssignInputPriority } from './bulkAssignInputPriority';
 
-export interface ReviewAssignInput {
-  teamId?: number | null;
+export interface BulkAssignInput {
+  packageIds: number[];
   assigneeUserId?: number | null;
-  backupUserId?: number | null;
+  teamId?: number | null;
   managerUserId?: number | null;
+  backupUserId?: number | null;
+  priority?: BulkAssignInputPriority;
   slaHours?: number;
-  priority?: ReviewAssignInputPriority;
   reason?: string;
   comments?: string;
 }

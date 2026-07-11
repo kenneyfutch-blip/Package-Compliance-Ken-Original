@@ -8,6 +8,7 @@ import {
   useAskCopilot, useExportProof, useComparePackageVersions, getComparePackageVersionsQueryKey,
   useGetLanguageReview, useRunLanguageReview, getGetLanguageReviewQueryKey,
   useCreatePackageVersion, useExtractArtworkText,
+  useGetPackageAssignment, getGetPackageAssignmentQueryKey,
   type PackageDetail, type Annotation as ApiAnnotation, type Violation as ApiViolation,
   type ReviewTask as ApiReviewTask, type Citation,
 } from "@workspace/api-client-react"
@@ -40,6 +41,9 @@ import { cn } from "@/lib/utils"
 import { hasDistinctFix } from "@/lib/compliance"
 import { LanguageReviewTab } from "@/components/language-review-tab"
 import { DocumentAiTab } from "@/components/document-ai-tab"
+import { ReviewOwnership } from "@/components/review-ownership"
+import { AssignmentDialog } from "@/components/assignment-dialog"
+import { UserCog } from "lucide-react"
 
 const OCR_MAX_DIM = 1600
 
@@ -97,6 +101,13 @@ export default function ReviewWorkspace() {
       },
     })
   }
+
+  const { data: assignmentDetail } = useGetPackageAssignment(packageId, {
+    query: { enabled: !!packageId, queryKey: getGetPackageAssignmentQueryKey(packageId) },
+  })
+  const [assignOpen, setAssignOpen] = React.useState(false)
+  const invalidateAssignment = () =>
+    qc.invalidateQueries({ queryKey: getGetPackageAssignmentQueryKey(packageId) })
 
   const [tool, setTool] = React.useState<MarkupTool>("hand")
   const [selectedId, setSelectedId] = React.useState<number | null>(null)
@@ -211,6 +222,9 @@ export default function ReviewWorkspace() {
             </Select>
           )}
           <AddVersionButton packageId={packageId} onAdded={(vid) => { setActiveVersionId(vid); invalidate() }} />
+          <Button variant="outline" className="gap-2 h-9" onClick={() => setAssignOpen(true)}>
+            <UserCog className="w-4 h-4" /> Assign
+          </Button>
           <Button variant="outline" className="gap-2 h-9" disabled={exportProof.isPending}
             onClick={() => exportProof.mutate({ id: packageId }, {
               onSuccess: (r) => { if (r?.url) window.open(r.url, "_blank") },
@@ -239,6 +253,12 @@ export default function ReviewWorkspace() {
         </div>
         <ScoreTile label="Open comments" value={String(sc.openComments)} />
         <ScoreTile label="Open tasks" value={String(sc.openTasks)} />
+      </div>
+
+      {/* Review ownership */}
+      <div className="pb-3 shrink-0">
+        <ReviewOwnership assignment={assignmentDetail?.assignment} variant="inline"
+          className="rounded-lg border border-border bg-card px-3 py-2" />
       </div>
 
       {/* Split */}
@@ -295,6 +315,15 @@ export default function ReviewWorkspace() {
           <ApprovalBar pkg={pkg} packageId={packageId} onChange={invalidate} />
         </div>
       </div>
+
+      <AssignmentDialog
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
+        packageId={packageId}
+        packageName={pkg.name}
+        assignment={assignmentDetail?.assignment}
+        onAssigned={invalidateAssignment}
+      />
 
       {/* Pin comment composer */}
       {pendingPin && (

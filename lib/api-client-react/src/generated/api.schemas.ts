@@ -1442,6 +1442,8 @@ export interface AuditEvent {
 
 export interface Notification {
   id: number;
+  userId?: number | null;
+  packageId?: number | null;
   title: string;
   message: string;
   type: string;
@@ -1634,8 +1636,12 @@ export const ReviewAssignInputPriority = {
 export interface ReviewAssignInput {
   teamId?: number | null;
   assigneeUserId?: number | null;
+  backupUserId?: number | null;
+  managerUserId?: number | null;
   slaHours?: number;
   priority?: ReviewAssignInputPriority;
+  reason?: string;
+  comments?: string;
 }
 
 export type ReviewAssignmentSlaStatus = typeof ReviewAssignmentSlaStatus[keyof typeof ReviewAssignmentSlaStatus];
@@ -1655,12 +1661,17 @@ export interface ReviewAssignment {
   teamName?: string | null;
   assigneeUserId?: number | null;
   assigneeName?: string | null;
+  backupUserId?: number | null;
+  backupName?: string | null;
+  managerUserId?: number | null;
+  managerName?: string | null;
   status: string;
   priority: string;
   slaHours: number;
   slaStatus: ReviewAssignmentSlaStatus;
   escalationLevel: number;
   autoRouted: boolean;
+  lastActivityAt?: string | null;
   assignedAt?: string | null;
   dueAt?: string | null;
   startedAt?: string | null;
@@ -1682,6 +1693,8 @@ export interface ReviewHistoryEntry {
   actorUserId?: number | null;
   actorName: string;
   detail?: string | null;
+  reason?: string | null;
+  comments?: string | null;
   escalationLevel?: number | null;
   createdAt: string;
 }
@@ -1771,6 +1784,138 @@ export interface ReviewMetricsSummary {
   escalatedReviews: number;
   byTeam: ReviewMetricsTeam[];
   recent: ReviewMetricsRecent[];
+}
+
+export interface MyWorkMetrics {
+  assigned: number;
+  inProgress: number;
+  overdue: number;
+  dueToday: number;
+  escalated: number;
+  completedToday: number;
+  slaComplianceRate?: number | null;
+  avgReviewMinutes?: number | null;
+}
+
+export interface MyActivityItem {
+  id: number;
+  packageId: number;
+  packageName: string;
+  action: string;
+  detail?: string | null;
+  reason?: string | null;
+  comments?: string | null;
+  actorName: string;
+  createdAt: string;
+}
+
+export interface MyWorkResponse {
+  metrics: MyWorkMetrics;
+  queue: AssignmentListItem[];
+  recentActivity: MyActivityItem[];
+  generatedAt: string;
+}
+
+export type OversightMemberStatus = typeof OversightMemberStatus[keyof typeof OversightMemberStatus];
+
+
+export const OversightMemberStatus = {
+  idle: 'idle',
+  available: 'available',
+  busy: 'busy',
+  overloaded: 'overloaded',
+} as const;
+
+export interface OversightMember {
+  userId: number;
+  name: string;
+  email?: string | null;
+  roleKey: string;
+  teamNames: string[];
+  assigned: number;
+  inProgress: number;
+  open: number;
+  completedToday: number;
+  critical: number;
+  overdue: number;
+  escalated: number;
+  capacity: number;
+  utilization: number;
+  avgReviewMinutes?: number | null;
+  slaComplianceRate?: number | null;
+  lastActivityAt?: string | null;
+  status: OversightMemberStatus;
+}
+
+export interface OversightTeam {
+  teamId: number;
+  teamName: string;
+  memberCount: number;
+  assigned: number;
+  open: number;
+  completed: number;
+  critical: number;
+  overdue: number;
+  capacity: number;
+  utilization: number;
+  avgReviewMinutes?: number | null;
+  slaComplianceRate?: number | null;
+}
+
+export interface OversightResponse {
+  members: OversightMember[];
+  teams: OversightTeam[];
+  generatedAt: string;
+}
+
+export interface RecommendedAssignee {
+  userId: number;
+  name: string;
+  activeCount: number;
+  capacity: number;
+  teamNames: string[];
+}
+
+export interface AssignmentRecommendation {
+  requestedUserId?: number | null;
+  requestedName?: string | null;
+  requestedActiveCount: number;
+  capacity: number;
+  overCapacity: boolean;
+  suggested: RecommendedAssignee[];
+  reason: string;
+}
+
+export type BulkAssignInputPriority = typeof BulkAssignInputPriority[keyof typeof BulkAssignInputPriority];
+
+
+export const BulkAssignInputPriority = {
+  low: 'low',
+  normal: 'normal',
+  high: 'high',
+  critical: 'critical',
+} as const;
+
+export interface BulkAssignInput {
+  packageIds: number[];
+  assigneeUserId?: number | null;
+  teamId?: number | null;
+  managerUserId?: number | null;
+  backupUserId?: number | null;
+  priority?: BulkAssignInputPriority;
+  slaHours?: number;
+  reason?: string;
+  comments?: string;
+}
+
+export interface BulkAssignFailure {
+  packageId: number;
+  error: string;
+}
+
+export interface BulkAssignResult {
+  assigned: number;
+  failed: BulkAssignFailure[];
 }
 
 export interface TeamMember {
@@ -1963,6 +2108,12 @@ export type ListReviewAssignmentsParams = {
 status?: string;
 teamId?: number;
 assigneeUserId?: number;
+};
+
+export type RecommendReviewAssigneeParams = {
+assigneeUserId?: number;
+teamId?: number;
+category?: string;
 };
 
 export type ListPoliciesParams = {

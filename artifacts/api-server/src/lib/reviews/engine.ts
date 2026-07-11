@@ -10,6 +10,7 @@ import {
   type ReviewAssignmentRow,
 } from "@workspace/db";
 import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { notifyUsers } from "./notify";
 
 // Default number of concurrent reviews a specialist is expected to carry before
 // they are considered at capacity. There is no per-user capacity field yet, so
@@ -149,12 +150,19 @@ export interface AssignParams {
   // undefined = leave unchanged; null = clear.
   teamId?: number | null;
   assigneeUserId?: number | null;
+  backupUserId?: number | null;
+  managerUserId?: number | null;
   priority?: string;
   slaHours?: number;
   actorUserId?: number | null;
   actorName: string;
   detail?: string | null;
+  // Structured reason + free-text note recorded on the history entry.
+  reason?: string | null;
+  comments?: string | null;
   auto?: boolean;
+  // A human-readable package name used only to compose notification copy.
+  packageName?: string | null;
 }
 
 // Create or update the active assignment for a package and append the transition
@@ -162,7 +170,7 @@ export interface AssignParams {
 // clears any prior escalation so the new owner gets a fresh window.
 export async function assignReview(p: AssignParams): Promise<ReviewAssignmentRow> {
   const now = new Date();
-  return db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     const [existing] = await tx
       .select()
       .from(reviewAssignmentsTable)
@@ -187,8 +195,20 @@ export async function assignReview(p: AssignParams): Promise<ReviewAssignmentRow
       p.assigneeUserId !== undefined
         ? p.assigneeUserId
         : (existing?.assigneeUserId ?? null);
+    const backupUserId =
+      p.backupUserId !== undefined
+        ? p.backupUserId
+        : (existing?.backupUserId ?? null);
+    const managerUserId =
+      p.managerUserId !== undefined
+        ? p.managerUserId
+        : (existing?.managerUserId ?? null);
 
     const prevAssignee = existing?.assigneeUserId ?? null;
+    const prevManager = existing?.managerUserId ?? null;
+    const prevBackup = existing?.backupUserId ?? null;
+    const prevPriority = existing?.priority ?? null;
+    const prevDueAt = existing?.dueAt ? new Date(existing.dueAt).getTime() : null;
     const assigneeChanged = prevAssignee !== assigneeUserId;
     const teamChanged = (existing?.teamId ?? null) !== teamId;
 
@@ -222,6 +242,8 @@ export async function assignReview(p: AssignParams): Promise<ReviewAssignmentRow
         .set({
           teamId,
           assigneeUserId,
+          backupUserId,
+          managerUserId,
           status,
           priority,
           slaHours,
@@ -244,6 +266,8 @@ export async function assignReview(p: AssignParams): Promise<ReviewAssignmentRow
           packageId: p.packageId,
           teamId,
           assigneeUserId,
+          backupUserId,
+          managerUserId,
           status,
           priority,
           slaHours,
@@ -278,11 +302,134 @@ export async function assignReview(p: AssignParams): Promise<ReviewAssignmentRow
       actorUserId: p.actorUserId ?? null,
       actorName: p.actorName,
       detail: p.detail ?? null,
+      reason: p.reason ?? null,
+      comments: p.comments ?? null,
       escalationLevel,
     });
 
-    return row;
+    const priorityChanged = existing != null && prevPriority !== priority;
+    const dueMs = dueAt ? dueAt.getTime() : null;
+    const dueChanged =
+      existing != null && !assigneeChanged && prevDueAt !== dueMs && dueMs !== null;
+
+    return {
+      row,
+      changes: {
+        assigneeChanged,
+        priorityChanged,
+        dueChanged,
+        prevAssignee,
+        assigneeUserId,
+        managerUserId,
+        managerChanged: prevManager !== managerUserId,
+        backupUserId,
+        backupChanged: prevBackup !== backupUserId,
+        priority,
+        dueAt,
+      },
+    };
   });
+
+  // Fire per-user notifications after the assignment commits (best-effort). The
+  // actor themselves is filtered out downstream so people are not pinged about
+  // their own actions.
+  await emitAssignmentNotifications(p, result.changes);
+
+  return result.row;
+}
+
+// Compose and send the per-user notifications implied by an assignment change:
+// new assignee, previous assignee (reassigned away), backup, manager, and
+// priority / due-date changes for the current owner.
+async function emitAssignmentNotifications(
+  p: AssignParams,
+  c: {
+    assigneeChanged: boolean;
+    priorityChanged: boolean;
+    dueChanged: boolean;
+    prevAssignee: number | null;
+    assigneeUserId: number | null;
+    managerUserId: number | null;
+    managerChanged: boolean;
+    backupUserId: number | null;
+    backupChanged: boolean;
+    priority: string;
+    dueAt: Date | null;
+  },
+): Promise<void> {
+  const label = p.packageName ? `"${p.packageName}"` : "a package review";
+  const actor = p.actorName || "A teammate";
+  const skip = (id: number | null | undefined) =>
+    id != null && id !== p.actorUserId ? id : null;
+  const due = c.dueAt ? new Date(c.dueAt).toLocaleString() : null;
+
+  try {
+    if (c.assigneeChanged) {
+      await notifyUsers({
+        organizationId: p.organizationId,
+        userIds: [skip(c.assigneeUserId)],
+        packageId: p.packageId,
+        title: "New review assigned to you",
+        message: `${actor} assigned you ${label}${
+          due ? `. Due ${due}.` : "."
+        }${p.reason ? ` Reason: ${p.reason}.` : ""}`,
+        type: "info",
+      });
+      await notifyUsers({
+        organizationId: p.organizationId,
+        userIds: [skip(c.prevAssignee)],
+        packageId: p.packageId,
+        title: "Review reassigned away",
+        message: `${actor} reassigned ${label} to another reviewer.`,
+        type: "info",
+      });
+    } else {
+      if (c.priorityChanged) {
+        await notifyUsers({
+          organizationId: p.organizationId,
+          userIds: [skip(c.assigneeUserId)],
+          packageId: p.packageId,
+          title: "Review priority changed",
+          message: `${actor} set the priority of ${label} to ${c.priority}.`,
+          type: c.priority === "critical" || c.priority === "high" ? "warning" : "info",
+        });
+      }
+      if (c.dueChanged) {
+        await notifyUsers({
+          organizationId: p.organizationId,
+          userIds: [skip(c.assigneeUserId)],
+          packageId: p.packageId,
+          title: "Review due date changed",
+          message: `The deadline for ${label} is now ${due ?? "updated"}.`,
+          type: "info",
+        });
+      }
+    }
+
+    if (c.managerChanged) {
+      await notifyUsers({
+        organizationId: p.organizationId,
+        userIds: [skip(c.managerUserId)],
+        packageId: p.packageId,
+        title: "You are the responsible manager",
+        message: `${actor} made you the responsible manager for ${label}.`,
+        type: "info",
+      });
+    }
+    if (c.backupChanged) {
+      await notifyUsers({
+        organizationId: p.organizationId,
+        userIds: [skip(c.backupUserId)],
+        packageId: p.packageId,
+        title: "You are the backup reviewer",
+        message: `${actor} named you backup reviewer for ${label}.`,
+        type: "info",
+      });
+    }
+  } catch {
+    // Notifications are best-effort; never fail an assignment because a
+    // notification insert failed.
+  }
 }
 
 // Route a package to the correct team by category and balance it onto that
@@ -295,6 +442,7 @@ export async function autoAssignReview(p: {
   priority?: string;
   actorUserId?: number | null;
   actorName?: string;
+  packageName?: string | null;
 }): Promise<ReviewAssignmentRow> {
   const team = await resolveTeamForCategory(p.organizationId, p.teamName);
   const assigneeUserId = team
@@ -308,6 +456,8 @@ export async function autoAssignReview(p: {
     priority: p.priority,
     actorUserId: p.actorUserId ?? null,
     actorName: p.actorName ?? "System",
+    packageName: p.packageName ?? null,
+    reason: "Auto-routed by category",
     detail: team
       ? `Auto-routed to ${team.name} by category "${p.category ?? "Uncategorized"}"`
       : `No team matched category "${p.category ?? "Uncategorized"}"; needs manual triage`,

@@ -5,7 +5,8 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, Loader2, ArrowRight, ShieldAlert, CheckCircle, Clock } from "lucide-react"
+import { Search, Loader2, ArrowRight, Clock } from "lucide-react"
+import { ReviewOwnership } from "@/components/review-ownership"
 
 export default function ReviewsPage() {
   const [search, setSearch] = useState("")
@@ -14,15 +15,6 @@ export default function ReviewsPage() {
   const assignmentByPkg = new Map(
     assignments.map((a) => [a.assignment.packageId, a.assignment]),
   )
-
-  const slaClass = (s: string) =>
-    s === "breached"
-      ? "text-destructive border-destructive/40"
-      : s === "at_risk"
-        ? "text-warning border-warning/40"
-        : "text-success border-success/40"
-  const slaLabel = (s: string) =>
-    s === "breached" ? "SLA breached" : s === "at_risk" ? "SLA at risk" : "On track"
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -77,28 +69,11 @@ export default function ReviewsPage() {
                   <Badge variant="outline">{pkg.category}</Badge>
                 </div>
 
-                {(() => {
-                  const a = assignmentByPkg.get(pkg.id)
-                  if (!a) return null
-                  return (
-                    <div className="flex flex-wrap items-center gap-2 mb-4 text-xs">
-                      <span className="text-muted-foreground">Assigned to</span>
-                      <span className="font-medium">
-                        {a.assigneeName ?? a.teamName ?? "Unassigned"}
-                      </span>
-                      {a.status !== "Completed" && a.slaStatus !== "none" && (
-                        <Badge variant="outline" className={slaClass(a.slaStatus)}>
-                          {slaLabel(a.slaStatus)}
-                        </Badge>
-                      )}
-                      {a.escalationLevel > 0 && a.status !== "Completed" && (
-                        <Badge variant="outline" className="text-destructive border-destructive/40">
-                          Escalated
-                        </Badge>
-                      )}
-                    </div>
-                  )
-                })()}
+                {assignmentByPkg.has(pkg.id) && (
+                  <div className="mb-4">
+                    <ReviewOwnership assignment={assignmentByPkg.get(pkg.id)} variant="inline" />
+                  </div>
+                )}
                 
                 {pkg.status !== 'Draft' && (
                   <div className="space-y-2 text-sm bg-accent/50 p-3 rounded-lg">

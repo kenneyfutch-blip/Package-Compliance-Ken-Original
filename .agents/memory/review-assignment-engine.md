@@ -47,6 +47,23 @@ completion because package/violation state keeps changing afterward.
 include an `organizationId` predicate (defense-in-depth tenant scoping), even
 though routes already scope by package access.
 
+## Per-user notifications fire AFTER the assignment txn commits
+**Rule:** assignment-change notifications are emitted after the assignment
+transaction commits, never inside it, and the acting user is excluded from
+recipients. A notification row's `userId` being null means org-wide (backward
+compatible); listing returns org-wide OR the current user's rows.
+**Why:** a notification failure must never roll back the assignment it describes.
+**How to apply:** escalation notifications are the exception — emitted inside the
+escalation txn (assignee/manager already loaded), org-wide fallback when unset.
+
+## "Approval required" = manager notification on the escalate decision
+**Rule:** there is no explicit approval-workflow entity, so "approval required" is
+interpreted as: a proofing *escalate* decision notifies the review's responsible
+manager (fallback assignee). Only the single-decision path has an escalate option —
+the bulk action path supports approve/reject/assign/rescan only, so there is no bulk
+escalate to reach parity with.
+**Why:** escalation is the only point where manager sign-off is implied.
+
 ## Category → team routing
 Keyword rules (case-insensitive) map a package category to a seeded team *name*,
 resolved to a team row per org. Unmatched categories produce a team-less

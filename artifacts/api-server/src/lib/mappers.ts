@@ -30,7 +30,12 @@ function iso(d: Date | null | undefined): string | null {
 
 export function mapReviewAssignment(
   a: ReviewAssignmentRow,
-  extra?: { teamName?: string | null; assigneeName?: string | null },
+  extra?: {
+    teamName?: string | null;
+    assigneeName?: string | null;
+    backupName?: string | null;
+    managerName?: string | null;
+  },
 ) {
   return {
     id: a.id,
@@ -39,6 +44,10 @@ export function mapReviewAssignment(
     teamName: extra?.teamName ?? null,
     assigneeUserId: a.assigneeUserId,
     assigneeName: extra?.assigneeName ?? null,
+    backupUserId: a.backupUserId,
+    backupName: extra?.backupName ?? null,
+    managerUserId: a.managerUserId,
+    managerName: extra?.managerName ?? null,
     status: a.status,
     priority: a.priority,
     slaHours: a.slaHours,
@@ -50,6 +59,9 @@ export function mapReviewAssignment(
     startedAt: iso(a.startedAt),
     completedAt: iso(a.completedAt),
     lastEscalatedAt: iso(a.lastEscalatedAt),
+    // Last time ownership meaningfully changed — surfaced in the ownership
+    // indicator so reviewers can see how fresh the assignment state is.
+    lastActivityAt: iso(a.updatedAt),
     createdAt: iso(a.createdAt)!,
     updatedAt: iso(a.updatedAt)!,
   };
@@ -68,6 +80,8 @@ export function mapReviewHistory(h: ReviewHistoryRow) {
     actorUserId: h.actorUserId,
     actorName: h.actorName,
     detail: h.detail,
+    reason: h.reason,
+    comments: h.comments,
     escalationLevel: h.escalationLevel,
     createdAt: iso(h.createdAt)!,
   };
@@ -494,6 +508,8 @@ export function mapAuditEvent(a: AuditEventRow) {
 export function mapNotification(n: NotificationRow) {
   return {
     id: n.id,
+    userId: n.userId,
+    packageId: n.packageId,
     title: n.title,
     message: n.message,
     type: n.type,

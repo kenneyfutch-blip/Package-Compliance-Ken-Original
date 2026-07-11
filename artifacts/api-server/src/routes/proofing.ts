@@ -13,6 +13,7 @@ import {
   approvalDecisionsTable,
   auditEventsTable,
   reportsTable,
+  reviewAssignmentsTable,
 } from "@workspace/db";
 import { eq, and, asc, desc, inArray } from "drizzle-orm";
 import {
@@ -45,10 +46,12 @@ import {
 } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
 import { currentUser } from "../lib/identity";
+import { notifyUsers } from "../lib/reviews/notify";
 import {
   requirePermission,
   requireAnyPermission,
   hasPermission,
+  orgId,
 } from "../lib/rbac/context";
 import { packageConds, canAccessPackage } from "../lib/rbac/scope";
 import type { PackageRow } from "@workspace/db";
@@ -591,6 +594,32 @@ router.post(
       .select()
       .from(packagesTable)
       .where(eq(packagesTable.id, id));
+
+    // Escalating a decision requires manager sign-off. Notify the responsible
+    // manager (falling back to the assignee) so approval isn't left waiting.
+    // Best-effort and non-fatal — must never roll back the decision.
+    if (d.decision === "escalate") {
+      try {
+        const [assignment] = await db
+          .select({
+            managerUserId: reviewAssignmentsTable.managerUserId,
+            assigneeUserId: reviewAssignmentsTable.assigneeUserId,
+          })
+          .from(reviewAssignmentsTable)
+          .where(eq(reviewAssignmentsTable.packageId, id));
+        await notifyUsers({
+          organizationId: orgId(req),
+          userIds: [assignment?.managerUserId, assignment?.assigneeUserId],
+          packageId: id,
+          title: "Approval required",
+          message: `${actor} escalated "${pkg.name}" for manager approval.${d.note ? ` Note: ${d.note}` : ""}`,
+          type: "warning",
+        });
+      } catch (err) {
+        logger.warn({ err, packageId: id }, "Failed to emit approval-required notification");
+      }
+    }
+
     res.json(await buildDetail(updated!));
   },
 );

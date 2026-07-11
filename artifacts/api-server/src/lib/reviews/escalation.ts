@@ -70,14 +70,39 @@ export async function runEscalationSweep(): Promise<Record<string, unknown>> {
         .returning({ id: reviewAssignmentsTable.id });
       if (!updated) return false;
 
-      await tx.insert(notificationsTable).values({
-        organizationId: a.organizationId ?? undefined,
-        title: `Critical review overdue — escalated to ${tier.label}`,
-        message: `"${packageName}" has unresolved critical violations ${Math.floor(
-          hoursOpen,
-        )}h after assignment. Escalated to ${tier.label} for immediate attention.`,
-        type: "critical",
-      });
+      const title = `Critical review overdue — escalated to ${tier.label}`;
+      const message = `"${packageName}" has unresolved critical violations ${Math.floor(
+        hoursOpen,
+      )}h after assignment. Escalated to ${tier.label} for immediate attention.`;
+      // Target the accountable people directly (assignee + responsible manager);
+      // fall back to an org-wide notice when neither is set.
+      const targets = Array.from(
+        new Set(
+          [a.assigneeUserId, a.managerUserId].filter(
+            (id): id is number => typeof id === "number",
+          ),
+        ),
+      );
+      if (targets.length > 0) {
+        await tx.insert(notificationsTable).values(
+          targets.map((userId) => ({
+            organizationId: a.organizationId ?? undefined,
+            userId,
+            packageId: a.packageId,
+            title,
+            message,
+            type: "critical",
+          })),
+        );
+      } else {
+        await tx.insert(notificationsTable).values({
+          organizationId: a.organizationId ?? undefined,
+          packageId: a.packageId,
+          title,
+          message,
+          type: "critical",
+        });
+      }
 
       await tx.insert(reviewHistoryTable).values({
         organizationId: a.organizationId,

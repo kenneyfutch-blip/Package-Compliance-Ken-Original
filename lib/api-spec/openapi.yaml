@@ -2252,6 +2252,80 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /reviews/my-work:
+    get:
+      operationId: getMyWork
+      tags: [reviews]
+      summary: Personal review queue, workload metrics, and recent activity for the signed-in reviewer
+      responses:
+        "200":
+          description: My work snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyWorkResponse"
+
+  /reviews/oversight:
+    get:
+      operationId: getReviewOversight
+      tags: [reviews]
+      summary: Per-member and per-team review ownership, workload, and SLA for managers
+      responses:
+        "200":
+          description: Oversight snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OversightResponse"
+
+  /reviews/recommend:
+    get:
+      operationId: recommendReviewAssignee
+      tags: [reviews]
+      summary: Suggest better-balanced assignees when a chosen reviewer is over capacity
+      parameters:
+        - name: assigneeUserId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: teamId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Assignment recommendation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentRecommendation"
+
+  /reviews/bulk-assign:
+    post:
+      operationId: bulkAssignReviews
+      tags: [reviews]
+      summary: Assign or reassign many package reviews at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkAssignInput"
+      responses:
+        "200":
+          description: Bulk assignment result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkAssignResult"
+
   /policies:
     get:
       operationId: listPolicies
@@ -5146,6 +5220,12 @@ components:
       properties:
         id:
           type: integer
+        userId:
+          type: integer
+          nullable: true
+        packageId:
+          type: integer
+          nullable: true
         title:
           type: string
         message:
@@ -5757,11 +5837,21 @@ components:
         assigneeUserId:
           type: integer
           nullable: true
+        backupUserId:
+          type: integer
+          nullable: true
+        managerUserId:
+          type: integer
+          nullable: true
         slaHours:
           type: integer
         priority:
           type: string
           enum: [low, normal, high, critical]
+        reason:
+          type: string
+        comments:
+          type: string
 
     ReviewAssignment:
       type: object
@@ -5782,6 +5872,18 @@ components:
         assigneeName:
           type: string
           nullable: true
+        backupUserId:
+          type: integer
+          nullable: true
+        backupName:
+          type: string
+          nullable: true
+        managerUserId:
+          type: integer
+          nullable: true
+        managerName:
+          type: string
+          nullable: true
         status:
           type: string
         priority:
@@ -5795,6 +5897,9 @@ components:
           type: integer
         autoRouted:
           type: boolean
+        lastActivityAt:
+          type: string
+          nullable: true
         assignedAt:
           type: string
           nullable: true
@@ -5856,6 +5961,12 @@ components:
         actorName:
           type: string
         detail:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        comments:
           type: string
           nullable: true
         escalationLevel:
@@ -6107,6 +6218,314 @@ components:
         - escalatedReviews
         - byTeam
         - recent
+
+    MyWorkMetrics:
+      type: object
+      properties:
+        assigned:
+          type: integer
+        inProgress:
+          type: integer
+        overdue:
+          type: integer
+        dueToday:
+          type: integer
+        escalated:
+          type: integer
+        completedToday:
+          type: integer
+        slaComplianceRate:
+          type: number
+          nullable: true
+        avgReviewMinutes:
+          type: number
+          nullable: true
+      required:
+        - assigned
+        - inProgress
+        - overdue
+        - dueToday
+        - escalated
+        - completedToday
+
+    MyActivityItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        packageName:
+          type: string
+        action:
+          type: string
+        detail:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        comments:
+          type: string
+          nullable: true
+        actorName:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - packageId
+        - packageName
+        - action
+        - actorName
+        - createdAt
+
+    MyWorkResponse:
+      type: object
+      properties:
+        metrics:
+          $ref: "#/components/schemas/MyWorkMetrics"
+        queue:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssignmentListItem"
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/MyActivityItem"
+        generatedAt:
+          type: string
+      required:
+        - metrics
+        - queue
+        - recentActivity
+        - generatedAt
+
+    OversightMember:
+      type: object
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        roleKey:
+          type: string
+        teamNames:
+          type: array
+          items:
+            type: string
+        assigned:
+          type: integer
+        inProgress:
+          type: integer
+        open:
+          type: integer
+        completedToday:
+          type: integer
+        critical:
+          type: integer
+        overdue:
+          type: integer
+        escalated:
+          type: integer
+        capacity:
+          type: integer
+        utilization:
+          type: number
+        avgReviewMinutes:
+          type: number
+          nullable: true
+        slaComplianceRate:
+          type: number
+          nullable: true
+        lastActivityAt:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [idle, available, busy, overloaded]
+      required:
+        - userId
+        - name
+        - roleKey
+        - teamNames
+        - assigned
+        - inProgress
+        - open
+        - completedToday
+        - critical
+        - overdue
+        - escalated
+        - capacity
+        - utilization
+        - status
+
+    OversightTeam:
+      type: object
+      properties:
+        teamId:
+          type: integer
+        teamName:
+          type: string
+        memberCount:
+          type: integer
+        assigned:
+          type: integer
+        open:
+          type: integer
+        completed:
+          type: integer
+        critical:
+          type: integer
+        overdue:
+          type: integer
+        capacity:
+          type: integer
+        utilization:
+          type: number
+        avgReviewMinutes:
+          type: number
+          nullable: true
+        slaComplianceRate:
+          type: number
+          nullable: true
+      required:
+        - teamId
+        - teamName
+        - memberCount
+        - assigned
+        - open
+        - completed
+        - critical
+        - overdue
+        - capacity
+        - utilization
+
+    OversightResponse:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/OversightMember"
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/OversightTeam"
+        generatedAt:
+          type: string
+      required:
+        - members
+        - teams
+        - generatedAt
+
+    RecommendedAssignee:
+      type: object
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        activeCount:
+          type: integer
+        capacity:
+          type: integer
+        teamNames:
+          type: array
+          items:
+            type: string
+      required:
+        - userId
+        - name
+        - activeCount
+        - capacity
+        - teamNames
+
+    AssignmentRecommendation:
+      type: object
+      properties:
+        requestedUserId:
+          type: integer
+          nullable: true
+        requestedName:
+          type: string
+          nullable: true
+        requestedActiveCount:
+          type: integer
+        capacity:
+          type: integer
+        overCapacity:
+          type: boolean
+        suggested:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecommendedAssignee"
+        reason:
+          type: string
+      required:
+        - requestedActiveCount
+        - capacity
+        - overCapacity
+        - suggested
+        - reason
+
+    BulkAssignInput:
+      type: object
+      properties:
+        packageIds:
+          type: array
+          items:
+            type: integer
+        assigneeUserId:
+          type: integer
+          nullable: true
+        teamId:
+          type: integer
+          nullable: true
+        managerUserId:
+          type: integer
+          nullable: true
+        backupUserId:
+          type: integer
+          nullable: true
+        priority:
+          type: string
+          enum: [low, normal, high, critical]
+        slaHours:
+          type: integer
+        reason:
+          type: string
+        comments:
+          type: string
+      required:
+        - packageIds
+
+    BulkAssignFailure:
+      type: object
+      properties:
+        packageId:
+          type: integer
+        error:
+          type: string
+      required:
+        - packageId
+        - error
+
+    BulkAssignResult:
+      type: object
+      properties:
+        assigned:
+          type: integer
+        failed:
+          type: array
+          items:
+            $ref: "#/components/schemas/BulkAssignFailure"
+      required:
+        - assigned
+        - failed
 
     TeamRef:
       type: object

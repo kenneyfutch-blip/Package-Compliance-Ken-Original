@@ -8,6 +8,8 @@
 
 export interface Notification {
   id: number;
+  userId?: number | null;
+  packageId?: number | null;
   title: string;
   message: string;
   type: string;

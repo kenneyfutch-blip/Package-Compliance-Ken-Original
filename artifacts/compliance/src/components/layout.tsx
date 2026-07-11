@@ -57,6 +57,8 @@ type NavEntry = ({ type: "link" } & NavLink) | ({ type: "group" } & NavGroup)
 
 const NAV: NavEntry[] = [
   { type: "link", name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { type: "link", name: "My Work", href: "/my-work", icon: Briefcase },
+  { type: "link", name: "My Dashboard", href: "/my-dashboard", icon: Gauge },
   {
     type: "group",
     name: "Review Queue",
