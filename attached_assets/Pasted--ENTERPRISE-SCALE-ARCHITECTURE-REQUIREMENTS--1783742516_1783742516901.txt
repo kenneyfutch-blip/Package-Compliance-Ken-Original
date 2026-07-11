@@ -1,0 +1,637 @@
+====================================================
+ENTERPRISE SCALE ARCHITECTURE REQUIREMENTS
+====================================================
+
+This platform must be architected as an enterprise-grade compliance application from day one.
+
+Do NOT build this as a single-user prototype.
+
+Design for:
+
+- 50 Active Users
+- 10 Teams
+- 500 Concurrent Reviews
+- 50,000+ Package Reviews
+- 500,000+ Violations
+- Millions of Regulatory Records
+- Multiple Years Of Audit History
+- Multiple TBs Of Packaging Assets
+- Future Supplier Portal Access
+- Future Workfront Integration
+- Future CIA Integration
+
+All architecture decisions should support horizontal growth and long-term scalability.
+
+====================================================
+ENTERPRISE ACCESS CONTROL & PERMISSIONS
+====================================================
+
+Design the platform using Role-Based Access Control (RBAC).
+
+Support:
+
+- Role Based Access
+- Team Based Access
+- Department Based Access
+- Category Based Access
+- Supplier Access Controls
+- Audit Logging
+- Read Only Permissions
+- Granular Permissions
+
+====================================================
+USER ROLES
+====================================================
+
+Platform Administrator
+
+Compliance Director
+
+Compliance Manager
+
+Compliance Specialist
+
+Packaging Manager
+
+Designer
+
+Legal Reviewer
+
+Executive Viewer
+
+Supplier User
+
+Read Only User
+
+====================================================
+PERMISSIONS
+====================================================
+
+Platform Administrator
+
+- Full Platform Access
+- Manage Users
+- Manage Teams
+- Manage Roles
+- Manage Regulations
+- Manage System Settings
+- View Audit Logs
+- View All Data
+
+Compliance Director
+
+- View All Reviews
+- Approve High Risk Packages
+- Assign Reviews
+- View Reports
+- View Vendor Performance
+- View Regulatory Changes
+
+Compliance Manager
+
+- Assign Reviews
+- Approve Reviews
+- Manage Team Work Queues
+- Escalate Compliance Issues
+- View Team Metrics
+
+Compliance Specialist
+
+- Review Packages
+- Create Findings
+- Approve Reviews
+- Reject Reviews
+- Use Compliance Copilot
+- View Regulations
+
+Packaging Manager
+
+- Submit Packages
+- View Reviews
+- Track Status
+- View Reports
+
+Designer
+
+- View Findings
+- Download Fix Lists
+- Upload Revisions
+- View Annotated Artwork
+
+Legal Reviewer
+
+- Review Claims
+- Review Regulatory Findings
+- Approve Legal Content
+
+Supplier User
+
+- Submit Packaging
+- View Own Reviews
+- View Own Feedback
+- View Approval Status
+
+Supplier Users Cannot View Other Suppliers
+
+Executive Viewer
+
+- Read Only Access
+- Compliance Trends
+- Executive Dashboards
+- Vendor Performance
+- Risk Reporting
+
+====================================================
+TEAM STRUCTURE
+====================================================
+
+Do not assign reviews directly to users by default.
+
+Assign work to teams first.
+
+Example Teams:
+
+Food Compliance Team
+
+Beauty Compliance Team
+
+EPA Compliance Team
+
+Toy Compliance Team
+
+Legal Team
+
+Packaging Team
+
+QA Team
+
+Supplier Compliance Team
+
+====================================================
+REVIEW ASSIGNMENT ENGINE
+====================================================
+
+Support:
+
+- Auto Assignment
+- Manual Assignment
+- Team Assignment
+- Load Balancing
+- Reassignments
+- Escalations
+
+Examples
+
+Food Products
+
+→ Food Compliance Team
+
+Beauty Products
+
+→ Beauty Compliance Team
+
+Disinfectants
+
+→ EPA Compliance Team
+
+Toys
+
+→ CPSC / Product Safety Team
+
+Health Products
+
+→ Regulatory Team
+
+====================================================
+WORKLOAD MANAGEMENT
+====================================================
+
+Create workload management tools.
+
+Allow managers to view:
+
+- Active Reviews Per User
+- Active Reviews Per Team
+- Average Review Time
+- SLA Performance
+- Capacity Planning
+
+Support automatic balancing.
+
+Example:
+
+Specialist A = 100 reviews
+
+Specialist B = 25 reviews
+
+System recommends reassignment.
+
+====================================================
+OPERATIONS MENU
+====================================================
+
+Create a dedicated Operations section.
+
+Menu:
+
+OPERATIONS
+
+User Management
+
+Team Management
+
+Role Management
+
+Workload Management
+
+SLA Tracking
+
+Audit Center
+
+Queue Performance
+
+System Health
+
+====================================================
+DATABASE ARCHITECTURE
+====================================================
+
+Use PostgreSQL.
+
+Use pgvector.
+
+Use proper indexing.
+
+Use partitioning where appropriate.
+
+Use object storage for files.
+
+Never store large artwork directly inside PostgreSQL.
+
+Store references only.
+
+====================================================
+CORE DATABASE TABLES
+====================================================
+
+organizations
+
+teams
+
+team_members
+
+users
+
+roles
+
+permissions
+
+role_permissions
+
+user_permissions
+
+projects
+
+packages
+
+uploads
+
+reviews
+
+violations
+
+review_assignments
+
+review_history
+
+audit_logs
+
+notifications
+
+vendor_scorecards
+
+suppliers
+
+supplier_reviews
+
+regulatory_updates
+
+regulatory_snapshots
+
+compliance_memory
+
+claim_reviews
+
+heatmap_data
+
+review_metrics
+
+====================================================
+ORGANIZATION MODEL
+====================================================
+
+Build multi-organization support from day one.
+
+Create:
+
+organizations
+
+Example future organizations:
+
+Dollar Tree
+
+Family Dollar
+
+External Suppliers
+
+Business Units
+
+The architecture should support multiple organizations without requiring redesign.
+
+====================================================
+SUPPLIER ARCHITECTURE
+====================================================
+
+Create dedicated supplier tables.
+
+suppliers
+
+supplier_contacts
+
+supplier_submissions
+
+supplier_reviews
+
+supplier_scorecards
+
+supplier_status
+
+Initial version:
+
+Internal supplier management only.
+
+No CIA integration required in V1.
+
+Future architecture:
+
+CIA
+↓
+Supplier Master Data
+↓
+Compliance Platform
+
+CIA will become the source of truth for supplier metadata in future phases.
+
+====================================================
+COMPLIANCE MEMORY ENGINE
+====================================================
+
+Store every compliance finding.
+
+Store:
+
+Violation
+
+Regulation
+
+Suggested Fix
+
+Approved Fix
+
+Reviewer
+
+Outcome
+
+Approval Status
+
+Category
+
+Vendor
+
+Date
+
+Future AI reviews should leverage this knowledge.
+
+Example:
+
+Issue
+
+Missing Soy Declaration
+
+Historical Approved Fix
+
+Contains: Soy
+
+Use this memory engine to improve recommendations over time.
+
+Treat Compliance Memory as institutional knowledge.
+
+====================================================
+AUDIT REQUIREMENTS
+====================================================
+
+Track everything.
+
+Store:
+
+Who Uploaded
+
+Who Reviewed
+
+Who Approved
+
+Who Rejected
+
+Who Commented
+
+What Changed
+
+When Changed
+
+Previous Values
+
+New Values
+
+Regulations Referenced
+
+AI Findings Generated
+
+Fixes Applied
+
+Approval History
+
+Version History
+
+Audit logs must be immutable.
+
+====================================================
+NOTIFICATION ESCALATIONS
+====================================================
+
+Critical Violation
+
+No Response After 24 Hours
+
+→ Notify Manager
+
+No Response After 48 Hours
+
+→ Notify Director
+
+No Response After 72 Hours
+
+→ Escalate To Leadership
+
+====================================================
+FILE STORAGE ARCHITECTURE
+====================================================
+
+Use Object Storage.
+
+Store:
+
+Packaging PDFs
+
+AI Files
+
+INDD Files
+
+Images
+
+Reports
+
+Annotated Reports
+
+Generated Assets
+
+Store references only in database.
+
+Example:
+
+uploads
+
+id
+
+package_id
+
+file_url
+
+file_version
+
+uploaded_by
+
+upload_date
+
+====================================================
+PERFORMANCE REQUIREMENTS
+====================================================
+
+Target Performance
+
+50 Active Users
+
+500 Concurrent Reviews
+
+50,000 Package Reviews
+
+500,000 Violations
+
+Sub 3 Second Dashboard Load
+
+Sub 5 Second Review Load
+
+Bulk Upload Support
+
+Bulk Review Support
+
+Queued AI Analysis
+
+Async Processing
+
+Background Regulatory Jobs
+
+Async Report Generation
+
+AI Work Queues
+
+Notification Queues
+
+====================================================
+SCALABILITY REQUIREMENTS
+====================================================
+
+System must support:
+
+500,000+ Violations
+
+Millions Of Regulatory Records
+
+Years Of Review Data
+
+Millions Of Audit Entries
+
+Future Multi-Tenant Architecture
+
+Future Supplier Portal
+
+Future Workfront Integration
+
+Future CIA Integration
+
+Future Vendor Access
+
+Future Regulatory Sources
+
+====================================================
+DATA RETENTION
+====================================================
+
+Maintain:
+
+5+ Years Review History
+
+5+ Years Audit History
+
+5+ Years Compliance Findings
+
+Version History
+
+Regulatory History
+
+Compliance Memory
+
+Review History
+
+====================================================
+SUCCESS CRITERIA
+====================================================
+
+The platform must operate as an enterprise-grade Packaging Compliance Operating System.
+
+It should support:
+
+50 Users
+
+10 Teams
+
+50,000 Reviews
+
+500,000 Violations
+
+Multiple Departments
+
+Multiple Regulatory Sources
+
+Audit Compliance
+
+Role-Based Security
+
+Supplier Management
+
+High Volume Review Workflows
+
+Compliance Memory
+
+Institutional Knowledge Retention
+
+The architecture should never need to be redesigned as user adoption increases.

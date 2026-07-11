@@ -35,7 +35,9 @@ import type {
   CreateProofInput,
   DashboardStats,
   DistributionItem,
+  FdaRecallResponse,
   HealthStatus,
+  ListFdaRecallsParams,
   ListPackagesParams,
   ListRegulationsParams,
   ListViolationsParams,
@@ -2105,6 +2107,90 @@ export const useBulkAnalyze = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getBulkAnalyzeMutationOptions(options));
     }
+
+export const getListFdaRecallsUrl = (params: ListFdaRecallsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/fda/recalls?${stringifiedParams}` : `/api/fda/recalls`
+}
+
+/**
+ * @summary Search live FDA recall & enforcement actions (openFDA)
+ */
+export const listFdaRecalls = async (params: ListFdaRecallsParams, options?: RequestInit): Promise<FdaRecallResponse> => {
+
+  return customFetch<FdaRecallResponse>(getListFdaRecallsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFdaRecallsQueryKey = (params?: ListFdaRecallsParams,) => {
+    return [
+    `/api/fda/recalls`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFdaRecallsQueryOptions = <TData = Awaited<ReturnType<typeof listFdaRecalls>>, TError = ErrorType<unknown>>(params: ListFdaRecallsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFdaRecalls>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFdaRecallsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFdaRecalls>>> = ({ signal }) => listFdaRecalls(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFdaRecalls>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListFdaRecallsQueryResult = NonNullable<Awaited<ReturnType<typeof listFdaRecalls>>>
+export type ListFdaRecallsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Search live FDA recall & enforcement actions (openFDA)
+ */
+
+export function useListFdaRecalls<TData = Awaited<ReturnType<typeof listFdaRecalls>>, TError = ErrorType<unknown>>(
+ params: ListFdaRecallsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listFdaRecalls>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListFdaRecallsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListRegulationsUrl = (params?: ListRegulationsParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -1031,6 +1031,34 @@ export const BulkAnalyzeResponse = zod.object({
 
 
 /**
+ * @summary Search live FDA recall & enforcement actions (openFDA)
+ */
+export const ListFdaRecallsQueryParams = zod.object({
+  "category": zod.enum(['food', 'drug', 'device']),
+  "search": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListFdaRecallsResponse = zod.object({
+  "results": zod.array(zod.object({
+  "recallNumber": zod.string(),
+  "category": zod.string(),
+  "status": zod.string(),
+  "classification": zod.string(),
+  "productDescription": zod.string(),
+  "reason": zod.string(),
+  "recallingFirm": zod.string(),
+  "distributionPattern": zod.string(),
+  "location": zod.string(),
+  "initiationDate": zod.string().nullish(),
+  "reportDate": zod.string().nullish()
+})),
+  "total": zod.number(),
+  "disclaimer": zod.string()
+})
+
+
+/**
  * @summary Browse the regulatory knowledge base
  */
 export const ListRegulationsQueryParams = zod.object({

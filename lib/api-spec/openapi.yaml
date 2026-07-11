@@ -685,6 +685,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/BulkAnalyzeResult"
 
+  /fda/recalls:
+    get:
+      operationId: listFdaRecalls
+      tags: [regulations]
+      summary: Search live FDA recall & enforcement actions (openFDA)
+      parameters:
+        - name: category
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [food, drug, device]
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Matching FDA recalls
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FdaRecallResponse"
+
   /regulations:
     get:
       operationId: listRegulations
@@ -1034,6 +1064,58 @@ paths:
 
 components:
   schemas:
+    FdaRecall:
+      type: object
+      required:
+        [
+          recallNumber,
+          category,
+          status,
+          classification,
+          productDescription,
+          reason,
+          recallingFirm,
+          distributionPattern,
+          location,
+        ]
+      properties:
+        recallNumber:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+        classification:
+          type: string
+        productDescription:
+          type: string
+        reason:
+          type: string
+        recallingFirm:
+          type: string
+        distributionPattern:
+          type: string
+        location:
+          type: string
+        initiationDate:
+          type: string
+          nullable: true
+        reportDate:
+          type: string
+          nullable: true
+
+    FdaRecallResponse:
+      type: object
+      required: [results, total, disclaimer]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/FdaRecall"
+        total:
+          type: integer
+        disclaimer:
+          type: string
     HealthStatus:
       type: object
       properties:

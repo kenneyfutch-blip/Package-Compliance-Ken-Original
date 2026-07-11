@@ -5,6 +5,26 @@
  * Packaging Compliance AI API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface FdaRecall {
+  recallNumber: string;
+  category: string;
+  status: string;
+  classification: string;
+  productDescription: string;
+  reason: string;
+  recallingFirm: string;
+  distributionPattern: string;
+  location: string;
+  initiationDate?: string | null;
+  reportDate?: string | null;
+}
+
+export interface FdaRecallResponse {
+  results: FdaRecall[];
+  total: number;
+  disclaimer: string;
+}
+
 export interface HealthStatus {
   status: string;
 }
@@ -615,6 +635,21 @@ risk?: string;
 engine?: string;
 vendor?: string;
 };
+
+export type ListFdaRecallsParams = {
+category: ListFdaRecallsCategory;
+search?: string;
+limit?: number;
+};
+
+export type ListFdaRecallsCategory = typeof ListFdaRecallsCategory[keyof typeof ListFdaRecallsCategory];
+
+
+export const ListFdaRecallsCategory = {
+  food: 'food',
+  drug: 'drug',
+  device: 'device',
+} as const;
 
 export type ListRegulationsParams = {
 search?: string;

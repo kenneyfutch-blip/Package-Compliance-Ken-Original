@@ -10,6 +10,7 @@ import violationsRouter from "./violations";
 import ocrRouter from "./ocr";
 import proofsRouter from "./proofs";
 import storageRouter from "./storage";
+import fdaRouter from "./fda";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -27,5 +28,6 @@ router.use(violationsRouter);
 router.use(ocrRouter);
 router.use(proofsRouter);
 router.use(storageRouter);
+router.use(fdaRouter);
 
 export default router;
