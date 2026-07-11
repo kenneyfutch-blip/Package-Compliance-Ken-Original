@@ -36,6 +36,7 @@ import {
   LineChart,
   BookOpen,
   PenLine,
+  Languages,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -95,6 +96,7 @@ const NAV: NavEntry[] = [
     icon: Sparkles,
     items: [
       { name: "Violations Center", href: "/ai/violations", icon: AlertTriangle },
+      { name: "Language Review", href: "/ai/language", icon: Languages },
       { name: "Recommended Fixes", href: "/ai/fixes", icon: Wrench },
       { name: "Compliance Memory", href: "/ai/memory", icon: Brain },
       { name: "Compliance Heatmaps", href: "/ai/heatmaps", icon: Grid3x3 },

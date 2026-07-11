@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useListPackages, useBulkAnalyze } from "@workspace/api-client-react"
+import { useListPackages, useBulkAnalyze, useBulkLanguageReview } from "@workspace/api-client-react"
 import { Link, useLocation } from "wouter"
 import { 
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Search, Filter, Loader2, PlayCircle, Eye, AlertCircle, CheckCircle } from "lucide-react"
+import { Search, Filter, Loader2, PlayCircle, Eye, AlertCircle, CheckCircle, Languages } from "lucide-react"
 
 export default function BulkQueuePage() {
   const [search, setSearch] = useState("")
@@ -18,6 +18,7 @@ export default function BulkQueuePage() {
   
   const { data: packages = [], isLoading, refetch } = useListPackages({ search })
   const bulkAnalyze = useBulkAnalyze()
+  const bulkLanguage = useBulkLanguageReview()
 
   const toggleSelectAll = () => {
     if (selectedIds.size === packages.length) {
@@ -44,6 +45,16 @@ export default function BulkQueuePage() {
     })
   }
 
+  const handleBulkLanguage = () => {
+    if (selectedIds.size === 0) return
+    bulkLanguage.mutate({ data: { ids: Array.from(selectedIds) } }, {
+      onSuccess: () => {
+        setSelectedIds(new Set())
+        refetch()
+      }
+    })
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -52,6 +63,15 @@ export default function BulkQueuePage() {
           <p className="text-muted-foreground mt-1">Manage and analyze packages at scale.</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleBulkLanguage}
+            disabled={selectedIds.size === 0 || bulkLanguage.isPending}
+            className="gap-2"
+          >
+            {bulkLanguage.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Languages className="w-4 h-4" />}
+            Language Review ({selectedIds.size})
+          </Button>
           <Button 
             onClick={handleBulkAnalyze} 
             disabled={selectedIds.size === 0 || bulkAnalyze.isPending}
@@ -92,6 +112,7 @@ export default function BulkQueuePage() {
                 <TableHead>Vendor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Grade</TableHead>
+                <TableHead className="text-right">Language</TableHead>
                 <TableHead className="text-right">Risk</TableHead>
                 <TableHead className="text-right">Violations</TableHead>
                 <TableHead></TableHead>
@@ -100,14 +121,14 @@ export default function BulkQueuePage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
                     Loading queue...
                   </TableCell>
                 </TableRow>
               ) : packages.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
                     No packages found.
                   </TableCell>
                 </TableRow>
@@ -136,6 +157,13 @@ export default function BulkQueuePage() {
                     {pkg.grade ? (
                       <span className={`font-bold text-lg ${pkg.grade === 'A' || pkg.grade === 'B' ? 'text-success' : pkg.grade === 'F' ? 'text-destructive' : 'text-warning'}`}>
                         {pkg.grade}
+                      </span>
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell className="text-right font-mono text-sm">
+                    {pkg.languageScore != null ? (
+                      <span className={pkg.languageScore >= 90 ? 'text-success' : pkg.languageScore >= 80 ? 'text-warning' : 'text-destructive font-bold'}>
+                        {pkg.languageScore}
                       </span>
                     ) : '-'}
                   </TableCell>

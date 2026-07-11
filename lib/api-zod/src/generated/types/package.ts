@@ -43,6 +43,12 @@ export interface Package {
   majorCount: number;
   minorCount: number;
   /** @nullable */
+  languageScore?: number | null;
+  languageIssueCount?: number;
+  languageCriticalCount?: number;
+  /** @nullable */
+  languageAnalyzedAt?: Date | null;
+  /** @nullable */
   analyzedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;

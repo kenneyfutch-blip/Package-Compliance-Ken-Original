@@ -1,6 +1,8 @@
+import { useState } from "react"
 import { useParams, Link } from "wouter"
-import { useGetPackage, useAnalyzePackage, useUpdatePackage, getGetPackageQueryKey } from "@workspace/api-client-react"
+import { useGetPackage, useAnalyzePackage, useUpdatePackage, getGetPackageQueryKey, useGetLanguageReview, useRunLanguageReview, getGetLanguageReviewQueryKey } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
+import { LanguageReviewTab } from "@/components/language-review-tab"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,7 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import { 
   ArrowLeft, BrainCircuit, CheckCircle, ShieldAlert, AlertTriangle, 
   FileText, Activity, Loader2, PlayCircle, Settings2, Info,
-  ArrowRight, PenLine
+  ArrowRight, PenLine, Languages
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { FdaIntelligenceTab } from "@/components/fda-intelligence-tab"
@@ -25,6 +27,20 @@ export default function ReviewWorkspace() {
   
   const analyze = useAnalyzePackage()
   const updateStatus = useUpdatePackage()
+  const runLanguage = useRunLanguageReview()
+  const { data: languageReview } = useGetLanguageReview(packageId, {
+    query: { enabled: !!packageId, queryKey: getGetLanguageReviewQueryKey(packageId) },
+  })
+  const [tab, setTab] = useState("violations")
+
+  const handleRunLanguage = () => {
+    runLanguage.mutate({ id: packageId }, {
+      onSuccess: (data) => {
+        queryClient.setQueryData(getGetLanguageReviewQueryKey(packageId), data)
+        queryClient.invalidateQueries({ queryKey: getGetPackageQueryKey(packageId) })
+      },
+    })
+  }
 
   if (isLoading) {
     return (
@@ -111,19 +127,33 @@ export default function ReviewWorkspace() {
                  <img src={pkg.artworkUrl} alt={pkg.name} className="max-h-[600px] object-contain shadow-xl" />
                  {/* Render bounding boxes if we had actual pixel dimensions, 
                      for now we simulate the CSS overlay idea */}
-                 {pkg.violations.map((v, i) => v.bbox && (
-                   <div 
-                     key={i} 
-                     className={`hotspot-box hotspot-${v.severity}`}
-                     style={{
-                       left: `${v.bbox.x * 100}%`,
-                       top: `${v.bbox.y * 100}%`,
-                       width: `${v.bbox.w * 100}%`,
-                       height: `${v.bbox.h * 100}%`
-                     }}
-                     title={v.title}
-                   />
-                 ))}
+                 {tab === "language"
+                   ? (languageReview?.findings ?? []).map((f, i) => f.bbox && (
+                       <div
+                         key={`lang-${i}`}
+                         className={`hotspot-box hotspot-${f.severity === "informational" ? "minor" : f.severity}`}
+                         style={{
+                           left: `${f.bbox.x * 100}%`,
+                           top: `${f.bbox.y * 100}%`,
+                           width: `${f.bbox.w * 100}%`,
+                           height: `${f.bbox.h * 100}%`
+                         }}
+                         title={`${f.issueType}: ${f.reason ?? ""}`}
+                       />
+                     ))
+                   : pkg.violations.map((v, i) => v.bbox && (
+                       <div 
+                         key={i} 
+                         className={`hotspot-box hotspot-${v.severity}`}
+                         style={{
+                           left: `${v.bbox.x * 100}%`,
+                           top: `${v.bbox.y * 100}%`,
+                           width: `${v.bbox.w * 100}%`,
+                           height: `${v.bbox.h * 100}%`
+                         }}
+                         title={v.title}
+                       />
+                     ))}
                </div>
             ) : (
               <div className="text-center text-muted-foreground p-12">
@@ -137,7 +167,7 @@ export default function ReviewWorkspace() {
 
         {/* RIGHT: Compliance Intelligence */}
         <div className="w-1/2 flex flex-col bg-card border border-border rounded-xl overflow-hidden">
-          <Tabs defaultValue="violations" className="flex-1 flex flex-col min-h-0">
+          <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col min-h-0">
             <div className="px-4 pt-3 border-b border-border bg-muted/20 shrink-0">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-6">
@@ -166,6 +196,7 @@ export default function ReviewWorkspace() {
 
               <TabsList className="w-full justify-start rounded-none border-b-0 h-auto p-0 bg-transparent gap-6">
                 <TabsTrigger value="violations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">Violations</TabsTrigger>
+                <TabsTrigger value="language" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1 gap-1.5"><Languages className="w-3.5 h-3.5" /> Language Review</TabsTrigger>
                 <TabsTrigger value="fda" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">FDA Intelligence</TabsTrigger>
                 <TabsTrigger value="ocr" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">Extracted Data</TabsTrigger>
                 <TabsTrigger value="copilot" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">AI Copilot</TabsTrigger>
@@ -246,6 +277,14 @@ export default function ReviewWorkspace() {
                     )}
                   </>
                 )}
+              </TabsContent>
+
+              <TabsContent value="language" className="m-0 p-4">
+                <LanguageReviewTab
+                  detail={languageReview}
+                  onRun={handleRunLanguage}
+                  isRunning={runLanguage.isPending}
+                />
               </TabsContent>
 
               <TabsContent value="fda" className="m-0 p-4">

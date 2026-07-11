@@ -28,6 +28,8 @@ import type {
   AuditEvent,
   BulkAnalyzeInput,
   BulkAnalyzeResult,
+  BulkLanguageReviewInput,
+  BulkLanguageReviewResult,
   CopilotAnswer,
   CopilotInput,
   CreateAnnotationInput,
@@ -40,7 +42,13 @@ import type {
   FdaStatus,
   GetFdaIntelligenceParams,
   HealthStatus,
+  LanguageFinding,
+  LanguageFindingWithPackage,
+  LanguageQualityStats,
+  LanguageReviewDetail,
+  LanguageReviewSummary,
   ListFdaRecallsParams,
+  ListLanguageFindingsParams,
   ListPackagesParams,
   ListRegulationsParams,
   ListViolationsParams,
@@ -66,6 +74,7 @@ import type {
   SupplierInput,
   TrendPoint,
   UpdateAnnotationInput,
+  UpdateLanguageFindingInput,
   UploadUrlRequest,
   UploadUrlResponse,
   UserAccount,
@@ -2111,6 +2120,535 @@ export const useBulkAnalyze = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getBulkAnalyzeMutationOptions(options));
     }
+
+export const getGetLanguageReviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/language-review`
+}
+
+/**
+ * @summary Get the latest AI language review for a package
+ */
+export const getLanguageReview = async (id: number, options?: RequestInit): Promise<LanguageReviewDetail> => {
+
+  return customFetch<LanguageReviewDetail>(getGetLanguageReviewUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLanguageReviewQueryKey = (id: number,) => {
+    return [
+    `/api/packages/${id}/language-review`
+    ] as const;
+    }
+
+
+export const getGetLanguageReviewQueryOptions = <TData = Awaited<ReturnType<typeof getLanguageReview>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLanguageReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLanguageReviewQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLanguageReview>>> = ({ signal }) => getLanguageReview(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLanguageReview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLanguageReviewQueryResult = NonNullable<Awaited<ReturnType<typeof getLanguageReview>>>
+export type GetLanguageReviewQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get the latest AI language review for a package
+ */
+
+export function useGetLanguageReview<TData = Awaited<ReturnType<typeof getLanguageReview>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLanguageReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLanguageReviewQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRunLanguageReviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/language-review`
+}
+
+/**
+ * @summary Run (or re-run) the AI Language Review Engine for a package
+ */
+export const runLanguageReview = async (id: number, options?: RequestInit): Promise<LanguageReviewDetail> => {
+
+  return customFetch<LanguageReviewDetail>(getRunLanguageReviewUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRunLanguageReviewMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runLanguageReview>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runLanguageReview>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['runLanguageReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runLanguageReview>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  runLanguageReview(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunLanguageReviewMutationResult = NonNullable<Awaited<ReturnType<typeof runLanguageReview>>>
+
+    export type RunLanguageReviewMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Run (or re-run) the AI Language Review Engine for a package
+ */
+export const useRunLanguageReview = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runLanguageReview>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runLanguageReview>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRunLanguageReviewMutationOptions(options));
+    }
+
+export const getBulkLanguageReviewUrl = () => {
+
+
+
+
+  return `/api/packages/bulk-language-review`
+}
+
+/**
+ * @summary Run the AI Language Review Engine across many packages
+ */
+export const bulkLanguageReview = async (bulkLanguageReviewInput: BulkLanguageReviewInput, options?: RequestInit): Promise<BulkLanguageReviewResult> => {
+
+  return customFetch<BulkLanguageReviewResult>(getBulkLanguageReviewUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(bulkLanguageReviewInput)
+  }
+);}
+
+
+
+
+
+export const getBulkLanguageReviewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkLanguageReview>>, TError,{data: BodyType<BulkLanguageReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof bulkLanguageReview>>, TError,{data: BodyType<BulkLanguageReviewInput>}, TContext> => {
+
+const mutationKey = ['bulkLanguageReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof bulkLanguageReview>>, {data: BodyType<BulkLanguageReviewInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  bulkLanguageReview(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type BulkLanguageReviewMutationResult = NonNullable<Awaited<ReturnType<typeof bulkLanguageReview>>>
+    export type BulkLanguageReviewMutationBody = BodyType<BulkLanguageReviewInput>
+    export type BulkLanguageReviewMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Run the AI Language Review Engine across many packages
+ */
+export const useBulkLanguageReview = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof bulkLanguageReview>>, TError,{data: BodyType<BulkLanguageReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof bulkLanguageReview>>,
+        TError,
+        {data: BodyType<BulkLanguageReviewInput>},
+        TContext
+      > => {
+      return useMutation(getBulkLanguageReviewMutationOptions(options));
+    }
+
+export const getListLanguageFindingsUrl = (params?: ListLanguageFindingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/language-findings?${stringifiedParams}` : `/api/language-findings`
+}
+
+/**
+ * @summary List AI language findings across packages with filters
+ */
+export const listLanguageFindings = async (params?: ListLanguageFindingsParams, options?: RequestInit): Promise<LanguageFindingWithPackage[]> => {
+
+  return customFetch<LanguageFindingWithPackage[]>(getListLanguageFindingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLanguageFindingsQueryKey = (params?: ListLanguageFindingsParams,) => {
+    return [
+    `/api/language-findings`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListLanguageFindingsQueryOptions = <TData = Awaited<ReturnType<typeof listLanguageFindings>>, TError = ErrorType<unknown>>(params?: ListLanguageFindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguageFindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLanguageFindingsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLanguageFindings>>> = ({ signal }) => listLanguageFindings(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLanguageFindings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLanguageFindingsQueryResult = NonNullable<Awaited<ReturnType<typeof listLanguageFindings>>>
+export type ListLanguageFindingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List AI language findings across packages with filters
+ */
+
+export function useListLanguageFindings<TData = Awaited<ReturnType<typeof listLanguageFindings>>, TError = ErrorType<unknown>>(
+ params?: ListLanguageFindingsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguageFindings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLanguageFindingsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateLanguageFindingUrl = (id: number,) => {
+
+
+
+
+  return `/api/language-findings/${id}`
+}
+
+/**
+ * @summary Update a language finding's status or approved fix
+ */
+export const updateLanguageFinding = async (id: number,
+    updateLanguageFindingInput: UpdateLanguageFindingInput, options?: RequestInit): Promise<LanguageFinding> => {
+
+  return customFetch<LanguageFinding>(getUpdateLanguageFindingUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateLanguageFindingInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateLanguageFindingMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLanguageFinding>>, TError,{id: number;data: BodyType<UpdateLanguageFindingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateLanguageFinding>>, TError,{id: number;data: BodyType<UpdateLanguageFindingInput>}, TContext> => {
+
+const mutationKey = ['updateLanguageFinding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateLanguageFinding>>, {id: number;data: BodyType<UpdateLanguageFindingInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateLanguageFinding(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateLanguageFindingMutationResult = NonNullable<Awaited<ReturnType<typeof updateLanguageFinding>>>
+    export type UpdateLanguageFindingMutationBody = BodyType<UpdateLanguageFindingInput>
+    export type UpdateLanguageFindingMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Update a language finding's status or approved fix
+ */
+export const useUpdateLanguageFinding = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLanguageFinding>>, TError,{id: number;data: BodyType<UpdateLanguageFindingInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateLanguageFinding>>,
+        TError,
+        {id: number;data: BodyType<UpdateLanguageFindingInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateLanguageFindingMutationOptions(options));
+    }
+
+export const getListLanguageReviewsUrl = () => {
+
+
+
+
+  return `/api/language-reviews`
+}
+
+/**
+ * @summary Per-package language review summaries for bulk review
+ */
+export const listLanguageReviews = async ( options?: RequestInit): Promise<LanguageReviewSummary[]> => {
+
+  return customFetch<LanguageReviewSummary[]>(getListLanguageReviewsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLanguageReviewsQueryKey = () => {
+    return [
+    `/api/language-reviews`
+    ] as const;
+    }
+
+
+export const getListLanguageReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listLanguageReviews>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguageReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLanguageReviewsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLanguageReviews>>> = ({ signal }) => listLanguageReviews({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLanguageReviews>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLanguageReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listLanguageReviews>>>
+export type ListLanguageReviewsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Per-package language review summaries for bulk review
+ */
+
+export function useListLanguageReviews<TData = Awaited<ReturnType<typeof listLanguageReviews>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguageReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLanguageReviewsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetLanguageQualityUrl = () => {
+
+
+
+
+  return `/api/dashboard/language-quality`
+}
+
+/**
+ * @summary Aggregate language quality metrics for the dashboard widget
+ */
+export const getLanguageQuality = async ( options?: RequestInit): Promise<LanguageQualityStats> => {
+
+  return customFetch<LanguageQualityStats>(getGetLanguageQualityUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLanguageQualityQueryKey = () => {
+    return [
+    `/api/dashboard/language-quality`
+    ] as const;
+    }
+
+
+export const getGetLanguageQualityQueryOptions = <TData = Awaited<ReturnType<typeof getLanguageQuality>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLanguageQuality>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLanguageQualityQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLanguageQuality>>> = ({ signal }) => getLanguageQuality({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLanguageQuality>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLanguageQualityQueryResult = NonNullable<Awaited<ReturnType<typeof getLanguageQuality>>>
+export type GetLanguageQualityQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Aggregate language quality metrics for the dashboard widget
+ */
+
+export function useGetLanguageQuality<TData = Awaited<ReturnType<typeof getLanguageQuality>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLanguageQuality>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLanguageQualityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListFdaRecallsUrl = (params: ListFdaRecallsParams,) => {
   const normalizedParams = new URLSearchParams();

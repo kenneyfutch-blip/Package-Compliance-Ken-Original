@@ -1,11 +1,11 @@
-import { useGetDashboardStats, useGetComplianceTrends, useGetCategoryDistribution, useGetVendorPerformance } from "@workspace/api-client-react"
+import { useGetDashboardStats, useGetComplianceTrends, useGetCategoryDistribution, useGetVendorPerformance, useGetLanguageQuality } from "@workspace/api-client-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { 
   Package, ShieldAlert, CheckCircle, AlertTriangle, 
-  Clock, Activity, BarChart2, TrendingUp 
+  Clock, Activity, BarChart2, TrendingUp, Languages 
 } from "lucide-react"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from "recharts"
 import { Link } from "wouter"
@@ -15,6 +15,7 @@ export default function Dashboard() {
   const { data: trends, isLoading: trendsLoading } = useGetComplianceTrends()
   const { data: categories, isLoading: categoriesLoading } = useGetCategoryDistribution()
   const { data: vendors, isLoading: vendorsLoading } = useGetVendorPerformance()
+  const { data: langQuality } = useGetLanguageQuality()
 
   if (statsLoading || trendsLoading || categoriesLoading || vendorsLoading) {
     return (
@@ -110,6 +111,50 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Language Quality */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <div>
+            <CardTitle className="flex items-center gap-2"><Languages className="w-5 h-5 text-primary" /> Language Quality</CardTitle>
+            <CardDescription>AI Language Review Engine across reviewed packaging</CardDescription>
+          </div>
+          <Link href="/ai/language">
+            <Button variant="outline" size="sm">View findings</Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex items-center gap-6">
+              <div>
+                <div className={`text-5xl font-black ${(langQuality?.averageScore ?? 0) >= 90 ? 'text-success' : (langQuality?.averageScore ?? 0) >= 80 ? 'text-warning' : langQuality?.averageScore == null ? 'text-muted-foreground' : 'text-destructive'}`}>
+                  {langQuality?.averageScore ?? "-"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wider font-semibold">Avg Score</p>
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm"><span className="font-bold">{langQuality?.reviewedCount ?? 0}</span> <span className="text-muted-foreground">reviewed</span></div>
+                <div className="text-sm"><span className="font-bold text-destructive">{langQuality?.criticalFindings ?? 0}</span> <span className="text-muted-foreground">critical findings</span></div>
+              </div>
+            </div>
+            <div className="flex-1 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {([
+                ["Spelling", langQuality?.spelling],
+                ["Grammar", langQuality?.grammar],
+                ["Context", langQuality?.context],
+                ["Regulatory", langQuality?.regulatory],
+                ["Marketing", langQuality?.marketing],
+                ["Brand", langQuality?.brand],
+              ] as const).map(([label, val]) => (
+                <div key={label} className="flex items-center justify-between px-3 py-2 bg-accent/40 border border-border rounded-md">
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                  <span className="text-sm font-bold">{val ?? 0}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
         {/* Main Chart */}

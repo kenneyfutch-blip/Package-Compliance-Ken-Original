@@ -52,6 +52,10 @@ export const packagesTable = pgTable("packages", {
   criticalCount: integer("critical_count").notNull().default(0),
   majorCount: integer("major_count").notNull().default(0),
   minorCount: integer("minor_count").notNull().default(0),
+  languageScore: integer("language_score"),
+  languageIssueCount: integer("language_issue_count").notNull().default(0),
+  languageCriticalCount: integer("language_critical_count").notNull().default(0),
+  languageAnalyzedAt: timestamp("language_analyzed_at", { withTimezone: true }),
   analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

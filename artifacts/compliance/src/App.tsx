@@ -32,6 +32,7 @@ import NotificationsPage from "@/pages/notifications"
 import PackagesView from "@/pages/packages"
 import FastReview from "@/pages/fast-review"
 import ViolationsView from "@/pages/violations-center"
+import LanguageReviewCenter from "@/pages/language-review-center"
 import Heatmaps from "@/pages/heatmaps"
 import VendorScorecards from "@/pages/vendor-scorecards"
 import ExecutiveReports from "@/pages/executive-reports"
@@ -253,6 +254,7 @@ function AppRoutes() {
 
         {/* AI Compliance */}
         <Route path="/ai/violations">{() => <ViolationsView mode="center" />}</Route>
+        <Route path="/ai/language" component={LanguageReviewCenter} />
         <Route path="/ai/fixes">{() => <ViolationsView mode="fixes" />}</Route>
         <Route path="/ai/claims">{() => <ViolationsView mode="claims" />}</Route>
         <Route path="/ai/memory">{() => <ViolationsView mode="memory" />}</Route>

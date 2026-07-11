@@ -137,6 +137,135 @@ export interface Bbox {
   h: number;
 }
 
+export interface ClaimReviewFlags {
+  fda?: boolean;
+  epa?: boolean;
+  ftc?: boolean;
+  legal?: boolean;
+}
+
+export interface LanguageFinding {
+  id: number;
+  reviewId: number;
+  packageId: number;
+  issueType: string;
+  severity: string;
+  /** @nullable */
+  originalText?: string | null;
+  /** @nullable */
+  suggestedText?: string | null;
+  /** @nullable */
+  reason?: string | null;
+  /** @nullable */
+  regulationReference?: string | null;
+  /** @nullable */
+  confidenceScore?: number | null;
+  /** @nullable */
+  claimRiskScore?: number | null;
+  reviewFlags?: ClaimReviewFlags | null;
+  bbox?: Bbox | null;
+  status: string;
+  /** @nullable */
+  approvedFix?: string | null;
+  historicalUsage: number;
+  /** @nullable */
+  createdAt?: string | null;
+  /** @nullable */
+  updatedAt?: string | null;
+}
+
+export type LanguageFindingWithPackage = LanguageFinding & ({
+  packageSku: string;
+  packageName: string;
+  packageVendor?: string;
+  /** @nullable */
+  languageScore?: number | null;
+});
+
+export interface LanguageReview {
+  id: number;
+  packageId: number;
+  score: number;
+  /** @nullable */
+  confidence?: number | null;
+  status: string;
+  /** @nullable */
+  summary?: string | null;
+  issueCount: number;
+  criticalCount?: number;
+  majorCount?: number;
+  minorCount?: number;
+  spellingCount?: number;
+  grammarCount?: number;
+  contextCount?: number;
+  regulatoryCount?: number;
+  marketingCount?: number;
+  brandCount?: number;
+  /** @nullable */
+  reviewer?: string | null;
+  /** @nullable */
+  createdAt?: string | null;
+}
+
+export interface LanguageReviewPackage {
+  id: number;
+  sku: string;
+  name: string;
+  vendor: string;
+  /** @nullable */
+  artworkUrl?: string | null;
+  /** @nullable */
+  languageScore?: number | null;
+}
+
+export interface LanguageReviewDetail {
+  package: LanguageReviewPackage;
+  review?: LanguageReview | null;
+  findings: LanguageFinding[];
+}
+
+export interface LanguageReviewSummary {
+  packageId: number;
+  sku: string;
+  name: string;
+  vendor: string;
+  /** @nullable */
+  languageScore?: number | null;
+  issueCount?: number;
+  criticalCount?: number;
+  status: string;
+  /** @nullable */
+  analyzedAt?: string | null;
+}
+
+export interface LanguageQualityStats {
+  /** @nullable */
+  averageScore?: number | null;
+  reviewedCount: number;
+  criticalFindings: number;
+  spelling: number;
+  grammar: number;
+  context: number;
+  regulatory: number;
+  marketing: number;
+  brand: number;
+}
+
+export interface UpdateLanguageFindingInput {
+  status?: string;
+  approvedFix?: string;
+}
+
+export interface BulkLanguageReviewInput {
+  ids: number[];
+}
+
+export interface BulkLanguageReviewResult {
+  processed: number;
+  failed: number;
+  total: number;
+}
+
 export interface Violation {
   id: number;
   packageId: number;
@@ -255,6 +384,12 @@ export interface Package {
   criticalCount: number;
   majorCount: number;
   minorCount: number;
+  /** @nullable */
+  languageScore?: number | null;
+  languageIssueCount?: number;
+  languageCriticalCount?: number;
+  /** @nullable */
+  languageAnalyzedAt?: string | null;
   /** @nullable */
   analyzedAt?: string | null;
   createdAt: string;
@@ -727,6 +862,15 @@ category?: string;
 risk?: string;
 engine?: string;
 vendor?: string;
+};
+
+export type ListLanguageFindingsParams = {
+search?: string;
+issueType?: string;
+severity?: string;
+status?: string;
+minScore?: number;
+maxScore?: number;
 };
 
 export type ListFdaRecallsParams = {

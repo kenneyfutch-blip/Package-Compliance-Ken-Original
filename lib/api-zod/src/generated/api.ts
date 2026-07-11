@@ -156,6 +156,10 @@ export const ListPackagesResponseItem = zod.object({
   "criticalCount": zod.number(),
   "majorCount": zod.number(),
   "minorCount": zod.number(),
+  "languageScore": zod.number().nullish(),
+  "languageIssueCount": zod.number().optional(),
+  "languageCriticalCount": zod.number().optional(),
+  "languageAnalyzedAt": zod.coerce.date().nullish(),
   "analyzedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -1036,6 +1040,285 @@ export const BulkAnalyzeResponse = zod.object({
 
 
 /**
+ * @summary Get the latest AI language review for a package
+ */
+export const GetLanguageReviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetLanguageReviewResponse = zod.object({
+  "package": zod.object({
+  "id": zod.number(),
+  "sku": zod.string(),
+  "name": zod.string(),
+  "vendor": zod.string(),
+  "artworkUrl": zod.string().nullish(),
+  "languageScore": zod.number().nullish()
+}),
+  "review": zod.union([zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "score": zod.number(),
+  "confidence": zod.number().nullish(),
+  "status": zod.string(),
+  "summary": zod.string().nullish(),
+  "issueCount": zod.number(),
+  "criticalCount": zod.number().optional(),
+  "majorCount": zod.number().optional(),
+  "minorCount": zod.number().optional(),
+  "spellingCount": zod.number().optional(),
+  "grammarCount": zod.number().optional(),
+  "contextCount": zod.number().optional(),
+  "regulatoryCount": zod.number().optional(),
+  "marketingCount": zod.number().optional(),
+  "brandCount": zod.number().optional(),
+  "reviewer": zod.string().nullish(),
+  "createdAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "findings": zod.array(zod.object({
+  "id": zod.number(),
+  "reviewId": zod.number(),
+  "packageId": zod.number(),
+  "issueType": zod.string(),
+  "severity": zod.string(),
+  "originalText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "regulationReference": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "claimRiskScore": zod.number().nullish(),
+  "reviewFlags": zod.union([zod.object({
+  "fda": zod.boolean().optional(),
+  "epa": zod.boolean().optional(),
+  "ftc": zod.boolean().optional(),
+  "legal": zod.boolean().optional()
+}),zod.null()]).optional(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "status": zod.string(),
+  "approvedFix": zod.string().nullish(),
+  "historicalUsage": zod.number(),
+  "createdAt": zod.string().nullish(),
+  "updatedAt": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Run (or re-run) the AI Language Review Engine for a package
+ */
+export const RunLanguageReviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RunLanguageReviewResponse = zod.object({
+  "package": zod.object({
+  "id": zod.number(),
+  "sku": zod.string(),
+  "name": zod.string(),
+  "vendor": zod.string(),
+  "artworkUrl": zod.string().nullish(),
+  "languageScore": zod.number().nullish()
+}),
+  "review": zod.union([zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "score": zod.number(),
+  "confidence": zod.number().nullish(),
+  "status": zod.string(),
+  "summary": zod.string().nullish(),
+  "issueCount": zod.number(),
+  "criticalCount": zod.number().optional(),
+  "majorCount": zod.number().optional(),
+  "minorCount": zod.number().optional(),
+  "spellingCount": zod.number().optional(),
+  "grammarCount": zod.number().optional(),
+  "contextCount": zod.number().optional(),
+  "regulatoryCount": zod.number().optional(),
+  "marketingCount": zod.number().optional(),
+  "brandCount": zod.number().optional(),
+  "reviewer": zod.string().nullish(),
+  "createdAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "findings": zod.array(zod.object({
+  "id": zod.number(),
+  "reviewId": zod.number(),
+  "packageId": zod.number(),
+  "issueType": zod.string(),
+  "severity": zod.string(),
+  "originalText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "regulationReference": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "claimRiskScore": zod.number().nullish(),
+  "reviewFlags": zod.union([zod.object({
+  "fda": zod.boolean().optional(),
+  "epa": zod.boolean().optional(),
+  "ftc": zod.boolean().optional(),
+  "legal": zod.boolean().optional()
+}),zod.null()]).optional(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "status": zod.string(),
+  "approvedFix": zod.string().nullish(),
+  "historicalUsage": zod.number(),
+  "createdAt": zod.string().nullish(),
+  "updatedAt": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Run the AI Language Review Engine across many packages
+ */
+export const BulkLanguageReviewBody = zod.object({
+  "ids": zod.array(zod.number())
+})
+
+export const BulkLanguageReviewResponse = zod.object({
+  "processed": zod.number(),
+  "failed": zod.number(),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary List AI language findings across packages with filters
+ */
+export const ListLanguageFindingsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "issueType": zod.coerce.string().optional(),
+  "severity": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional(),
+  "minScore": zod.coerce.number().optional(),
+  "maxScore": zod.coerce.number().optional()
+})
+
+export const ListLanguageFindingsResponseItem = zod.object({
+  "id": zod.number(),
+  "reviewId": zod.number(),
+  "packageId": zod.number(),
+  "issueType": zod.string(),
+  "severity": zod.string(),
+  "originalText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "regulationReference": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "claimRiskScore": zod.number().nullish(),
+  "reviewFlags": zod.union([zod.object({
+  "fda": zod.boolean().optional(),
+  "epa": zod.boolean().optional(),
+  "ftc": zod.boolean().optional(),
+  "legal": zod.boolean().optional()
+}),zod.null()]).optional(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "status": zod.string(),
+  "approvedFix": zod.string().nullish(),
+  "historicalUsage": zod.number(),
+  "createdAt": zod.string().nullish(),
+  "updatedAt": zod.string().nullish()
+}).and(zod.object({
+  "packageSku": zod.string(),
+  "packageName": zod.string(),
+  "packageVendor": zod.string().optional(),
+  "languageScore": zod.number().nullish()
+}))
+export const ListLanguageFindingsResponse = zod.array(ListLanguageFindingsResponseItem)
+
+
+/**
+ * @summary Update a language finding's status or approved fix
+ */
+export const UpdateLanguageFindingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateLanguageFindingBody = zod.object({
+  "status": zod.string().optional(),
+  "approvedFix": zod.string().optional()
+})
+
+export const UpdateLanguageFindingResponse = zod.object({
+  "id": zod.number(),
+  "reviewId": zod.number(),
+  "packageId": zod.number(),
+  "issueType": zod.string(),
+  "severity": zod.string(),
+  "originalText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "regulationReference": zod.string().nullish(),
+  "confidenceScore": zod.number().nullish(),
+  "claimRiskScore": zod.number().nullish(),
+  "reviewFlags": zod.union([zod.object({
+  "fda": zod.boolean().optional(),
+  "epa": zod.boolean().optional(),
+  "ftc": zod.boolean().optional(),
+  "legal": zod.boolean().optional()
+}),zod.null()]).optional(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "status": zod.string(),
+  "approvedFix": zod.string().nullish(),
+  "historicalUsage": zod.number(),
+  "createdAt": zod.string().nullish(),
+  "updatedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Per-package language review summaries for bulk review
+ */
+export const ListLanguageReviewsResponseItem = zod.object({
+  "packageId": zod.number(),
+  "sku": zod.string(),
+  "name": zod.string(),
+  "vendor": zod.string(),
+  "languageScore": zod.number().nullish(),
+  "issueCount": zod.number().optional(),
+  "criticalCount": zod.number().optional(),
+  "status": zod.string(),
+  "analyzedAt": zod.string().nullish()
+})
+export const ListLanguageReviewsResponse = zod.array(ListLanguageReviewsResponseItem)
+
+
+/**
+ * @summary Aggregate language quality metrics for the dashboard widget
+ */
+export const GetLanguageQualityResponse = zod.object({
+  "averageScore": zod.number().nullish(),
+  "reviewedCount": zod.number(),
+  "criticalFindings": zod.number(),
+  "spelling": zod.number(),
+  "grammar": zod.number(),
+  "context": zod.number(),
+  "regulatory": zod.number(),
+  "marketing": zod.number(),
+  "brand": zod.number()
+})
+
+
+/**
  * @summary Search live FDA recall & enforcement actions (openFDA)
  */
 export const ListFdaRecallsQueryParams = zod.object({
@@ -1316,6 +1599,10 @@ export const GetSupplierResponse = zod.object({
   "criticalCount": zod.number(),
   "majorCount": zod.number(),
   "minorCount": zod.number(),
+  "languageScore": zod.number().nullish(),
+  "languageIssueCount": zod.number().optional(),
+  "languageCriticalCount": zod.number().optional(),
+  "languageAnalyzedAt": zod.coerce.date().nullish(),
   "analyzedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()

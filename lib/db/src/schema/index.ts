@@ -7,6 +7,7 @@ export * from "./regulations";
 export * from "./packages";
 export * from "./proofs";
 export * from "./violations";
+export * from "./language";
 export * from "./audit_events";
 export * from "./notifications";
 export * from "./reports";

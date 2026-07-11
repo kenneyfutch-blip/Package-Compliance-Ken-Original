@@ -30,6 +30,8 @@ tags:
     description: AI model provider configuration
   - name: violations
     description: Cross-package compliance violations and AI recommendations
+  - name: language
+    description: AI Language Review Engine — spelling, grammar, context, regulatory, marketing claims, and brand language
 paths:
   /healthz:
     get:
@@ -684,6 +686,178 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BulkAnalyzeResult"
+
+  /packages/{id}/language-review:
+    get:
+      operationId: getLanguageReview
+      tags: [language]
+      summary: Get the latest AI language review for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Language review detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LanguageReviewDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: runLanguageReview
+      tags: [language]
+      summary: Run (or re-run) the AI Language Review Engine for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Language review detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LanguageReviewDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/bulk-language-review:
+    post:
+      operationId: bulkLanguageReview
+      tags: [language]
+      summary: Run the AI Language Review Engine across many packages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkLanguageReviewInput"
+      responses:
+        "200":
+          description: Bulk language review result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkLanguageReviewResult"
+
+  /language-findings:
+    get:
+      operationId: listLanguageFindings
+      tags: [language]
+      summary: List AI language findings across packages with filters
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: issueType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: minScore
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: maxScore
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of language findings with package context
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LanguageFindingWithPackage"
+
+  /language-findings/{id}:
+    patch:
+      operationId: updateLanguageFinding
+      tags: [language]
+      summary: Update a language finding's status or approved fix
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLanguageFindingInput"
+      responses:
+        "200":
+          description: Updated finding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LanguageFinding"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /language-reviews:
+    get:
+      operationId: listLanguageReviews
+      tags: [language]
+      summary: Per-package language review summaries for bulk review
+      responses:
+        "200":
+          description: Language review summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LanguageReviewSummary"
+
+  /dashboard/language-quality:
+    get:
+      operationId: getLanguageQuality
+      tags: [language]
+      summary: Aggregate language quality metrics for the dashboard widget
+      responses:
+        "200":
+          description: Language quality stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LanguageQualityStats"
 
   /fda/recalls:
     get:
@@ -1431,6 +1605,262 @@ components:
         - w
         - h
 
+    ClaimReviewFlags:
+      type: object
+      properties:
+        fda:
+          type: boolean
+        epa:
+          type: boolean
+        ftc:
+          type: boolean
+        legal:
+          type: boolean
+
+    LanguageFinding:
+      type: object
+      properties:
+        id:
+          type: integer
+        reviewId:
+          type: integer
+        packageId:
+          type: integer
+        issueType:
+          type: string
+        severity:
+          type: string
+        originalText:
+          type: ["string", "null"]
+        suggestedText:
+          type: ["string", "null"]
+        reason:
+          type: ["string", "null"]
+        regulationReference:
+          type: ["string", "null"]
+        confidenceScore:
+          type: ["number", "null"]
+        claimRiskScore:
+          type: ["integer", "null"]
+        reviewFlags:
+          oneOf:
+            - $ref: "#/components/schemas/ClaimReviewFlags"
+            - type: "null"
+        bbox:
+          oneOf:
+            - $ref: "#/components/schemas/Bbox"
+            - type: "null"
+        status:
+          type: string
+        approvedFix:
+          type: ["string", "null"]
+        historicalUsage:
+          type: integer
+        createdAt:
+          type: ["string", "null"]
+        updatedAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - reviewId
+        - packageId
+        - issueType
+        - severity
+        - status
+        - historicalUsage
+
+    LanguageFindingWithPackage:
+      allOf:
+        - $ref: "#/components/schemas/LanguageFinding"
+        - type: object
+          properties:
+            packageSku:
+              type: string
+            packageName:
+              type: string
+            packageVendor:
+              type: string
+            languageScore:
+              type: ["integer", "null"]
+          required:
+            - packageSku
+            - packageName
+
+    LanguageReview:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        score:
+          type: integer
+        confidence:
+          type: ["number", "null"]
+        status:
+          type: string
+        summary:
+          type: ["string", "null"]
+        issueCount:
+          type: integer
+        criticalCount:
+          type: integer
+        majorCount:
+          type: integer
+        minorCount:
+          type: integer
+        spellingCount:
+          type: integer
+        grammarCount:
+          type: integer
+        contextCount:
+          type: integer
+        regulatoryCount:
+          type: integer
+        marketingCount:
+          type: integer
+        brandCount:
+          type: integer
+        reviewer:
+          type: ["string", "null"]
+        createdAt:
+          type: ["string", "null"]
+      required:
+        - id
+        - packageId
+        - score
+        - status
+        - issueCount
+
+    LanguageReviewPackage:
+      type: object
+      properties:
+        id:
+          type: integer
+        sku:
+          type: string
+        name:
+          type: string
+        vendor:
+          type: string
+        artworkUrl:
+          type: ["string", "null"]
+        languageScore:
+          type: ["integer", "null"]
+      required:
+        - id
+        - sku
+        - name
+        - vendor
+
+    LanguageReviewDetail:
+      type: object
+      properties:
+        package:
+          $ref: "#/components/schemas/LanguageReviewPackage"
+        review:
+          oneOf:
+            - $ref: "#/components/schemas/LanguageReview"
+            - type: "null"
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/LanguageFinding"
+      required:
+        - package
+        - findings
+
+    LanguageReviewSummary:
+      type: object
+      properties:
+        packageId:
+          type: integer
+        sku:
+          type: string
+        name:
+          type: string
+        vendor:
+          type: string
+        languageScore:
+          type: ["integer", "null"]
+        issueCount:
+          type: integer
+        criticalCount:
+          type: integer
+        status:
+          type: string
+        analyzedAt:
+          type: ["string", "null"]
+      required:
+        - packageId
+        - sku
+        - name
+        - vendor
+        - status
+
+    LanguageQualityStats:
+      type: object
+      properties:
+        averageScore:
+          type: ["integer", "null"]
+        reviewedCount:
+          type: integer
+        criticalFindings:
+          type: integer
+        spelling:
+          type: integer
+        grammar:
+          type: integer
+        context:
+          type: integer
+        regulatory:
+          type: integer
+        marketing:
+          type: integer
+        brand:
+          type: integer
+      required:
+        - reviewedCount
+        - criticalFindings
+        - spelling
+        - grammar
+        - context
+        - regulatory
+        - marketing
+        - brand
+
+    UpdateLanguageFindingInput:
+      type: object
+      properties:
+        status:
+          type: string
+        approvedFix:
+          type: string
+
+    BulkLanguageReviewInput:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+      required:
+        - ids
+
+    BulkLanguageReviewResult:
+      type: object
+      properties:
+        processed:
+          type: integer
+        failed:
+          type: integer
+        total:
+          type: integer
+      required:
+        - processed
+        - failed
+        - total
+
     Violation:
       type: object
       properties:
@@ -1613,6 +2043,15 @@ components:
           type: integer
         minorCount:
           type: integer
+        languageScore:
+          type: ["integer", "null"]
+        languageIssueCount:
+          type: integer
+        languageCriticalCount:
+          type: integer
+        languageAnalyzedAt:
+          type: ["string", "null"]
+          format: date-time
         analyzedAt:
           type: ["string", "null"]
           format: date-time
