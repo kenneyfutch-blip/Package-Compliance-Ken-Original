@@ -4,6 +4,7 @@ import type { AuditEvent, ListAuditEventsParams } from "@workspace/api-client-re
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { RegulationRef } from "@/components/regulation-ref"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -178,7 +179,9 @@ export default function AuditCenter() {
           )}
           {selected?.regulationRefs && selected.regulationRefs.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {selected.regulationRefs.map((r) => <Badge key={r} variant="outline">{r}</Badge>)}
+              {selected.regulationRefs.map((r) => (
+                <RegulationRef key={r} refText={r} className="rounded border px-2 py-0.5 text-xs" />
+              ))}
             </div>
           )}
         </DialogContent>

@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
+import { useSearch } from "wouter"
 import { useListRegulations } from "@workspace/api-client-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +31,22 @@ export default function RegulatoryLibrary({ agency, title, subtitle }: Props) {
     })
   }, [all, agency])
 
+  // Deep link support: /regulatory/:agency?rule=<id> opens and scrolls to a rule
+  // (used by the "View in library" action on finding references).
+  const queryString = useSearch()
+  const ruleId = new URLSearchParams(queryString).get("rule")
+  const [openItem, setOpenItem] = useState<string | undefined>(ruleId ?? undefined)
+  useEffect(() => {
+    // Sync open state to the deep link: open the target rule, or clear it when
+    // the ?rule= param is removed so stale state does not persist.
+    setOpenItem(ruleId ?? undefined)
+  }, [ruleId])
+  useEffect(() => {
+    if (!ruleId || !regs.some((r) => String(r.id) === ruleId)) return
+    const el = document.getElementById(`reg-${ruleId}`)
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+  }, [ruleId, regs])
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -59,9 +76,9 @@ export default function RegulatoryLibrary({ agency, title, subtitle }: Props) {
             <div className="text-sm text-muted-foreground">{regs.length} regulation{regs.length === 1 ? "" : "s"}</div>
           </CardHeader>
           <CardContent>
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion type="single" collapsible className="w-full" value={openItem} onValueChange={setOpenItem}>
               {regs.map((r) => (
-                <AccordionItem key={r.id} value={String(r.id)}>
+                <AccordionItem key={r.id} value={String(r.id)} id={`reg-${r.id}`}>
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center gap-3 text-left">
                       <Badge variant="outline" className="font-mono shrink-0">{r.ruleCode}</Badge>

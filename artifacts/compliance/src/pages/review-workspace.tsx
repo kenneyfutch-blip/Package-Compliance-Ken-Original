@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import { useUpload } from "@workspace/object-storage-web"
 import { ProofViewer, type ViewerAnnotation, type AnnotationDraft } from "@/components/proof-viewer"
+import { RegulationRef } from "@/components/regulation-ref"
 import { FdaIntelligenceTab } from "@/components/fda-intelligence-tab"
 import {
   type MarkupTool, findingClassMeta, priorityMeta, REVIEWERS,
@@ -397,7 +398,7 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
                     )}
                   </div>
                 )}
-                {v.regulationRef && <div className="text-[10px] font-mono text-muted-foreground">Ref: {v.regulationRef}</div>}
+                {v.regulationRef && <div className="text-[10px] font-mono text-muted-foreground">Ref: <RegulationRef refText={v.regulationRef} /></div>}
               </button>
             )
           })}
@@ -474,7 +475,7 @@ function CommentCard({ a, num, selected, onSelect, onChange }: {
       {isAi && a.suggestedFix && (
         <div className="text-xs p-2 bg-success/5 border border-success/20 rounded"><span className="font-semibold text-success">Suggested fix: </span>{a.suggestedFix}</div>
       )}
-      {a.regulationRef && <div className="text-[10px] font-mono text-muted-foreground">Ref: {a.regulationRef}{a.confidence != null ? ` • ${a.confidence}% confidence` : ""}</div>}
+      {a.regulationRef && <div className="text-[10px] font-mono text-muted-foreground">Ref: <RegulationRef refText={a.regulationRef} />{a.confidence != null ? ` • ${a.confidence}% confidence` : ""}</div>}
 
       {a.replies.length > 0 && (
         <div className="space-y-2 pl-3 border-l-2 border-border ml-1">

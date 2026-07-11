@@ -4,6 +4,7 @@ import { useListViolations } from "@workspace/api-client-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { RegulationRef } from "@/components/regulation-ref"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -18,7 +19,6 @@ import {
   ArrowRight,
   Copy,
   Check,
-  BookOpen,
   Sparkles,
   ShieldAlert,
   Megaphone,
@@ -204,7 +204,7 @@ export default function ViolationsView({ mode }: { mode: Mode }) {
 
                     {v.regulationRef && (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <BookOpen className="w-3.5 h-3.5" /> {v.regulationRef}
+                        <RegulationRef refText={v.regulationRef} icon />
                       </div>
                     )}
 
