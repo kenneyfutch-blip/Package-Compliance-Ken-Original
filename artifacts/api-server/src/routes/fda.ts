@@ -12,6 +12,8 @@ import {
   type RecallCategory,
 } from "../lib/fda";
 import { logger } from "../lib/logger";
+import { requirePermission } from "../lib/rbac/context";
+import { canAccessPackage } from "../lib/rbac/scope";
 
 const router: IRouter = Router();
 
@@ -21,7 +23,7 @@ const DISCLAIMER =
 // GET /fda/status — admin panel: whether the FDA integration is configured,
 // whether openFDA is reachable right now, and the full catalog of category ->
 // dataset mappings the review engine consults.
-router.get("/fda/status", async (_req: Request, res: Response): Promise<void> => {
+router.get("/fda/status", requirePermission("fda:read"), async (_req: Request, res: Response): Promise<void> => {
   const configured = isFdaConfigured();
   const reachable = configured ? await pingFda() : false;
   res.json({
@@ -35,7 +37,7 @@ router.get("/fda/status", async (_req: Request, res: Response): Promise<void> =>
 
 // GET /fda/recalls — proxy live openFDA enforcement (recall) data. The openFDA
 // API key stays server-side; the browser only ever calls this route.
-router.get("/fda/recalls", async (req: Request, res: Response): Promise<void> => {
+router.get("/fda/recalls", requirePermission("fda:read"), async (req: Request, res: Response): Promise<void> => {
   const categoryRaw = String(req.query["category"] ?? "food").toLowerCase();
   if (!RECALL_CATEGORIES.includes(categoryRaw as RecallCategory)) {
     res
@@ -70,6 +72,7 @@ router.get("/fda/recalls", async (req: Request, res: Response): Promise<void> =>
 // flags rather than an error, so a review can always continue.
 router.get(
   "/fda/intelligence",
+  requirePermission("fda:read"),
   async (req: Request, res: Response): Promise<void> => {
     const packageId = Number(req.query["packageId"]);
     if (!Number.isInteger(packageId) || packageId <= 0) {
@@ -82,7 +85,7 @@ router.get(
       .from(packagesTable)
       .where(eq(packagesTable.id, packageId));
 
-    if (!pkg) {
+    if (!pkg || !canAccessPackage(req, pkg)) {
       res.status(404).json({ error: "Package not found" });
       return;
     }

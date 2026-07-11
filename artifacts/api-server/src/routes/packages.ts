@@ -38,6 +38,9 @@ import {
   type AnalysisResult,
 } from "../lib/ai";
 import { logger } from "../lib/logger";
+import { requirePermission, orgId } from "../lib/rbac/context";
+import { packageConds, canAccessPackage } from "../lib/rbac/scope";
+import { writeAudit } from "../lib/audit";
 
 const router: IRouter = Router();
 
@@ -67,6 +70,7 @@ function gradeToStatus(complianceStatus: string): string {
 async function applyAnalysis(
   pkg: PackageRow,
   result: AnalysisResult,
+  organizationId: number,
 ): Promise<void> {
   const counts = result.violations.reduce(
     (acc, v) => {
@@ -101,6 +105,7 @@ async function applyAnalysis(
   if (result.violations.length > 0) {
     await db.insert(violationsTable).values(
       result.violations.map((v) => ({
+        organizationId,
         packageId: pkg.id,
         severity: v.severity,
         engine: v.engine,
@@ -119,11 +124,23 @@ async function applyAnalysis(
     );
   }
 
+  const regulationRefs = Array.from(
+    new Set(
+      result.violations
+        .map((v) => v.regulationRef)
+        .filter((r): r is string => Boolean(r)),
+    ),
+  );
+
   await db.insert(auditEventsTable).values({
+    organizationId,
     packageId: pkg.id,
+    entityType: "package",
+    entityId: pkg.id,
     actor: "AI Compliance Engine",
     action: "Analysis completed",
     detail: `Grade ${result.grade}, risk ${result.riskScore}, ${result.violations.length} issue(s) detected. Status: ${result.complianceStatus}.`,
+    regulationRefs,
   });
 }
 
@@ -143,137 +160,163 @@ async function buildDetail(pkg: PackageRow) {
 }
 
 // GET /packages
-router.get("/packages", async (req: Request, res: Response): Promise<void> => {
-  const { search, status, category, risk, vendor, engine } = req.query;
-  const conditions: SQL[] = [];
+router.get(
+  "/packages",
+  requirePermission("packages:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const { search, status, category, risk, vendor, engine } = req.query;
+    const conditions: SQL[] = [...packageConds(req)];
 
-  if (typeof search === "string" && search.trim()) {
-    const term = `%${search.trim()}%`;
-    conditions.push(
-      or(
-        ilike(packagesTable.name, term),
-        ilike(packagesTable.sku, term),
-        ilike(packagesTable.brand, term),
-        ilike(packagesTable.vendor, term),
-      )!,
-    );
-  }
-  if (typeof status === "string" && status) {
-    conditions.push(eq(packagesTable.status, status));
-  }
-  if (typeof category === "string" && category) {
-    conditions.push(eq(packagesTable.category, category));
-  }
-  if (typeof vendor === "string" && vendor) {
-    conditions.push(eq(packagesTable.vendor, vendor));
-  }
-  if (typeof risk === "string" && risk) {
-    const band = risk.toLowerCase();
-    if (band === "high") {
-      conditions.push(gte(packagesTable.riskScore, 70));
-    } else if (band === "medium") {
+    if (typeof search === "string" && search.trim()) {
+      const term = `%${search.trim()}%`;
       conditions.push(
-        and(gte(packagesTable.riskScore, 40), lt(packagesTable.riskScore, 70))!,
+        or(
+          ilike(packagesTable.name, term),
+          ilike(packagesTable.sku, term),
+          ilike(packagesTable.brand, term),
+          ilike(packagesTable.vendor, term),
+        )!,
       );
-    } else if (band === "low") {
-      conditions.push(lt(packagesTable.riskScore, 40));
-    } else {
-      conditions.push(eq(packagesTable.complianceStatus, risk));
     }
-  }
-  if (typeof engine === "string" && engine) {
-    const withEngine = db
-      .select({ id: violationsTable.packageId })
-      .from(violationsTable)
-      .where(eq(violationsTable.engine, engine));
-    conditions.push(inArray(packagesTable.id, withEngine));
-  }
+    if (typeof status === "string" && status) {
+      conditions.push(eq(packagesTable.status, status));
+    }
+    if (typeof category === "string" && category) {
+      conditions.push(eq(packagesTable.category, category));
+    }
+    if (typeof vendor === "string" && vendor) {
+      conditions.push(eq(packagesTable.vendor, vendor));
+    }
+    if (typeof risk === "string" && risk) {
+      const band = risk.toLowerCase();
+      if (band === "high") {
+        conditions.push(gte(packagesTable.riskScore, 70));
+      } else if (band === "medium") {
+        conditions.push(
+          and(
+            gte(packagesTable.riskScore, 40),
+            lt(packagesTable.riskScore, 70),
+          )!,
+        );
+      } else if (band === "low") {
+        conditions.push(lt(packagesTable.riskScore, 40));
+      } else {
+        conditions.push(eq(packagesTable.complianceStatus, risk));
+      }
+    }
+    if (typeof engine === "string" && engine) {
+      const withEngine = db
+        .select({ id: violationsTable.packageId })
+        .from(violationsTable)
+        .where(eq(violationsTable.engine, engine));
+      conditions.push(inArray(packagesTable.id, withEngine));
+    }
 
-  const rows = await db
-    .select()
-    .from(packagesTable)
-    .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(desc(packagesTable.createdAt));
+    const rows = await db
+      .select()
+      .from(packagesTable)
+      .where(and(...conditions))
+      .orderBy(desc(packagesTable.createdAt));
 
-  res.json(rows.map(mapPackage));
-});
+    res.json(rows.map(mapPackage));
+  },
+);
 
 // POST /packages
-router.post("/packages", async (req: Request, res: Response): Promise<void> => {
-  const parsed = CreatePackageBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
-  const data = parsed.data;
-
-  const [inserted] = await db
-    .insert(packagesTable)
-    .values({
-      sku: data.sku,
-      upc: data.upc ?? null,
-      name: data.name,
-      brand: data.brand,
-      vendor: data.vendor,
-      category: data.category ?? "Uncategorized",
-      country: data.country ?? null,
-      netWeight: data.netWeight ?? null,
-      dimensions: data.dimensions ?? null,
-      packageType: data.packageType ?? null,
-      productType: data.productType ?? null,
-      manufacturingRegion: data.manufacturingRegion ?? null,
-      artworkUrl: data.artworkUrl ?? null,
-      extractedText: data.extractedText ?? null,
-      status: "Uploaded",
-      complianceStatus: "Pending",
-    })
-    .returning();
-
-  if (!inserted) {
-    res.status(500).json({ error: "Failed to create package" });
-    return;
-  }
-
-  await db.insert(auditEventsTable).values({
-    packageId: inserted.id,
-    actor: "System",
-    action: "Package uploaded",
-    detail: `${inserted.name} (${inserted.sku}) uploaded for review.`,
-  });
-
-  let current = inserted;
-  if (data.extractedText && data.extractedText.trim()) {
-    try {
-      const regulations = await loadRegulations();
-      const result = await analyzePackaging(inserted, regulations);
-      await applyAnalysis(inserted, result);
-      const [refreshed] = await db
-        .select()
-        .from(packagesTable)
-        .where(eq(packagesTable.id, inserted.id));
-      if (refreshed) current = refreshed;
-    } catch (err) {
-      logger.error({ err }, "Auto-analysis failed on create");
+router.post(
+  "/packages",
+  requirePermission("packages:write"),
+  async (req: Request, res: Response): Promise<void> => {
+    const parsed = CreatePackageBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
     }
-  }
+    const data = parsed.data;
+    const organizationId = orgId(req);
 
-  res.status(201).json(await buildDetail(current));
-});
+    const [inserted] = await db
+      .insert(packagesTable)
+      .values({
+        organizationId,
+        sku: data.sku,
+        upc: data.upc ?? null,
+        name: data.name,
+        brand: data.brand,
+        vendor: data.vendor,
+        category: data.category ?? "Uncategorized",
+        country: data.country ?? null,
+        netWeight: data.netWeight ?? null,
+        dimensions: data.dimensions ?? null,
+        packageType: data.packageType ?? null,
+        productType: data.productType ?? null,
+        manufacturingRegion: data.manufacturingRegion ?? null,
+        artworkUrl: data.artworkUrl ?? null,
+        extractedText: data.extractedText ?? null,
+        status: "Uploaded",
+        complianceStatus: "Pending",
+      })
+      .returning();
+
+    if (!inserted) {
+      res.status(500).json({ error: "Failed to create package" });
+      return;
+    }
+
+    await writeAudit(req, {
+      action: "Package uploaded",
+      entityType: "package",
+      entityId: inserted.id,
+      packageId: inserted.id,
+      detail: `${inserted.name} (${inserted.sku}) uploaded for review.`,
+      after: { name: inserted.name, sku: inserted.sku, vendor: inserted.vendor },
+    });
+
+    let current = inserted;
+    if (data.extractedText && data.extractedText.trim()) {
+      try {
+        const regulations = await loadRegulations();
+        const result = await analyzePackaging(inserted, regulations);
+        await applyAnalysis(inserted, result, organizationId);
+        const [refreshed] = await db
+          .select()
+          .from(packagesTable)
+          .where(eq(packagesTable.id, inserted.id));
+        if (refreshed) current = refreshed;
+      } catch (err) {
+        logger.error({ err }, "Auto-analysis failed on create");
+      }
+    }
+
+    res.status(201).json(await buildDetail(current));
+  },
+);
+
+async function loadOwnedPackage(
+  req: Request,
+  res: Response,
+  id: number,
+): Promise<PackageRow | null> {
+  const [pkg] = await db
+    .select()
+    .from(packagesTable)
+    .where(eq(packagesTable.id, id));
+  if (!pkg || !canAccessPackage(req, pkg)) {
+    res.status(404).json({ error: "Package not found" });
+    return null;
+  }
+  return pkg;
+}
 
 // GET /packages/:id
 router.get(
   "/packages/:id",
+  requirePermission("packages:read"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
-    const [pkg] = await db
-      .select()
-      .from(packagesTable)
-      .where(eq(packagesTable.id, id));
-    if (!pkg) {
-      res.status(404).json({ error: "Package not found" });
-      return;
-    }
+    const pkg = await loadOwnedPackage(req, res, id);
+    if (!pkg) return;
     res.json(await buildDetail(pkg));
   },
 );
@@ -281,6 +324,7 @@ router.get(
 // PATCH /packages/:id
 router.patch(
   "/packages/:id",
+  requirePermission("packages:write"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
@@ -289,14 +333,8 @@ router.patch(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
-    const [existing] = await db
-      .select()
-      .from(packagesTable)
-      .where(eq(packagesTable.id, id));
-    if (!existing) {
-      res.status(404).json({ error: "Package not found" });
-      return;
-    }
+    const existing = await loadOwnedPackage(req, res, id);
+    if (!existing) return;
 
     const data = parsed.data;
     await db
@@ -312,19 +350,35 @@ router.patch(
       })
       .where(eq(packagesTable.id, id));
 
-    await db.insert(auditEventsTable).values({
-      packageId: id,
-      actor: existing.reviewer ?? "Reviewer",
-      action: "Package updated",
-      detail: data.status
-        ? `Status changed to ${data.status}.`
-        : "Package record updated.",
-    });
-
     const [updated] = await db
       .select()
       .from(packagesTable)
       .where(eq(packagesTable.id, id));
+
+    await writeAudit(req, {
+      action: "Package updated",
+      entityType: "package",
+      entityId: id,
+      packageId: id,
+      detail: data.status
+        ? `Status changed to ${data.status}.`
+        : "Package record updated.",
+      before: {
+        status: existing.status,
+        reviewer: existing.reviewer,
+        grade: existing.grade,
+        riskScore: existing.riskScore,
+        complianceStatus: existing.complianceStatus,
+      },
+      after: {
+        status: updated!.status,
+        reviewer: updated!.reviewer,
+        grade: updated!.grade,
+        riskScore: updated!.riskScore,
+        complianceStatus: updated!.complianceStatus,
+      },
+    });
+
     res.json(await buildDetail(updated!));
   },
 );
@@ -332,17 +386,20 @@ router.patch(
 // DELETE /packages/:id
 router.delete(
   "/packages/:id",
+  requirePermission("packages:delete"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
-    const [existing] = await db
-      .select()
-      .from(packagesTable)
-      .where(eq(packagesTable.id, id));
-    if (!existing) {
-      res.status(404).json({ error: "Package not found" });
-      return;
-    }
+    const existing = await loadOwnedPackage(req, res, id);
+    if (!existing) return;
+    await writeAudit(req, {
+      action: "Package deleted",
+      entityType: "package",
+      entityId: id,
+      packageId: id,
+      detail: `${existing.name} (${existing.sku}) deleted.`,
+      before: { name: existing.name, sku: existing.sku },
+    });
     await db.delete(violationsTable).where(eq(violationsTable.packageId, id));
     await db.delete(packagesTable).where(eq(packagesTable.id, id));
     res.status(204).send();
@@ -352,21 +409,16 @@ router.delete(
 // POST /packages/:id/analyze
 router.post(
   "/packages/:id/analyze",
+  requirePermission("packages:analyze"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
-    const [pkg] = await db
-      .select()
-      .from(packagesTable)
-      .where(eq(packagesTable.id, id));
-    if (!pkg) {
-      res.status(404).json({ error: "Package not found" });
-      return;
-    }
+    const pkg = await loadOwnedPackage(req, res, id);
+    if (!pkg) return;
     try {
       const regulations = await loadRegulations();
       const result = await analyzePackaging(pkg, regulations);
-      await applyAnalysis(pkg, result);
+      await applyAnalysis(pkg, result, orgId(req));
     } catch (err) {
       logger.error({ err }, "Analysis failed");
       res.status(502).json({ error: "AI analysis failed. Please retry." });
@@ -383,6 +435,7 @@ router.post(
 // POST /packages/:id/copilot
 router.post(
   "/packages/:id/copilot",
+  requirePermission("packages:read"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
@@ -391,14 +444,8 @@ router.post(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
-    const [pkg] = await db
-      .select()
-      .from(packagesTable)
-      .where(eq(packagesTable.id, id));
-    if (!pkg) {
-      res.status(404).json({ error: "Package not found" });
-      return;
-    }
+    const pkg = await loadOwnedPackage(req, res, id);
+    if (!pkg) return;
     const [violations, regulations] = await Promise.all([
       db.select().from(violationsTable).where(eq(violationsTable.packageId, id)),
       loadRegulations(),
@@ -421,13 +468,21 @@ router.post(
 // GET /packages/:id/audit
 router.get(
   "/packages/:id/audit",
+  requirePermission("audit:read"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
+    const pkg = await loadOwnedPackage(req, res, id);
+    if (!pkg) return;
     const rows = await db
       .select()
       .from(auditEventsTable)
-      .where(eq(auditEventsTable.packageId, id))
+      .where(
+        and(
+          eq(auditEventsTable.packageId, id),
+          eq(auditEventsTable.organizationId, orgId(req)),
+        ),
+      )
       .orderBy(desc(auditEventsTable.createdAt));
     res.json(rows.map(mapAuditEvent));
   },
@@ -436,6 +491,7 @@ router.get(
 // POST /packages/:id/report
 router.post(
   "/packages/:id/report",
+  requirePermission("reports:write"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
@@ -444,17 +500,12 @@ router.post(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
-    const [pkg] = await db
-      .select()
-      .from(packagesTable)
-      .where(eq(packagesTable.id, id));
-    if (!pkg) {
-      res.status(404).json({ error: "Package not found" });
-      return;
-    }
+    const pkg = await loadOwnedPackage(req, res, id);
+    if (!pkg) return;
     const [report] = await db
       .insert(reportsTable)
       .values({
+        organizationId: orgId(req),
         packageId: id,
         title: parsed.data.title,
         type: parsed.data.type ?? "Compliance",
@@ -465,10 +516,11 @@ router.post(
       })
       .returning();
 
-    await db.insert(auditEventsTable).values({
-      packageId: id,
-      actor: "Reviewer",
+    await writeAudit(req, {
       action: "Report generated",
+      entityType: "report",
+      entityId: report!.id,
+      packageId: id,
       detail: `${parsed.data.title} (${parsed.data.format ?? "PDF"}).`,
     });
 
@@ -479,6 +531,7 @@ router.post(
 // POST /packages/bulk-analyze
 router.post(
   "/packages/bulk-analyze",
+  requirePermission("packages:analyze"),
   async (req: Request, res: Response): Promise<void> => {
     const parsed = BulkAnalyzeBody.safeParse(req.body);
     if (!parsed.success) {
@@ -490,10 +543,11 @@ router.post(
       res.json({ analyzed: 0, passed: 0, failed: 0 });
       return;
     }
+    const organizationId = orgId(req);
     const rows = await db
       .select()
       .from(packagesTable)
-      .where(inArray(packagesTable.id, ids));
+      .where(and(inArray(packagesTable.id, ids), ...packageConds(req)));
     const regulations = await loadRegulations();
 
     let passed = 0;
@@ -502,7 +556,7 @@ router.post(
     for (const pkg of rows) {
       try {
         const result = await analyzePackaging(pkg, regulations);
-        await applyAnalysis(pkg, result);
+        await applyAnalysis(pkg, result, organizationId);
         analyzed += 1;
         if (result.complianceStatus === "Passed") passed += 1;
         else if (result.complianceStatus === "Failed") failed += 1;

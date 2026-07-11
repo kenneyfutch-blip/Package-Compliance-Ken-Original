@@ -11,7 +11,7 @@ export default function NotificationsPage() {
   const queryClient = useQueryClient()
 
   const handleMarkRead = (id: number) => {
-    markRead.mutate({ data: { id } }, {
+    markRead.mutate({ id }, {
       onSuccess: () => {
         // Invalidate the query to refresh the notifications list and update the top nav badge
         queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() })

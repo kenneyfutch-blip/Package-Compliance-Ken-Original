@@ -40,6 +40,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { useListNotifications } from "@workspace/api-client-react"
+import { usePermissions, requiredPermFor } from "@/lib/access"
 
 type NavLink = { name: string; href: string; icon?: React.ComponentType<{ className?: string }> }
 type NavGroup = { name: string; icon: React.ComponentType<{ className?: string }>; items: NavLink[] }
@@ -134,13 +135,29 @@ function isItemActive(location: string, href: string): boolean {
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const [location] = useLocation()
   const [manual, setManual] = React.useState<Record<string, boolean>>({})
+  const { has } = usePermissions()
+
+  const canSee = (href: string) => {
+    const perm = requiredPermFor(href)
+    return perm === null || has(perm)
+  }
+
+  // Hide nav entries the caller has no permission for; drop empty groups.
+  const visibleNav = React.useMemo<NavEntry[]>(() => {
+    return NAV.flatMap((entry): NavEntry[] => {
+      if (entry.type === "link") return canSee(entry.href) ? [entry] : []
+      const items = entry.items.filter((i) => canSee(i.href))
+      return items.length ? [{ ...entry, items }] : []
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [has])
 
   const groupHasActive = (g: NavGroup) => g.items.some((i) => isItemActive(location, i.href))
   const isOpen = (g: NavGroup) => manual[g.name] ?? groupHasActive(g)
 
   return (
     <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-      {NAV.map((entry) => {
+      {visibleNav.map((entry) => {
         if (entry.type === "link") {
           const active = isItemActive(location, entry.href)
           const Icon = entry.icon
@@ -213,15 +230,18 @@ function Brand() {
 }
 
 function UserBlock() {
+  const { me } = usePermissions()
+  const displayName = me?.name || me?.email || "Signed in"
+  const roleName = me?.role || "Member"
   return (
     <div className="p-4 border-t border-border">
       <div className="flex items-center gap-3 px-3 py-2">
         <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-foreground">
           <User className="w-4 h-4" />
         </div>
-        <div className="flex flex-col">
-          <span className="text-sm font-medium">Eleanor Shellstrop</span>
-          <span className="text-xs text-muted-foreground">Compliance Mgr</span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-medium truncate">{displayName}</span>
+          <span className="text-xs text-muted-foreground truncate">{roleName}</span>
         </div>
       </div>
     </div>

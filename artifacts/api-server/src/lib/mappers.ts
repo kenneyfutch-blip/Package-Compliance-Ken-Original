@@ -119,9 +119,14 @@ export function mapAuditEvent(a: AuditEventRow) {
   return {
     id: a.id,
     packageId: a.packageId,
+    entityType: a.entityType,
+    entityId: a.entityId,
     actor: a.actor,
     action: a.action,
     detail: a.detail,
+    before: a.before ?? null,
+    after: a.after ?? null,
+    regulationRefs: a.regulationRefs ?? [],
     createdAt: iso(a.createdAt)!,
   };
 }
@@ -155,6 +160,8 @@ export function mapUser(u: UserRow) {
     name: u.name,
     email: u.email,
     role: u.role,
+    roleKey: u.roleKey,
+    status: u.status,
     active: u.active,
     createdAt: iso(u.createdAt)!,
   };

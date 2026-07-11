@@ -2,3 +2,4 @@
 - [AI provider integrations](ai-providers.md) — configurable AI models: encrypted keys, single-active invariant, SSRF-validated baseUrl, 8-engine taxonomy.
 - [Proofing & Review Suite](proofing-suite.md) — presigned uploads (no per-object ACL, by design), server-only identity, version uniqueness, image-only markup.
 - [openFDA integration](openfda.md) — server-only key proxy; 404=empty results, YYYYMMDD dates, per-category enforcement endpoints, 503-vs-502.
+- [Tenancy, RBAC & Teams](tenancy-rbac.md) — code is source of truth for roles/perms; Clerk provisioning + org scoping; requiredPermFor gates nav+routes; global regulations/ai_providers; append-only audit.

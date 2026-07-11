@@ -13,6 +13,7 @@ import { publishableKeyFromHost } from "@clerk/react/internal"
 import { shadcn } from "@clerk/themes"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Shell } from "@/components/layout"
+import { PermissionProvider, usePermissions, requiredPermFor, NoAccess } from "@/lib/access"
 import { Button } from "@/components/ui/button"
 import { ShieldCheck, Loader2, Lock } from "lucide-react"
 import NotFound from "@/pages/not-found"
@@ -183,8 +184,20 @@ const REG_LIBS: Record<string, { agency: string; title: string; subtitle: string
 }
 
 function AppRoutes() {
+  const [location] = useLocation()
+  const { has, isLoading } = usePermissions()
+  const required = requiredPermFor(location)
+  const blocked = !isLoading && required !== null && !has(required)
+
   return (
     <Shell>
+      {isLoading ? (
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : blocked ? (
+        <NoAccess />
+      ) : (
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/upload" component={UploadPage} />
@@ -260,6 +273,7 @@ function AppRoutes() {
         <Route path="/notifications" component={NotificationsPage} />
         <Route component={NotFound} />
       </Switch>
+      )}
     </Shell>
   )
 }
@@ -269,7 +283,9 @@ function ProtectedArea() {
     <>
       <Show when="signed-in">
         <DomainGate>
-          <AppRoutes />
+          <PermissionProvider>
+            <AppRoutes />
+          </PermissionProvider>
         </DomainGate>
       </Show>
       <Show when="signed-out">

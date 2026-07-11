@@ -11,6 +11,10 @@ export interface UserAccount {
   name: string;
   email: string;
   role: string;
+  /** @nullable */
+  roleKey?: string | null;
+  /** @nullable */
+  status?: string | null;
   active: boolean;
   createdAt: Date;
 }

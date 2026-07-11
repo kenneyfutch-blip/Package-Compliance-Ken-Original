@@ -2,12 +2,14 @@ import {
   pgTable,
   serial,
   text,
+  integer,
   boolean,
   timestamp,
 } from "drizzle-orm/pg-core";
 
 export const notificationsTable = pgTable("notifications", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"),
   title: text("title").notNull(),
   message: text("message").notNull(),
   type: text("type").notNull().default("info"),

@@ -78,7 +78,10 @@ export default function AdminPage() {
                     <div className="text-xs text-muted-foreground">{user.email}</div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs">{user.role}</Badge>
+                    <Badge variant="outline" className="text-xs">{user.role}</Badge>
+                    {user.roleKey && (
+                      <div className="text-[10px] text-muted-foreground font-mono mt-1">{user.roleKey}</div>
+                    )}
                   </TableCell>
                   <TableCell>
                     {user.active ? (

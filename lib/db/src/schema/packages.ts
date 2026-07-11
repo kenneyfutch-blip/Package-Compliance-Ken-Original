@@ -26,6 +26,7 @@ export type OcrData = {
 
 export const packagesTable = pgTable("packages", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"),
   sku: text("sku").notNull(),
   upc: text("upc"),
   name: text("name").notNull(),

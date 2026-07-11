@@ -3,6 +3,7 @@ import { db, regulationsTable } from "@workspace/db";
 import { eq, desc, and, or, ilike, type SQL } from "drizzle-orm";
 import { CreateRegulationBody } from "@workspace/api-zod";
 import { mapRegulation } from "../lib/mappers";
+import { requirePermission } from "../lib/rbac/context";
 
 const router: IRouter = Router();
 
@@ -12,6 +13,7 @@ function parseId(raw: string | string[] | undefined): number {
 
 router.get(
   "/regulations",
+  requirePermission("regulations:read"),
   async (req: Request, res: Response): Promise<void> => {
     const { search, agency, category } = req.query;
     const conditions: SQL[] = [];
@@ -42,6 +44,7 @@ router.get(
 
 router.post(
   "/regulations",
+  requirePermission("regulations:write"),
   async (req: Request, res: Response): Promise<void> => {
     const parsed = CreateRegulationBody.safeParse(req.body);
     if (!parsed.success) {
@@ -69,6 +72,7 @@ router.post(
 
 router.get(
   "/regulations/:id",
+  requirePermission("regulations:read"),
   async (req: Request, res: Response): Promise<void> => {
     const id = parseId(req.params["id"]);
     const [row] = await db

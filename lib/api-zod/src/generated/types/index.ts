@@ -40,6 +40,7 @@ export * from './listFdaRecallsParams';
 export * from './listPackagesParams';
 export * from './listRegulationsParams';
 export * from './listViolationsParams';
+export * from './me';
 export * from './notification';
 export * from './ocrData';
 export * from './ocrExtractInput';

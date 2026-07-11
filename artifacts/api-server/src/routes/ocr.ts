@@ -2,13 +2,17 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { ExtractArtworkTextBody } from "@workspace/api-zod";
 import { extractTextFromImage } from "../lib/ai";
 import { logger } from "../lib/logger";
+import { requirePermission } from "../lib/rbac/context";
 
 const router: IRouter = Router();
 
 const DATA_URL_RE = /^data:image\/[a-zA-Z0-9.+-]+;base64,/;
 
 // POST /ocr — transcribe packaging artwork image into text for AI analysis.
-router.post("/ocr", async (req: Request, res: Response): Promise<void> => {
+router.post(
+  "/ocr",
+  requirePermission("packages:write"),
+  async (req: Request, res: Response): Promise<void> => {
   const parsed = ExtractArtworkTextBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });

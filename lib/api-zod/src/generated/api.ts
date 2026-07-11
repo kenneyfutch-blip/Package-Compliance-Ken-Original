@@ -981,9 +981,14 @@ export const GetPackageAuditParams = zod.object({
 export const GetPackageAuditResponseItem = zod.object({
   "id": zod.number(),
   "packageId": zod.number().nullish(),
+  "entityType": zod.string().nullish(),
+  "entityId": zod.number().nullish(),
   "actor": zod.string(),
   "action": zod.string(),
   "detail": zod.string().nullish(),
+  "before": zod.unknown().nullish(),
+  "after": zod.unknown().nullish(),
+  "regulationRefs": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 })
 export const GetPackageAuditResponse = zod.array(GetPackageAuditResponseItem)
@@ -1324,9 +1329,14 @@ export const GetSupplierResponse = zod.object({
 export const ListAuditEventsResponseItem = zod.object({
   "id": zod.number(),
   "packageId": zod.number().nullish(),
+  "entityType": zod.string().nullish(),
+  "entityId": zod.number().nullish(),
   "actor": zod.string(),
   "action": zod.string(),
   "detail": zod.string().nullish(),
+  "before": zod.unknown().nullish(),
+  "after": zod.unknown().nullish(),
+  "regulationRefs": zod.array(zod.string()).optional(),
   "createdAt": zod.coerce.date()
 })
 export const ListAuditEventsResponse = zod.array(ListAuditEventsResponseItem)
@@ -1379,6 +1389,23 @@ export const ListReportsResponse = zod.array(ListReportsResponseItem)
 
 
 /**
+ * @summary Current user identity, organization, role, and permissions
+ */
+export const GetMeResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string().nullish(),
+  "email": zod.string().nullish(),
+  "role": zod.string(),
+  "roleKey": zod.string(),
+  "permissions": zod.array(zod.string()),
+  "organizationId": zod.number().nullish(),
+  "organizationName": zod.string().nullish(),
+  "supplierId": zod.number().nullish(),
+  "supplierName": zod.string().nullish()
+})
+
+
+/**
  * @summary List platform users and their roles
  */
 export const ListUsersResponseItem = zod.object({
@@ -1386,6 +1413,8 @@ export const ListUsersResponseItem = zod.object({
   "name": zod.string(),
   "email": zod.string(),
   "role": zod.string(),
+  "roleKey": zod.string().nullish(),
+  "status": zod.string().nullish(),
   "active": zod.boolean(),
   "createdAt": zod.coerce.date()
 })

@@ -16,6 +16,7 @@ export const proofsTable = pgTable(
   "proofs",
   {
     id: serial("id").primaryKey(),
+    organizationId: integer("organization_id"),
     packageId: integer("package_id")
       .notNull()
       .references(() => packagesTable.id, { onDelete: "cascade" }),

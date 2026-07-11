@@ -1,5 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, packagesTable, violationsTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+import { requirePermission, orgId } from "../lib/rbac/context";
+import { packageConds } from "../lib/rbac/scope";
 
 const router: IRouter = Router();
 
@@ -7,10 +10,19 @@ function dayKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Packages visible to the caller (organization + supplier scoped).
+function scopedPackages(req: Request) {
+  return db
+    .select()
+    .from(packagesTable)
+    .where(and(...packageConds(req)));
+}
+
 router.get(
   "/dashboard/stats",
-  async (_req: Request, res: Response): Promise<void> => {
-    const packages = await db.select().from(packagesTable);
+  requirePermission("dashboard:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const packages = await scopedPackages(req);
     const today = dayKey(new Date());
 
     const reviewedToday = packages.filter(
@@ -40,9 +52,7 @@ router.get(
     );
     const analyzed = packages.filter((p) => p.analyzedAt);
     const complianceVelocity =
-      analyzed.length > 0
-        ? Math.round((passed / analyzed.length) * 100)
-        : 0;
+      analyzed.length > 0 ? Math.round((passed / analyzed.length) * 100) : 0;
 
     res.json({
       reviewedToday,
@@ -62,8 +72,9 @@ router.get(
 
 router.get(
   "/dashboard/trends",
-  async (_req: Request, res: Response): Promise<void> => {
-    const packages = await db.select().from(packagesTable);
+  requirePermission("dashboard:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const packages = await scopedPackages(req);
     const days: { date: string; key: string }[] = [];
     const now = new Date();
     for (let i = 13; i >= 0; i--) {
@@ -110,8 +121,12 @@ router.get(
 
 router.get(
   "/dashboard/violation-distribution",
-  async (_req: Request, res: Response): Promise<void> => {
-    const violations = await db.select().from(violationsTable);
+  requirePermission("dashboard:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const violations = await db
+      .select()
+      .from(violationsTable)
+      .where(eq(violationsTable.organizationId, orgId(req)));
     const counts = new Map<string, number>();
     for (const v of violations) {
       counts.set(v.engine, (counts.get(v.engine) ?? 0) + 1);
@@ -126,8 +141,9 @@ router.get(
 
 router.get(
   "/dashboard/category-distribution",
-  async (_req: Request, res: Response): Promise<void> => {
-    const packages = await db.select().from(packagesTable);
+  requirePermission("dashboard:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const packages = await scopedPackages(req);
     const counts = new Map<string, number>();
     for (const p of packages) {
       counts.set(p.category, (counts.get(p.category) ?? 0) + 1);
@@ -142,8 +158,9 @@ router.get(
 
 router.get(
   "/dashboard/vendor-performance",
-  async (_req: Request, res: Response): Promise<void> => {
-    const packages = await db.select().from(packagesTable);
+  requirePermission("dashboard:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const packages = await scopedPackages(req);
     const byVendor = new Map<
       string,
       { packages: number; failed: number; riskSum: number; scored: number }

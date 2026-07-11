@@ -634,10 +634,17 @@ export interface AuditEvent {
   id: number;
   /** @nullable */
   packageId?: number | null;
+  /** @nullable */
+  entityType?: string | null;
+  /** @nullable */
+  entityId?: number | null;
   actor: string;
   action: string;
   /** @nullable */
   detail?: string | null;
+  before?: unknown | null;
+  after?: unknown | null;
+  regulationRefs?: string[];
   createdAt: string;
 }
 
@@ -674,8 +681,31 @@ export interface UserAccount {
   name: string;
   email: string;
   role: string;
+  /** @nullable */
+  roleKey?: string | null;
+  /** @nullable */
+  status?: string | null;
   active: boolean;
   createdAt: string;
+}
+
+export interface Me {
+  id: number;
+  /** @nullable */
+  name?: string | null;
+  /** @nullable */
+  email?: string | null;
+  role: string;
+  roleKey: string;
+  permissions: string[];
+  /** @nullable */
+  organizationId?: number | null;
+  /** @nullable */
+  organizationName?: string | null;
+  /** @nullable */
+  supplierId?: number | null;
+  /** @nullable */
+  supplierName?: string | null;
 }
 
 export type ListViolationsParams = {

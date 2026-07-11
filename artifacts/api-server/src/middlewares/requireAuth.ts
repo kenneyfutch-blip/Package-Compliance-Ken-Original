@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
+import { provisionUser } from "../lib/rbac/provision";
+import { setAuthContext } from "../lib/rbac/context";
 
 // Access is restricted to Dollar Tree associates. Enforced here on the server so
 // the restriction holds in production regardless of any client-side checks.
@@ -9,7 +11,12 @@ const ALLOWED_DOMAINS = (process.env.ALLOWED_EMAIL_DOMAINS ?? "dollartree.com")
   .map((d) => d.trim().toLowerCase())
   .filter(Boolean);
 
-type CacheEntry = { email: string | null; allowed: boolean; expires: number };
+type CacheEntry = {
+  email: string | null;
+  name: string | null;
+  allowed: boolean;
+  expires: number;
+};
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const cache = new Map<string, CacheEntry>();
 
@@ -42,8 +49,13 @@ export async function requireAuth(
         user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId) ??
         user.emailAddresses[0];
       const email = primary?.emailAddress ?? null;
+      const name =
+        [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
+        user.username ||
+        null;
       entry = {
         email,
+        name,
         allowed: isEmailAllowed(email),
         expires: now + CACHE_TTL_MS,
       };
@@ -66,5 +78,17 @@ export async function requireAuth(
     userId;
   (req as Request & { userId?: string; userEmail?: string | null }).userEmail =
     entry.email;
+
+  // Provision the caller into the database and resolve their organization, role,
+  // and effective permissions for downstream authorization + tenant scoping.
+  try {
+    const ctx = await provisionUser(userId, entry.email, entry.name);
+    setAuthContext(req, ctx);
+  } catch (err) {
+    req.log?.error({ err }, "Failed to provision user");
+    res.status(500).json({ error: "Failed to establish user session" });
+    return;
+  }
+
   next();
 }

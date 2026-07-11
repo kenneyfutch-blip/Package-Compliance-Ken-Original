@@ -11,6 +11,7 @@ import ocrRouter from "./ocr";
 import proofsRouter from "./proofs";
 import storageRouter from "./storage";
 import fdaRouter from "./fda";
+import meRouter from "./me";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -18,6 +19,7 @@ const router: IRouter = Router();
 // Health check stays public; everything below requires a signed-in Dollar Tree user.
 router.use(healthRouter);
 router.use(requireAuth);
+router.use(meRouter);
 router.use(dashboardRouter);
 router.use(packagesRouter);
 router.use(regulationsRouter);

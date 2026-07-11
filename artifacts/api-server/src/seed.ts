@@ -9,19 +9,52 @@ import {
   auditEventsTable,
   reportsTable,
   aiProvidersTable,
+  organizationsTable,
+  rolesTable,
+  permissionsTable,
+  rolePermissionsTable,
+  userPermissionsTable,
+  teamsTable,
+  teamMembersTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { analyzePackaging, type AnalysisResult } from "./lib/ai";
 import { logger } from "./lib/logger";
+import {
+  PERMISSIONS,
+  ROLES,
+  permissionsForRole,
+  getRoleDef,
+} from "./lib/rbac/permissions";
+import { ensureAuditImmutability, dropAuditImmutability } from "./lib/audit";
+
+const ORG = { name: "Dollar Tree", slug: "dollar-tree" };
+
+// Maps legacy display role names to the enterprise role keys.
+const ROLE_KEY_BY_LEGACY: Record<string, string> = {
+  Administrator: "platform_admin",
+  "Compliance Manager": "compliance_manager",
+  "Compliance Reviewer": "compliance_specialist",
+  "Packaging Manager": "packaging_manager",
+  Designer: "designer",
+  Auditor: "legal_reviewer",
+  "Executive Viewer": "executive_viewer",
+};
 
 const users = [
-  { name: "Dana Whitfield", email: "dana.whitfield@dollartree.com", role: "Administrator" },
-  { name: "Marcus Lee", email: "marcus.lee@dollartree.com", role: "Compliance Manager" },
-  { name: "Priya Nair", email: "priya.nair@dollartree.com", role: "Compliance Reviewer" },
-  { name: "Sofia Alvarez", email: "sofia.alvarez@dollartree.com", role: "Packaging Manager" },
-  { name: "Tom Becker", email: "tom.becker@dollartree.com", role: "Designer" },
-  { name: "Rachel Kim", email: "rachel.kim@dollartree.com", role: "Auditor" },
-  { name: "James Okafor", email: "james.okafor@dollartree.com", role: "Executive Viewer" },
+  { name: "Dana Whitfield", email: "dana.whitfield@dollartree.com", legacyRole: "Administrator" },
+  { name: "Marcus Lee", email: "marcus.lee@dollartree.com", legacyRole: "Compliance Manager" },
+  { name: "Priya Nair", email: "priya.nair@dollartree.com", legacyRole: "Compliance Reviewer" },
+  { name: "Sofia Alvarez", email: "sofia.alvarez@dollartree.com", legacyRole: "Packaging Manager" },
+  { name: "Tom Becker", email: "tom.becker@dollartree.com", legacyRole: "Designer" },
+  { name: "Rachel Kim", email: "rachel.kim@dollartree.com", legacyRole: "Auditor" },
+  { name: "James Okafor", email: "james.okafor@dollartree.com", legacyRole: "Executive Viewer" },
+];
+
+const teams = [
+  { name: "Food & Beverage Compliance", description: "Reviews food, beverage, and snack packaging." },
+  { name: "Household & Chemicals", description: "Reviews household chemical and cleaning products." },
+  { name: "Toys & Children Safety", description: "Reviews toys and children's product packaging." },
 ];
 
 const suppliers = [
@@ -96,6 +129,13 @@ const seedPackages: SeedPackage[] = [
 ];
 
 async function clearAll() {
+  // Audit is append-only in normal operation; drop the guard so the seed can
+  // reset it, then reinstall it at the end.
+  await dropAuditImmutability();
+  await db.delete(teamMembersTable);
+  await db.delete(teamsTable);
+  await db.delete(userPermissionsTable);
+  await db.delete(rolePermissionsTable);
   await db.delete(violationsTable);
   await db.delete(reportsTable);
   await db.delete(auditEventsTable);
@@ -104,12 +144,56 @@ async function clearAll() {
   await db.delete(suppliersTable);
   await db.delete(notificationsTable);
   await db.delete(usersTable);
+  await db.delete(rolesTable);
+  await db.delete(permissionsTable);
   await db.delete(aiProvidersTable);
+  await db.delete(organizationsTable);
 }
 
 async function main() {
   logger.info("Seeding database...");
   await clearAll();
+
+  // Organization (tenant)
+  const [org] = await db.insert(organizationsTable).values(ORG).returning();
+  const orgId = org!.id;
+
+  // Permissions + roles + role-permission mappings
+  const insertedPerms = await db
+    .insert(permissionsTable)
+    .values(PERMISSIONS)
+    .returning();
+  const permIdByKey = new Map(insertedPerms.map((p) => [p.key, p.id]));
+
+  await db.insert(rolesTable).values(
+    ROLES.map((r) => ({
+      key: r.key,
+      name: r.name,
+      description: r.description,
+      rank: r.rank,
+      isSystem: true,
+    })),
+  );
+  const insertedRoles = await db.select().from(rolesTable);
+  const roleIdByKey = new Map(insertedRoles.map((r) => [r.key, r.id]));
+
+  const rolePermRows: { roleId: number; permissionId: number }[] = [];
+  for (const role of ROLES) {
+    const roleId = roleIdByKey.get(role.key)!;
+    for (const permKey of permissionsForRole(role.key)) {
+      const permissionId = permIdByKey.get(permKey);
+      if (permissionId) rolePermRows.push({ roleId, permissionId });
+    }
+  }
+  if (rolePermRows.length) {
+    await db.insert(rolePermissionsTable).values(rolePermRows);
+  }
+
+  // Teams
+  const insertedTeams = await db
+    .insert(teamsTable)
+    .values(teams.map((t) => ({ ...t, organizationId: orgId })))
+    .returning();
 
   await db.insert(aiProvidersTable).values({
     name: "Replit-managed OpenAI",
@@ -120,19 +204,63 @@ async function main() {
     status: "connected",
     statusMessage: "Built-in Replit AI integration",
   });
-  await db.insert(usersTable).values(users);
-  await db.insert(suppliersTable).values(suppliers);
+
+  // Users (scoped to org, with enterprise role keys)
+  const insertedUsers = await db
+    .insert(usersTable)
+    .values(
+      users.map((u) => {
+        const roleKey = ROLE_KEY_BY_LEGACY[u.legacyRole] ?? "read_only";
+        return {
+          name: u.name,
+          email: u.email,
+          organizationId: orgId,
+          roleKey,
+          role: getRoleDef(roleKey)?.name ?? "Read Only User",
+          status: "active",
+          active: true,
+        };
+      }),
+    )
+    .returning();
+
+  // Assign a few users to teams as a starting point.
+  const teamMemberRows: { teamId: number; userId: number }[] = [];
+  if (insertedTeams[0]) {
+    for (const email of ["marcus.lee@dollartree.com", "priya.nair@dollartree.com", "rachel.kim@dollartree.com"]) {
+      const u = insertedUsers.find((x) => x.email === email);
+      if (u) teamMemberRows.push({ teamId: insertedTeams[0].id, userId: u.id });
+    }
+  }
+  if (insertedTeams[1]) {
+    const u = insertedUsers.find((x) => x.email === "marcus.lee@dollartree.com");
+    if (u) teamMemberRows.push({ teamId: insertedTeams[1].id, userId: u.id });
+  }
+  if (insertedTeams[2]) {
+    const u = insertedUsers.find((x) => x.email === "sofia.alvarez@dollartree.com");
+    if (u) teamMemberRows.push({ teamId: insertedTeams[2].id, userId: u.id });
+  }
+  if (teamMemberRows.length) {
+    await db.insert(teamMembersTable).values(teamMemberRows);
+  }
+
+  await db.insert(suppliersTable).values(
+    suppliers.map((s) => ({ ...s, organizationId: orgId })),
+  );
   const insertedRegs = await db
     .insert(regulationsTable)
     .values(regulations)
     .returning();
-  await db.insert(notificationsTable).values(notifications);
+  await db.insert(notificationsTable).values(
+    notifications.map((n) => ({ ...n, organizationId: orgId })),
+  );
 
   logger.info("Analyzing seed packages with AI (this may take a minute)...");
   for (const sp of seedPackages) {
     const [pkg] = await db
       .insert(packagesTable)
       .values({
+        organizationId: orgId,
         sku: sp.sku,
         upc: sp.upc,
         name: sp.name,
@@ -155,7 +283,10 @@ async function main() {
     if (!pkg) continue;
 
     await db.insert(auditEventsTable).values({
+      organizationId: orgId,
       packageId: pkg.id,
+      entityType: "package",
+      entityId: pkg.id,
       actor: "System",
       action: "Package uploaded",
       detail: `${pkg.name} (${pkg.sku}) uploaded for review.`,
@@ -207,6 +338,7 @@ async function main() {
     if (result.violations.length > 0) {
       await db.insert(violationsTable).values(
         result.violations.map((v) => ({
+          organizationId: orgId,
           packageId: pkg.id,
           severity: v.severity,
           engine: v.engine,
@@ -225,11 +357,23 @@ async function main() {
       );
     }
 
+    const regulationRefs = Array.from(
+      new Set(
+        result.violations
+          .map((v) => v.regulationRef)
+          .filter((r): r is string => Boolean(r)),
+      ),
+    );
+
     await db.insert(auditEventsTable).values({
+      organizationId: orgId,
       packageId: pkg.id,
+      entityType: "package",
+      entityId: pkg.id,
       actor: "AI Compliance Engine",
       action: "Analysis completed",
       detail: `Grade ${result.grade}, risk ${result.riskScore}, ${result.violations.length} issue(s). Status: ${result.complianceStatus}.`,
+      regulationRefs,
     });
 
     logger.info(
@@ -243,6 +387,7 @@ async function main() {
   const failedPkgs = analyzed.filter((p) => p.complianceStatus === "Failed");
   for (const p of failedPkgs.slice(0, 2)) {
     await db.insert(reportsTable).values({
+      organizationId: orgId,
       packageId: p.id,
       title: `Compliance Report - ${p.name}`,
       type: "Compliance",
@@ -250,6 +395,9 @@ async function main() {
       summary: p.summary,
     });
   }
+
+  // Re-enable append-only enforcement on the audit trail.
+  await ensureAuditImmutability();
 
   logger.info("Seed complete.");
 }

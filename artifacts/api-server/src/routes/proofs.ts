@@ -6,7 +6,7 @@ import {
   proofAnnotationsTable,
   proofCommentsTable,
   proofDecisionsTable,
-  auditEventsTable,
+  type PackageRow,
   type ProofRow,
   type ProofAnnotationRow,
   type ProofCommentRow,
@@ -20,6 +20,9 @@ import {
   CreateCommentBody,
   RecordProofDecisionBody,
 } from "@workspace/api-zod";
+import { requirePermission, orgId } from "../lib/rbac/context";
+import { canAccessPackage } from "../lib/rbac/scope";
+import { writeAudit } from "../lib/audit";
 
 const router: IRouter = Router();
 
@@ -51,6 +54,49 @@ function requireIntParam(
     return null;
   }
   return id;
+}
+
+// Loads a package only if the caller's organization (and supplier scope) allows
+// it; otherwise responds 404 and returns null.
+async function accessiblePackage(
+  req: Request,
+  res: Response,
+  packageId: number,
+): Promise<PackageRow | null> {
+  const [pkg] = await db
+    .select()
+    .from(packagesTable)
+    .where(eq(packagesTable.id, packageId));
+  if (!pkg || !canAccessPackage(req, pkg)) {
+    res.status(404).json({ error: "Package not found" });
+    return null;
+  }
+  return pkg;
+}
+
+// Loads a proof only if its package is accessible to the caller.
+async function accessibleProof(
+  req: Request,
+  res: Response,
+  proofId: number,
+): Promise<ProofRow | null> {
+  const [proof] = await db
+    .select()
+    .from(proofsTable)
+    .where(eq(proofsTable.id, proofId));
+  if (!proof) {
+    res.status(404).json({ error: "Proof not found" });
+    return null;
+  }
+  const [pkg] = await db
+    .select()
+    .from(packagesTable)
+    .where(eq(packagesTable.id, proof.packageId));
+  if (!pkg || !canAccessPackage(req, pkg)) {
+    res.status(404).json({ error: "Proof not found" });
+    return null;
+  }
+  return proof;
 }
 
 function mapComment(row: ProofCommentRow) {
@@ -161,9 +207,11 @@ async function loadProofDetail(proofId: number) {
 // GET /packages/:id/proofs
 router.get(
   "/packages/:id/proofs",
+  requirePermission("proofs:read"),
   async (req: Request, res: Response): Promise<void> => {
     const packageId = requireIntParam(req.params["id"], res);
     if (packageId === null) return;
+    if (!(await accessiblePackage(req, res, packageId))) return;
 
     const proofs = await db
       .select()
@@ -213,6 +261,7 @@ router.get(
 // POST /packages/:id/proofs
 router.post(
   "/packages/:id/proofs",
+  requirePermission("proofs:write"),
   async (req: Request, res: Response): Promise<void> => {
     const packageId = requireIntParam(req.params["id"], res);
     if (packageId === null) return;
@@ -231,14 +280,7 @@ router.post(
       return;
     }
 
-    const [pkg] = await db
-      .select()
-      .from(packagesTable)
-      .where(eq(packagesTable.id, packageId));
-    if (!pkg) {
-      res.status(404).json({ error: "Package not found" });
-      return;
-    }
+    if (!(await accessiblePackage(req, res, packageId))) return;
 
     // Compute the next version and insert; retry on the (package_id, version)
     // unique conflict that a concurrent upload can trigger.
@@ -255,6 +297,7 @@ router.post(
         [inserted] = await db
           .insert(proofsTable)
           .values({
+            organizationId: orgId(req),
             packageId,
             version: nextVersion,
             fileName: data.fileName,
@@ -279,10 +322,11 @@ router.post(
       return;
     }
 
-    await db.insert(auditEventsTable).values({
-      packageId,
-      actor: authorName(req),
+    await writeAudit(req, {
       action: "Proof uploaded",
+      entityType: "proof",
+      entityId: inserted.id,
+      packageId,
       detail: `${data.fileName} uploaded as version ${nextVersion}.`,
     });
 
@@ -294,14 +338,12 @@ router.post(
 // GET /proofs/:proofId
 router.get(
   "/proofs/:proofId",
+  requirePermission("proofs:read"),
   async (req: Request, res: Response): Promise<void> => {
     const proofId = requireIntParam(req.params["proofId"], res);
     if (proofId === null) return;
+    if (!(await accessibleProof(req, res, proofId))) return;
     const detail = await loadProofDetail(proofId);
-    if (!detail) {
-      res.status(404).json({ error: "Proof not found" });
-      return;
-    }
     res.json(detail);
   },
 );
@@ -309,6 +351,7 @@ router.get(
 // POST /proofs/:proofId/annotations
 router.post(
   "/proofs/:proofId/annotations",
+  requirePermission("proofs:write"),
   async (req: Request, res: Response): Promise<void> => {
     const proofId = requireIntParam(req.params["proofId"], res);
     if (proofId === null) return;
@@ -320,14 +363,7 @@ router.post(
     }
     const data = parsed.data;
 
-    const [proof] = await db
-      .select()
-      .from(proofsTable)
-      .where(eq(proofsTable.id, proofId));
-    if (!proof) {
-      res.status(404).json({ error: "Proof not found" });
-      return;
-    }
+    if (!(await accessibleProof(req, res, proofId))) return;
 
     const [annotation] = await db
       .insert(proofAnnotationsTable)
@@ -372,6 +408,7 @@ router.post(
 // PATCH /annotations/:annotationId
 router.patch(
   "/annotations/:annotationId",
+  requirePermission("proofs:write"),
   async (req: Request, res: Response): Promise<void> => {
     const annotationId = requireIntParam(req.params["annotationId"], res);
     if (annotationId === null) return;
@@ -390,6 +427,7 @@ router.patch(
       res.status(404).json({ error: "Annotation not found" });
       return;
     }
+    if (!(await accessibleProof(req, res, existing.proofId))) return;
 
     const [updated] = await db
       .update(proofAnnotationsTable)
@@ -414,6 +452,7 @@ router.patch(
 // DELETE /annotations/:annotationId
 router.delete(
   "/annotations/:annotationId",
+  requirePermission("proofs:write"),
   async (req: Request, res: Response): Promise<void> => {
     const annotationId = requireIntParam(req.params["annotationId"], res);
     if (annotationId === null) return;
@@ -425,6 +464,7 @@ router.delete(
       res.status(404).json({ error: "Annotation not found" });
       return;
     }
+    if (!(await accessibleProof(req, res, existing.proofId))) return;
     await db
       .delete(proofAnnotationsTable)
       .where(eq(proofAnnotationsTable.id, annotationId));
@@ -435,6 +475,7 @@ router.delete(
 // POST /proofs/:proofId/comments
 router.post(
   "/proofs/:proofId/comments",
+  requirePermission("proofs:write"),
   async (req: Request, res: Response): Promise<void> => {
     const proofId = requireIntParam(req.params["proofId"], res);
     if (proofId === null) return;
@@ -446,14 +487,7 @@ router.post(
     }
     const data = parsed.data;
 
-    const [proof] = await db
-      .select()
-      .from(proofsTable)
-      .where(eq(proofsTable.id, proofId));
-    if (!proof) {
-      res.status(404).json({ error: "Proof not found" });
-      return;
-    }
+    if (!(await accessibleProof(req, res, proofId))) return;
 
     if (data.annotationId !== undefined && data.annotationId !== null) {
       const [ann] = await db
@@ -489,6 +523,7 @@ router.post(
 // POST /proofs/:proofId/decision
 router.post(
   "/proofs/:proofId/decision",
+  requirePermission("proofs:decide"),
   async (req: Request, res: Response): Promise<void> => {
     const proofId = requireIntParam(req.params["proofId"], res);
     if (proofId === null) return;
@@ -511,14 +546,8 @@ router.post(
       return;
     }
 
-    const [proof] = await db
-      .select()
-      .from(proofsTable)
-      .where(eq(proofsTable.id, proofId));
-    if (!proof) {
-      res.status(404).json({ error: "Proof not found" });
-      return;
-    }
+    const proof = await accessibleProof(req, res, proofId);
+    if (!proof) return;
 
     const reviewer = authorName(req);
 
@@ -544,10 +573,11 @@ router.post(
         .where(eq(packagesTable.id, proof.packageId));
     }
 
-    await db.insert(auditEventsTable).values({
-      packageId: proof.packageId,
-      actor: reviewer,
+    await writeAudit(req, {
       action: `Proof ${proofStatus.toLowerCase()}`,
+      entityType: "proof",
+      entityId: proofId,
+      packageId: proof.packageId,
       detail:
         `Version ${proof.version}: ${proofStatus}` +
         (data.note ? ` — ${data.note}` : "") +

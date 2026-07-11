@@ -10,9 +10,16 @@ export interface AuditEvent {
   id: number;
   /** @nullable */
   packageId?: number | null;
+  /** @nullable */
+  entityType?: string | null;
+  /** @nullable */
+  entityId?: number | null;
   actor: string;
   action: string;
   /** @nullable */
   detail?: string | null;
+  before?: unknown | null;
+  after?: unknown | null;
+  regulationRefs?: string[];
   createdAt: Date;
 }

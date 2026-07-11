@@ -10,6 +10,8 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
+import { requirePermission } from "../lib/rbac/context";
+import { packageConds } from "../lib/rbac/scope";
 
 const router: IRouter = Router();
 
@@ -22,15 +24,17 @@ function toInt(value: unknown, fallback: number): number {
   return Number.isFinite(n) && n >= 0 ? n : fallback;
 }
 
-// GET /violations — every violation across all packages, joined with package context.
+// GET /violations — every violation the caller may see, joined with package context.
 router.get(
   "/violations",
+  requirePermission("violations:read"),
   async (req: Request, res: Response): Promise<void> => {
     const { search, engine, severity, status, vendor, category, resolved } =
       req.query;
     const limit = Math.min(toInt(req.query.limit, DEFAULT_LIMIT), MAX_LIMIT);
     const offset = toInt(req.query.offset, 0);
-    const conditions: SQL[] = [];
+    // Tenant + supplier scoping is applied on the joined package.
+    const conditions: SQL[] = [...packageConds(req)];
 
     if (typeof search === "string" && search.trim()) {
       const term = `%${search.trim()}%`;
@@ -102,9 +106,13 @@ router.get(
         packagesTable,
         eq(violationsTable.packageId, packagesTable.id),
       )
-      .where(conditions.length ? and(...conditions) : undefined)
+      .where(and(...conditions))
       // Deterministic ordering: severity, then newest, with id as tie-breaker.
-      .orderBy(severityRank, desc(violationsTable.createdAt), desc(violationsTable.id))
+      .orderBy(
+        severityRank,
+        desc(violationsTable.createdAt),
+        desc(violationsTable.id),
+      )
       .limit(limit)
       .offset(offset);
 

@@ -9,6 +9,7 @@ import {
 
 export const violationsTable = pgTable("violations", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"),
   packageId: integer("package_id").notNull(),
   severity: text("severity").notNull(),
   engine: text("engine").notNull(),

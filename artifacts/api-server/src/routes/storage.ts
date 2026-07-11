@@ -10,6 +10,7 @@ import {
   ObjectNotFoundError,
   ObjectStorageService,
 } from '../lib/objectStorage';
+import { requireAnyPermission } from '../lib/rbac/context';
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -24,6 +25,7 @@ const objectStorageService = new ObjectStorageService();
  */
 router.post(
   '/storage/uploads/request-url',
+  requireAnyPermission('packages:write', 'proofs:write'),
   async (req: Request, res: Response) => {
     // Upstream requireAuth already guarantees a signed-in Dollar Tree user.
     if (!getAuth(req)?.userId) {

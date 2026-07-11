@@ -5,6 +5,7 @@ import { CreateAiProviderBody, UpdateAiProviderBody } from "@workspace/api-zod";
 import { buildClient } from "../lib/ai-client";
 import { encryptSecret } from "../lib/crypto";
 import { isValidProviderType, validateBaseUrl } from "../lib/provider-security";
+import { requirePermission } from "../lib/rbac/context";
 
 const router: IRouter = Router();
 
@@ -48,6 +49,7 @@ async function loadProvider(id: number): Promise<AiProvider | undefined> {
 
 router.get(
   "/ai-providers",
+  requirePermission("ai_providers:read"),
   async (_req: Request, res: Response): Promise<void> => {
     const rows = await db
       .select()
@@ -59,6 +61,7 @@ router.get(
 
 router.post(
   "/ai-providers",
+  requirePermission("ai_providers:write"),
   async (req: Request, res: Response): Promise<void> => {
     const parsed = CreateAiProviderBody.safeParse(req.body);
     if (!parsed.success) {
@@ -105,6 +108,7 @@ router.post(
 
 router.patch(
   "/ai-providers/:id",
+  requirePermission("ai_providers:write"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
@@ -157,6 +161,7 @@ router.patch(
 
 router.delete(
   "/ai-providers/:id",
+  requirePermission("ai_providers:write"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
@@ -185,6 +190,7 @@ router.delete(
 
 router.post(
   "/ai-providers/:id/activate",
+  requirePermission("ai_providers:write"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;
@@ -211,6 +217,7 @@ router.post(
 
 router.post(
   "/ai-providers/:id/test",
+  requirePermission("ai_providers:write"),
   async (req: Request, res: Response): Promise<void> => {
     const id = requireId(req.params["id"], res);
     if (id === null) return;

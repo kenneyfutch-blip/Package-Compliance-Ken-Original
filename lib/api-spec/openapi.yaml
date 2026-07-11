@@ -947,6 +947,19 @@ paths:
                 items:
                   $ref: "#/components/schemas/Report"
 
+  /me:
+    get:
+      operationId: getMe
+      tags: [admin]
+      summary: Current user identity, organization, role, and permissions
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+
   /users:
     get:
       operationId: listUsers
@@ -2342,12 +2355,24 @@ components:
           type: integer
         packageId:
           type: ["integer", "null"]
+        entityType:
+          type: ["string", "null"]
+        entityId:
+          type: ["integer", "null"]
         actor:
           type: string
         action:
           type: string
         detail:
           type: ["string", "null"]
+        before:
+          nullable: true
+        after:
+          nullable: true
+        regulationRefs:
+          type: array
+          items:
+            type: string
         createdAt:
           type: string
           format: date-time
@@ -2430,6 +2455,10 @@ components:
           type: string
         role:
           type: string
+        roleKey:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
         active:
           type: boolean
         createdAt:
@@ -2442,3 +2471,34 @@ components:
         - role
         - active
         - createdAt
+
+    Me:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        role:
+          type: string
+        roleKey:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        organizationId:
+          type: ["integer", "null"]
+        organizationName:
+          type: ["string", "null"]
+        supplierId:
+          type: ["integer", "null"]
+        supplierName:
+          type: ["string", "null"]
+      required:
+        - id
+        - role
+        - roleKey
+        - permissions

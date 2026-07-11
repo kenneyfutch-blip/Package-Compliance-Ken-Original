@@ -1,0 +1,174 @@
+====================================================
+OFFICIAL DOCUMENT PROCESSING ARCHITECTURE
+====================================================
+
+Google Document AI is the official document extraction and OCR platform for this application.
+
+All document ingestion workflows must be designed around Google Document AI.
+
+Do not use Tesseract as the primary OCR engine.
+
+Do not rely solely on PDF text extraction.
+
+Google Document AI should be treated as the enterprise document processing layer.
+
+====================================================
+GOOGLE DOCUMENT AI RESPONSIBILITIES
+====================================================
+
+Document AI will:
+
+- Extract text from packaging PDFs
+- Extract text from images
+- Identify document structure
+- Capture bounding boxes
+- Capture coordinates
+- Identify packaging components
+- Support batch processing
+- Support multipage documents
+
+====================================================
+EXTRACTED COMPONENTS
+====================================================
+
+Extract:
+
+- Product Name
+- Ingredients
+- Nutrition Facts
+- Warnings
+- Directions
+- Claims
+- Allergen Statements
+- Manufacturer Information
+- Country Of Origin
+- Net Weight
+- Lot Codes
+- Expiration Dates
+- EPA Registration Numbers
+- Hazard Statements
+- Barcode Regions
+
+====================================================
+PROCESSING WORKFLOW
+====================================================
+
+Upload Package
+      ↓
+Document AI
+      ↓
+Extract Content
+      ↓
+Store Results
+      ↓
+OpenAI Compliance Analysis
+      ↓
+FDA / EPA / eCFR Validation
+      ↓
+Compliance Grade
+      ↓
+Review Queue
+
+====================================================
+DOCUMENT AI TRIGGERS
+====================================================
+
+Document AI should only run when:
+
+- New package uploaded
+- New package version uploaded
+- Manual reprocess requested
+
+Opening a package must NOT rerun Document AI.
+
+Viewing reports must NOT rerun Document AI.
+
+Reviewing findings must NOT rerun Document AI.
+
+====================================================
+CACHING REQUIREMENTS
+====================================================
+
+After processing:
+
+Store:
+
+- OCR text
+- Bounding boxes
+- Coordinates
+- Components
+- Confidence scores
+
+All future reviews should use cached results.
+
+Never rerun Document AI unless the source document changes.
+
+====================================================
+CONFIGURATION
+====================================================
+
+System must support:
+
+GOOGLE_PROJECT_ID
+
+GOOGLE_LOCATION
+
+DOCUMENT_AI_PROCESSOR_ID
+
+DOCUMENT_AI_SERVICE_ACCOUNT
+
+Store all credentials in secure environment variables.
+
+====================================================
+FUTURE PROCESSOR SUPPORT
+====================================================
+
+Initial Processor:
+
+Layout Parser
+
+Future Support:
+
+Custom Extractors
+
+Specialized Packaging Models
+
+Nutrition Label Detection
+
+Ingredient Detection
+
+Allergen Detection
+
+====================================================
+SCALABILITY REQUIREMENTS
+====================================================
+
+Support:
+
+50 Users
+
+500 Concurrent Reviews
+
+50,000+ Package Reviews
+
+Bulk Uploads
+
+Batch Processing
+
+Asynchronous Processing
+
+Background Workers
+
+Job Queues
+
+====================================================
+DESIGN PRINCIPLE
+====================================================
+
+Google Document AI is responsible for extraction.
+
+OpenAI is responsible for reasoning.
+
+FDA, EPA, eCFR, USDA, FTC, CPSC, and Internal SOPs are responsible for validation.
+
+The architecture should keep extraction, reasoning, and regulatory validation as separate services.
