@@ -19,6 +19,7 @@ import reviewsRouter from "./reviews";
 import usersRouter from "./users";
 import teamsRouter from "./teams";
 import opsRouter from "./ops";
+import complianceMemoryRouter from "./compliance-memory";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -45,5 +46,6 @@ router.use(reviewsRouter);
 router.use(usersRouter);
 router.use(teamsRouter);
 router.use(opsRouter);
+router.use(complianceMemoryRouter);
 
 export default router;

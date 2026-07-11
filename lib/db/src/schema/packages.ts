@@ -6,6 +6,7 @@ import {
   real,
   timestamp,
   jsonb,
+  index,
 } from "drizzle-orm/pg-core";
 
 export type OcrData = {
@@ -71,7 +72,16 @@ export const packagesTable = pgTable("packages", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (t) => [
+  // Nearly every read is org-scoped; the composite indexes back the dashboard
+  // filters and the paginated package list (which orders by createdAt desc).
+  index("idx_packages_org_created").on(t.organizationId, t.createdAt),
+  index("idx_packages_org_status").on(t.organizationId, t.status),
+  index("idx_packages_org_compliance").on(t.organizationId, t.complianceStatus),
+  index("idx_packages_org_category").on(t.organizationId, t.category),
+  index("idx_packages_org_vendor").on(t.organizationId, t.vendor),
+  index("idx_packages_sku").on(t.sku),
+]);
 
 export type PackageRow = typeof packagesTable.$inferSelect;
 export type InsertPackage = typeof packagesTable.$inferInsert;

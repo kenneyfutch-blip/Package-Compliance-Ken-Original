@@ -5,6 +5,7 @@ import {
   integer,
   boolean,
   timestamp,
+  index,
 } from "drizzle-orm/pg-core";
 
 // The active review assignment for a package. Exactly one active row per package
@@ -41,7 +42,14 @@ export const reviewAssignmentsTable = pgTable("review_assignments", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (t) => [
+  // Workload queues filter by team/assignee + status; the escalation sweep scans
+  // open assignments by due date.
+  index("idx_review_assign_org_status").on(t.organizationId, t.status),
+  index("idx_review_assign_team_status").on(t.teamId, t.status),
+  index("idx_review_assign_user_status").on(t.assigneeUserId, t.status),
+  index("idx_review_assign_due").on(t.dueAt),
+]);
 
 // Append-only trail of every assignment/reassignment/escalation event, so a
 // review's ownership history is fully auditable.
@@ -64,7 +72,10 @@ export const reviewHistoryTable = pgTable("review_history", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (t) => [
+  index("idx_review_hist_package").on(t.packageId),
+  index("idx_review_hist_assignment").on(t.assignmentId),
+]);
 
 // One row captured when a review reaches a terminal state, powering workload and
 // SLA reporting without recomputing from the live assignment each time.
@@ -86,7 +97,11 @@ export const reviewMetricsTable = pgTable("review_metrics", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (t) => [
+  index("idx_review_metrics_org").on(t.organizationId),
+  index("idx_review_metrics_team").on(t.teamId),
+  index("idx_review_metrics_user").on(t.assigneeUserId),
+]);
 
 export type ReviewAssignmentRow = typeof reviewAssignmentsTable.$inferSelect;
 export type InsertReviewAssignment = typeof reviewAssignmentsTable.$inferInsert;

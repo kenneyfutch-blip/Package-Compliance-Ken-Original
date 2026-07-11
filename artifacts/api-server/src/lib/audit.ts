@@ -62,11 +62,18 @@ export async function ensureAuditImmutability(): Promise<void> {
   try {
     await db.execute(sql`
       CREATE OR REPLACE FUNCTION audit_events_prevent_mutation()
-      RETURNS trigger AS $$
+      RETURNS trigger AS $fn$
       BEGIN
+        -- Governed retention: the archival routine sets app.audit_archival for
+        -- its own transaction so it may move cold rows to the archive. Every
+        -- other DELETE, and all UPDATEs, remain forbidden.
+        IF TG_OP = 'DELETE'
+           AND current_setting('app.audit_archival', true) = 'on' THEN
+          RETURN OLD;
+        END IF;
         RAISE EXCEPTION 'audit_events is append-only; % is not permitted', TG_OP;
       END;
-      $$ LANGUAGE plpgsql;
+      $fn$ LANGUAGE plpgsql;
     `);
     await db.execute(
       sql`DROP TRIGGER IF EXISTS audit_events_no_mutation ON audit_events;`,

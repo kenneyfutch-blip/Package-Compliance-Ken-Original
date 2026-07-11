@@ -56,6 +56,7 @@ const VALID_SEVERITY = new Set([
 export async function analyzePackaging(
   pkg: PackageRow,
   regulations: Regulation[],
+  priorKnowledge?: string,
 ): Promise<AnalysisResult> {
   const regContext = regulations
     .map(
@@ -99,7 +100,11 @@ ${pkg.extractedText ?? "(no artwork text provided; infer typical requirements fo
 
 APPLICABLE REGULATIONS KNOWLEDGE BASE:
 ${regContext || "(none provided; rely on standard US packaging regulations)"}
-
+${
+  priorKnowledge && priorKnowledge.trim()
+    ? `\nINSTITUTIONAL COMPLIANCE MEMORY (how reviewers resolved similar findings on past packages — use this to stay consistent with precedent, prefer the same regulation citations and fixes when the same issue recurs, but still analyze this package on its own merits):\n${priorKnowledge}\n`
+    : ""
+}
 Perform:
 1. OCR field extraction: pull structured fields from the artwork text.
 2. Compliance engines: FDA/EPA/CPSC/FTC/USDA regulatory checks, spelling, grammar, contextual language, and marketing claims substantiation. Flag missing mandatory elements (net contents, ingredients, warnings, country of origin, allergen statements, nutrition facts, hazard/precautionary statements, EPA registration where applicable).

@@ -8,3 +8,4 @@
 - [Review Assignment & Workload Engine](review-assignment-engine.md) — durable Postgres job queue; category→team routing; atomic monotonic escalation; SLA/metrics; recurring reschedule dedupe.
 - [Operations Console](operations-console.md) — admin UI; jobs table is org-scoped (filter every read); self-lockout guards; invalidateAuthCache on role change; invite = unlinked user row.
 - [Supplier Architecture & Access Control](supplier-architecture.md) — supplier_user isolation via *Conds helpers (org + own supplierId ?? -1); anti-spoof forced supplierId; submissions:review gate; status lifecycle + external linkage.
+- [Compliance Memory & Scalability](compliance-memory-scalability.md) — self-contained hashed embedder + pgvector recall (org+supplier scoped, non-fatal); push-safe audit archiving in archive schema; governed-delete GUC; named dollar-quote tags in drizzle sql; SQL dashboards must match old JS semantics.

@@ -5,6 +5,7 @@ import {
   integer,
   jsonb,
   timestamp,
+  index,
 } from "drizzle-orm/pg-core";
 import { organizationsTable } from "./organizations";
 
@@ -30,7 +31,14 @@ export const auditEventsTable = pgTable("audit_events", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (t) => [
+  // Audit is the highest-volume table. Reads are org-scoped and time-ordered;
+  // archival/retention sweeps range-scan by createdAt.
+  index("idx_audit_org_created").on(t.organizationId, t.createdAt),
+  index("idx_audit_package").on(t.packageId),
+  index("idx_audit_entity").on(t.entityType, t.entityId),
+  index("idx_audit_created").on(t.createdAt),
+]);
 
 export type AuditEventRow = typeof auditEventsTable.$inferSelect;
 export type InsertAuditEvent = typeof auditEventsTable.$inferInsert;

@@ -45,8 +45,66 @@ import { packageConds, canAccessPackage } from "../lib/rbac/scope";
 import { writeAudit } from "../lib/audit";
 import { autoAssignReview, completeReview } from "../lib/reviews/engine";
 import { matchTeamName } from "../lib/reviews/routing";
+import {
+  retrieveSimilarFindings,
+  captureFindingsForDecision,
+  packageQueryText,
+  formatMemoryForPrompt,
+} from "../lib/memory/engine";
+import { readArchivedAuditForPackage } from "../lib/maintenance/archive";
 
 const router: IRouter = Router();
+
+// Map a raw archived audit row (snake_case, from the archive schema) into the
+// same response shape as a live audit row.
+function mapArchivedAudit(r: Record<string, unknown>) {
+  const createdAt = r["created_at"];
+  return {
+    id: Number(r["id"]),
+    packageId: r["package_id"] === null ? null : Number(r["package_id"]),
+    entityType: String(r["entity_type"] ?? "package"),
+    entityId: r["entity_id"] === null ? null : Number(r["entity_id"]),
+    actor: String(r["actor"] ?? "Unknown"),
+    action: String(r["action"] ?? ""),
+    detail: (r["detail"] as string | null) ?? null,
+    before: (r["before"] as Record<string, unknown> | null) ?? null,
+    after: (r["after"] as Record<string, unknown> | null) ?? null,
+    regulationRefs: (r["regulation_refs"] as string[] | null) ?? [],
+    createdAt:
+      createdAt instanceof Date
+        ? createdAt.toISOString()
+        : String(createdAt ?? ""),
+  };
+}
+
+// Compliance Memory recall: fetch how similar findings were resolved on past
+// packages and format them for the AI review prompt. Non-fatal — a memory miss
+// must never block analysis. When a supplier user triggers the analysis, recall
+// is restricted to that supplier's own findings so the resulting suggestions can
+// never echo another supplier's data.
+async function priorKnowledgeFor(
+  pkg: PackageRow,
+  req: Request,
+): Promise<string | undefined> {
+  try {
+    const ctx = getAuthContext(req);
+    const supplierName =
+      ctx.roleKey === "supplier_user"
+        ? (ctx.supplierName ?? "___no_supplier___")
+        : null;
+    const similar = await retrieveSimilarFindings({
+      organizationId: ctx.organizationId,
+      queryText: packageQueryText(pkg),
+      limit: 6,
+      excludePackageId: pkg.id,
+      supplierName,
+    });
+    return formatMemoryForPrompt(similar) || undefined;
+  } catch (err) {
+    logger.error({ err }, "Compliance memory recall failed");
+    return undefined;
+  }
+}
 
 function parseId(raw: string | string[] | undefined): number {
   const value = Array.isArray(raw) ? raw[0] : raw;
@@ -298,7 +356,8 @@ router.post(
     if (current.extractedText && current.extractedText.trim()) {
       try {
         const regulations = await loadRegulations();
-        const result = await analyzePackaging(current, regulations);
+        const priorKnowledge = await priorKnowledgeFor(current, req);
+        const result = await analyzePackaging(current, regulations, priorKnowledge);
         await applyAnalysis(current, result, organizationId);
         const [refreshed] = await db
           .select()
@@ -422,8 +481,8 @@ router.patch(
     // A human review decision (Approved / Needs Revision) closes the active
     // assignment and captures its SLA + duration metrics for reporting.
     if (data.status === "Approved" || data.status === "Needs Revision") {
+      const ctx = getAuthContext(req);
       try {
-        const ctx = getAuthContext(req);
         await completeReview({
           organizationId: orgId(req),
           packageId: id,
@@ -433,6 +492,20 @@ router.patch(
         });
       } catch (err) {
         logger.error({ err }, "Failed to complete review on decision");
+      }
+
+      // Distil this review into Compliance Memory so future AI reviews can recall
+      // how these findings were resolved. Non-fatal.
+      try {
+        await captureFindingsForDecision({
+          organizationId: orgId(req),
+          pkg: updated!,
+          decision: data.status,
+          actorName: ctx.name || ctx.email || "Unknown",
+          actorId: ctx.clerkUserId,
+        });
+      } catch (err) {
+        logger.error({ err }, "Failed to capture findings into compliance memory");
       }
     }
 
@@ -474,7 +547,8 @@ router.post(
     if (!pkg) return;
     try {
       const regulations = await loadRegulations();
-      const result = await analyzePackaging(pkg, regulations);
+      const priorKnowledge = await priorKnowledgeFor(pkg, req);
+      const result = await analyzePackaging(pkg, regulations, priorKnowledge);
       await applyAnalysis(pkg, result, orgId(req));
     } catch (err) {
       logger.error({ err }, "Analysis failed");
@@ -539,7 +613,8 @@ router.post(
     if (current.extractedText && current.extractedText.trim()) {
       try {
         const regulations = await loadRegulations();
-        const result = await analyzePackaging(current, regulations);
+        const priorKnowledge = await priorKnowledgeFor(current, req);
+        const result = await analyzePackaging(current, regulations, priorKnowledge);
         await applyAnalysis(current, result, orgId(req));
         const [refreshed] = await db
           .select()
@@ -600,17 +675,24 @@ router.get(
     if (id === null) return;
     const pkg = await loadOwnedPackage(req, res, id);
     if (!pkg) return;
-    const rows = await db
-      .select()
-      .from(auditEventsTable)
-      .where(
-        and(
-          eq(auditEventsTable.packageId, id),
-          eq(auditEventsTable.organizationId, orgId(req)),
-        ),
-      )
-      .orderBy(desc(auditEventsTable.createdAt));
-    res.json(rows.map(mapAuditEvent));
+    const organizationId = orgId(req);
+    const [rows, archived] = await Promise.all([
+      db
+        .select()
+        .from(auditEventsTable)
+        .where(
+          and(
+            eq(auditEventsTable.packageId, id),
+            eq(auditEventsTable.organizationId, organizationId),
+          ),
+        )
+        .orderBy(desc(auditEventsTable.createdAt)),
+      readArchivedAuditForPackage(organizationId, id),
+    ]);
+    // Full history = hot rows plus any that have rolled into the archive.
+    const merged = [...rows.map(mapAuditEvent), ...archived.map(mapArchivedAudit)];
+    merged.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    res.json(merged);
   },
 );
 
@@ -681,7 +763,8 @@ router.post(
     let analyzed = 0;
     for (const pkg of rows) {
       try {
-        const result = await analyzePackaging(pkg, regulations);
+        const priorKnowledge = await priorKnowledgeFor(pkg, req);
+        const result = await analyzePackaging(pkg, regulations, priorKnowledge);
         await applyAnalysis(pkg, result, organizationId);
         analyzed += 1;
         if (result.complianceStatus === "Passed") passed += 1;

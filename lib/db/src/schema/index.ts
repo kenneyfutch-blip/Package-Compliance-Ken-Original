@@ -15,3 +15,4 @@ export * from "./reports";
 export * from "./ai_providers";
 export * from "./reviews";
 export * from "./jobs";
+export * from "./compliance-memory";
