@@ -47,7 +47,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { useListNotifications } from "@workspace/api-client-react"
-import { usePermissions, requiredPermFor } from "@/lib/access"
+import { usePermissions } from "@/lib/access"
+import { requiredPermFor } from "@/lib/permissions"
 
 type NavLink = { name: string; href: string; icon?: React.ComponentType<{ className?: string }> }
 type NavGroup = { name: string; icon: React.ComponentType<{ className?: string }>; items: NavLink[] }
