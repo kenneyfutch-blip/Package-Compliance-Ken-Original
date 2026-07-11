@@ -28,6 +28,7 @@ The enterprise foundation for Packaging Compliance AI: every user belongs to an 
 
 ## Frontend gating
 - `artifacts/compliance/src/lib/access.tsx` `requiredPermFor(path)` is the single source mapping a route path -> required permission. **Both** nav filtering (`layout.tsx`) and route gating (`App.tsx`) consult it, so they never drift. Add new gated pages there, not in two places.
+- **Mixed-permission pages:** `requiredPermFor` returns ONE perm, but a page (esp. admin/oversight dashboards) often calls several endpoints with *different* backend perms. Gate on the perm that, under the role matrix in `permissions.ts`, implies the rest — i.e. the narrowest/admin-tier perm held only by roles that also hold the others. **Why:** gating on a broad perm (e.g. `packages:read`) lets a lower role pass the route gate then hit 403s on admin-only calls (`users:read`/`teams:read`). **How to apply:** before choosing the gate, list every endpoint the page hits + its perm, then pick the one no role holds without the others (verify against `permissions.ts`); if no such perm exists, split the page or conditionally render sections by permission.
 
 ## Object download ACL (resolved)
 - `GET /storage/objects/*` now enforces per-object ACL: `resolveObjectOwner` maps the path back to its owning package/supplier record and `canAccessObjectOwner` applies org + supplier-id scoping before streaming (deny-by-default → 404 on unknown/out-of-scope). Owner descriptors carry `supplierId`, not vendor.

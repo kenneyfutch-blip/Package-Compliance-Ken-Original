@@ -47,6 +47,11 @@ import FdaRecalls from "@/pages/fda-recalls"
 import FdaSources from "@/pages/fda-sources"
 import SupplierPortal from "@/pages/supplier-portal"
 import SupplierDetail from "@/pages/supplier-detail"
+import AdminDashboard from "@/pages/admin/admin-dashboard"
+import ReviewQueue from "@/pages/admin/review-queue"
+import ActivityMonitor from "@/pages/admin/activity-monitor"
+import UsageAnalytics from "@/pages/admin/usage-analytics"
+import IntegrationsPage from "@/pages/admin/integrations"
 
 const queryClient = new QueryClient()
 
@@ -282,6 +287,12 @@ function AppRoutes() {
         <Route path="/operations/audit" component={AuditCenter} />
         <Route path="/operations/system" component={SystemHealthPage} />
 
+        {/* Administration */}
+        <Route path="/admin/dashboard" component={AdminDashboard} />
+        <Route path="/admin/queue" component={ReviewQueue} />
+        <Route path="/admin/activity" component={ActivityMonitor} />
+        <Route path="/admin/usage" component={UsageAnalytics} />
+        <Route path="/admin/integrations" component={IntegrationsPage} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/notifications" component={NotificationsPage} />
         <Route component={NotFound} />

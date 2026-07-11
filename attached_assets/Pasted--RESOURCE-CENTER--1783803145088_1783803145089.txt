@@ -1,0 +1,495 @@
+====================================================
+RESOURCE CENTER
+====================================================
+
+Build a dedicated Resource Center that serves as the central knowledge repository for compliance specialists, managers, legal reviewers, packaging teams, and administrators.
+
+This section should provide transparency into regulatory sources, internal standards, compliance guidance, approved language, and system integrations.
+
+The Resource Center should function as the single source of truth for regulatory and compliance knowledge.
+
+====================================================
+MAIN NAVIGATION
+====================================================
+
+RESOURCES
+
+├ Regulatory Source Catalog
+├ FDA Resources
+├ EPA Resources
+├ eCFR Resources
+├ USDA Resources
+├ FTC Resources
+├ CPSC Resources
+├ Internal SOP Library
+├ Approved Language Library
+├ Regulatory Glossary
+├ Compliance Playbooks
+├ Knowledge Center
+├ Release Notes
+└ System Documentation
+
+====================================================
+REGULATORY SOURCE CATALOG
+====================================================
+
+Create a centralized inventory of all connected regulatory sources.
+
+Display:
+
+Source Name
+
+Agency
+
+Status
+
+Last Sync
+
+Records Cached
+
+Endpoint
+
+Purpose
+
+Validation Engine
+
+Categories Covered
+
+Examples:
+
+FDA Drug Labels
+
+Endpoint:
+https://api.fda.gov/drug/label.json
+
+Used For:
+
+- Drug Facts Validation
+- Active Ingredient Validation
+- Warning Language Review
+
+----------------------------------------------------
+
+FDA Food Enforcement
+
+Endpoint:
+https://api.fda.gov/food/enforcement.json
+
+Used For:
+
+- Recall Intelligence
+- Food Safety Validation
+- Historical Compliance Issues
+
+----------------------------------------------------
+
+eCFR Title 21
+
+Endpoint:
+/api/versioner/v1/full/{date}/title-21.xml
+
+Used For:
+
+- Food Labeling
+- Allergens
+- Nutrition Facts
+- Cosmetics
+- OTC Drugs
+
+----------------------------------------------------
+
+eCFR Title 40
+
+Endpoint:
+/api/versioner/v1/full/{date}/title-40.xml
+
+Used For:
+
+- Cleaning Products
+- Disinfectants
+- Hazard Statements
+- EPA Compliance
+
+====================================================
+FDA RESOURCES
+====================================================
+
+Provide dedicated FDA reference pages.
+
+Display:
+
+Connected Endpoints
+
+Endpoint Purpose
+
+Validation Rules
+
+Sync Status
+
+Last Sync Date
+
+Record Counts
+
+Supported Reviews
+
+Examples of What FDA Powers
+
+Create sections:
+
+Drug Labels
+
+Food Enforcement
+
+Food Events
+
+Cosmetic Events
+
+Searchable FDA Knowledge Base
+
+====================================================
+EPA RESOURCES
+====================================================
+
+Display:
+
+EPA Sources
+
+EPA Validation Coverage
+
+Supported Product Types
+
+Examples:
+
+Cleaning Products
+
+Disinfectants
+
+Pesticides
+
+Insect Repellents
+
+Hazard Statement Reviews
+
+Show:
+
+Source
+
+Status
+
+Last Sync
+
+Categories Covered
+
+====================================================
+ECFR RESOURCES
+====================================================
+
+Display:
+
+Title 21
+
+Title 40
+
+Version History
+
+Corrections Tracking
+
+Regulatory Monitoring Status
+
+Examples of Regulations Covered
+
+Allow users to:
+
+Search Regulations
+
+View Regulation Hierarchies
+
+View Version History
+
+View Regulatory Updates
+
+====================================================
+INTERNAL SOP LIBRARY
+====================================================
+
+Store:
+
+Packaging Standards
+
+Compliance Standards
+
+Private Label Requirements
+
+Brand Guidelines
+
+Artwork Standards
+
+Regulatory Procedures
+
+Supplier Requirements
+
+Allow:
+
+Version History
+
+Search
+
+Filtering
+
+Document Comparison
+
+====================================================
+APPROVED LANGUAGE LIBRARY
+====================================================
+
+Create a searchable repository.
+
+Display approved examples for:
+
+Allergen Statements
+
+Country Of Origin Statements
+
+FDA Warnings
+
+EPA Warnings
+
+Hazard Statements
+
+Marketing Disclaimers
+
+Safety Statements
+
+Internal Compliance Language
+
+Users should be able to search:
+
+"Show approved soy allergen language."
+
+"Show approved choking hazard language."
+
+"Show approved EPA warning statements."
+
+====================================================
+REGULATORY GLOSSARY
+====================================================
+
+Create compliance definitions.
+
+Examples:
+
+Allergen
+
+Principal Display Panel
+
+Drug Facts
+
+Net Quantity
+
+Hazard Statement
+
+Signal Word
+
+EPA Registration Number
+
+Natural Claim
+
+Organic Claim
+
+Country Of Origin
+
+Each definition should include:
+
+Definition
+
+Source
+
+Applicable Regulations
+
+Related Guidance
+
+====================================================
+COMPLIANCE PLAYBOOKS
+====================================================
+
+Create review guides by category.
+
+Food Review Playbook
+
+Cosmetic Review Playbook
+
+OTC Drug Review Playbook
+
+Cleaning Product Review Playbook
+
+Toy Review Playbook
+
+Each playbook should include:
+
+Review Steps
+
+Common Violations
+
+Required Checks
+
+Approval Criteria
+
+Escalation Rules
+
+====================================================
+KNOWLEDGE CENTER
+====================================================
+
+Allow users to search across:
+
+FDA Sources
+
+EPA Sources
+
+eCFR
+
+Internal SOPs
+
+Compliance Memory
+
+Approved Language
+
+Historical Reviews
+
+Users should be able to ask:
+
+Show allergen requirements.
+
+Show nutrition labeling rules.
+
+Show approved EPA language.
+
+Show cosmetic warning requirements.
+
+Show FDA regulations related to food packaging.
+
+====================================================
+SOURCE ATTRIBUTION
+====================================================
+
+For every regulatory source display:
+
+Source Name
+
+Owner
+
+Purpose
+
+Validation Engines Using Source
+
+Last Sync
+
+Records Available
+
+Compliance Functions Powered
+
+Examples:
+
+eCFR Title 21
+
+Powers:
+
+- Violation Detection
+- Compliance Scoring
+- Regulatory Search
+- Compliance Copilot
+- Regulatory Monitoring
+
+----------------------------------------------------
+
+Google Document AI
+
+Powers:
+
+- OCR
+- Packaging Component Detection
+- Coordinate Detection
+- Annotation Mapping
+
+----------------------------------------------------
+
+OpenAI GPT-5
+
+Powers:
+
+- Compliance Reasoning
+- Language Review
+- Claim Analysis
+- Remediation Suggestions
+
+====================================================
+SYSTEM DOCUMENTATION
+====================================================
+
+Create documentation pages for:
+
+Architecture Overview
+
+Data Sources
+
+Integrations
+
+Validation Engines
+
+Compliance Engine
+
+Regulatory Monitoring
+
+Notifications
+
+User Roles
+
+Permissions
+
+Audit Logging
+
+Caching Strategy
+
+Review Workflow
+
+====================================================
+SEARCH AND FILTERING
+====================================================
+
+Provide global search.
+
+Allow users to search:
+
+Source Name
+
+Endpoint
+
+Regulation
+
+Keyword
+
+SOP
+
+Approved Language
+
+Compliance Playbook
+
+Return results from all Resource Center content.
+
+====================================================
+SUCCESS CRITERIA
+====================================================
+
+The Resource Center should become the single source of truth for the platform.
+
+Users should be able to answer:
+
+- What regulatory sources are connected?
+- What endpoint powers this feature?
+- What regulations are being checked?
+- What validation engine generated this finding?
+- What approved language should be used?
+- What SOP applies?
+- What compliance guidance exists?
+
+The Resource Center should support onboarding, compliance reviews, audits, training, regulatory research, and platform transparency.

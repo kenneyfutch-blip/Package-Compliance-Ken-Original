@@ -74,6 +74,13 @@ export function requiredPermFor(path: string): string | null {
   if (p === "/operations/system") return "org:manage"
   if (p.startsWith("/operations/")) return "users:read"
   if (p === "/audit") return "audit:read"
+  if (p === "/admin/dashboard") return "org:manage"
+  // Org-wide review-queue oversight. Also calls teams/users list endpoints for
+  // its filters, so gate on the admin-tier perm that implies those too.
+  if (p === "/admin/queue") return "users:read"
+  if (p === "/admin/activity") return "audit:read"
+  if (p === "/admin/usage") return "dashboard:read"
+  if (p === "/admin/integrations") return "ai_providers:read"
   if (p === "/admin") return "users:read"
   if (p === "/notifications") return "notifications:read"
   return null

@@ -41,6 +41,7 @@ import {
   UsersRound,
   Gauge,
   Activity,
+  Plug,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -128,18 +129,23 @@ const NAV: NavEntry[] = [
   },
   {
     type: "group",
-    name: "Operations",
+    name: "Administration",
     icon: Cog,
     items: [
+      { name: "Admin Overview", href: "/admin/dashboard", icon: LayoutDashboard },
+      { name: "Review Queue", href: "/admin/queue", icon: ClipboardList },
+      { name: "Activity Monitor", href: "/admin/activity", icon: Activity },
+      { name: "Usage Analytics", href: "/admin/usage", icon: LineChart },
+      { name: "Integrations", href: "/admin/integrations", icon: Plug },
       { name: "User Management", href: "/operations/users", icon: Users },
       { name: "Team Management", href: "/operations/teams", icon: UsersRound },
       { name: "Roles & Permissions", href: "/operations/roles", icon: ShieldCheck },
       { name: "Workload & SLA", href: "/operations/workload", icon: Gauge },
       { name: "Audit Center", href: "/operations/audit", icon: History },
       { name: "Queue & Health", href: "/operations/system", icon: Activity },
+      { name: "Settings", href: "/admin", icon: Settings },
     ],
   },
-  { type: "link", name: "Admin", href: "/admin", icon: Settings },
 ]
 
 function isItemActive(location: string, href: string): boolean {

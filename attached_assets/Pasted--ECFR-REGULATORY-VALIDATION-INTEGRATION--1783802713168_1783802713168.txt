@@ -1,0 +1,319 @@
+====================================================
+ECFR REGULATORY VALIDATION INTEGRATION
+====================================================
+
+Integrate the existing eCFR Regulatory Service directly into the package analysis workflow.
+
+Use eCFR as the regulatory source of truth during all packaging reviews.
+
+====================================================
+REGULATORY SOURCES
+====================================================
+
+FDA Regulations
+
+Title 21
+
+EPA Regulations
+
+Title 40
+
+Sources:
+
+/api/versioner/v1/full/{date}/title-21.xml
+
+/api/versioner/v1/full/{date}/title-40.xml
+
+====================================================
+PACKAGE REVIEW WORKFLOW
+====================================================
+
+Every uploaded package must be validated against regulatory requirements.
+
+Workflow:
+
+Upload Package
+    ↓
+Google Document AI
+    ↓
+Extract Package Components
+    ↓
+OpenAI Analysis
+    ↓
+eCFR Validation
+    ↓
+Violation Detection
+    ↓
+Risk Scoring
+    ↓
+Compliance Grade
+    ↓
+Review Queue
+
+====================================================
+COMPONENTS TO VALIDATE
+====================================================
+
+Validate:
+
+Product Name
+
+Ingredients
+
+Nutrition Facts
+
+Claims
+
+Warnings
+
+Directions
+
+Country Of Origin
+
+Manufacturer Information
+
+Allergen Statements
+
+Net Quantity
+
+Expiration Dates
+
+Lot Codes
+
+EPA Registration Numbers
+
+Hazard Statements
+
+Barcode Regions
+
+====================================================
+REGULATORY VALIDATION RULES
+====================================================
+
+Use Title 21 for:
+
+Food Products
+
+Cosmetics
+
+OTC Drugs
+
+Supplements
+
+Health Products
+
+Use Title 40 for:
+
+Cleaning Products
+
+Disinfectants
+
+Pesticides
+
+Insect Repellents
+
+Hazardous Products
+
+====================================================
+VIOLATION DETECTION ENGINE
+====================================================
+
+Generate findings whenever:
+
+Required language is missing
+
+Required warnings are missing
+
+Required disclosures are missing
+
+Required allergen statements are missing
+
+Required manufacturer information is missing
+
+Required country of origin information is missing
+
+Required hazard language is missing
+
+Product claims violate regulations
+
+Product claims require review
+
+Labeling does not meet regulatory requirements
+
+====================================================
+VIOLATION OUTPUT
+====================================================
+
+Every violation must include:
+
+Violation Type
+
+Severity
+
+Category
+
+Source Regulation
+
+Regulation Citation
+
+Regulation Title
+
+Violation Description
+
+Reason
+
+Suggested Fix
+
+Confidence Score
+
+Approval Impact
+
+Example:
+
+Violation Type:
+Missing Allergen Disclosure
+
+Severity:
+Critical
+
+Regulation:
+Title 21
+
+Citation:
+21 CFR Part 101
+
+Reason:
+Soy ingredient detected but allergen declaration not found.
+
+Recommended Fix:
+Contains: Soy
+
+Confidence:
+98%
+
+====================================================
+COMPLIANCE COPILOT INTEGRATION
+====================================================
+
+For every violation allow users to ask:
+
+Why did this fail?
+
+What regulation applies?
+
+Show me the regulation.
+
+Show regulation citation.
+
+How do I fix this?
+
+Provide a summary of the applicable regulation.
+
+Provide approved language examples.
+
+====================================================
+COMPLIANCE SCORING
+====================================================
+
+Generate:
+
+Compliance Grade
+
+Risk Score
+
+Critical Findings Count
+
+Major Findings Count
+
+Minor Findings Count
+
+Approval Recommendation
+
+Example:
+
+Grade: B
+
+Risk Score: 82
+
+Critical Findings: 1
+
+Major Findings: 2
+
+Recommendation:
+Needs Revision
+
+====================================================
+REGULATORY SEARCH
+====================================================
+
+Enable natural language queries.
+
+Examples:
+
+Show regulations related to allergen declarations.
+
+Show FDA requirements for nutrition labels.
+
+Show EPA requirements for disinfectants.
+
+Show cosmetic labeling requirements.
+
+Show country of origin requirements.
+
+Use stored eCFR embeddings to retrieve relevant regulations.
+
+====================================================
+REVIEW REPORTS
+====================================================
+
+Package review reports must include:
+
+Detected Violations
+
+Applicable Regulations
+
+Regulation Citations
+
+Suggested Fixes
+
+Compliance Grade
+
+Risk Score
+
+Approval Recommendation
+
+====================================================
+CACHING
+====================================================
+
+Do not query eCFR during every review.
+
+Use locally stored regulatory data.
+
+Use embeddings created from Title 21 and Title 40.
+
+Use weekly regulatory synchronization jobs to update content.
+
+====================================================
+SUCCESS CRITERIA
+====================================================
+
+When a package is uploaded and analyzed:
+
+The system should automatically compare extracted package content against eCFR regulations.
+
+The system should generate violations, risk scores, compliance grades, recommendations, and regulation citations.
+
+The user should never need to manually search regulations.
+
+The platform should identify:
+
+What is wrong
+
+Why it is wrong
+
+What regulation applies
+
+How to fix it
+
+Whether approval should be granted

@@ -1,0 +1,374 @@
+====================================================
+INTERNAL POLICY & STANDARDS ENGINE
+====================================================
+
+Build an Internal Policy Management System.
+
+This system will allow compliance managers and administrators to upload company-specific standards that influence compliance reviews.
+
+The policies become part of the compliance engine and are validated alongside FDA, EPA, eCFR, and other regulatory sources.
+
+====================================================
+PURPOSE
+====================================================
+
+The platform must support both:
+
+External Regulations
+
+Examples:
+
+- FDA
+- EPA
+- eCFR
+- FTC
+- USDA
+- CPSC
+
+Internal Standards
+
+Examples:
+
+- Dollar Tree Packaging Standards
+- Brand Guidelines
+- Supplier Standards
+- Artwork Standards
+- Compliance Procedures
+- Legal Requirements
+- Marketing Restrictions
+
+Internal standards can generate violations even when no government regulation exists.
+
+====================================================
+NEW NAVIGATION
+====================================================
+
+Resources
+
+  Internal Standards
+
+  SOP Library
+
+  Packaging Standards
+
+  Brand Standards
+
+  Approved Language
+
+  Policy Repository
+
+====================================================
+POLICY MANAGEMENT
+====================================================
+
+Create:
+
+Admin
+  Policy Management
+
+Authorized users may:
+
+Upload Policies
+
+Edit Policies
+
+Archive Policies
+
+Version Policies
+
+Assign Categories
+
+Assign Owners
+
+Set Effective Dates
+
+Track Changes
+
+====================================================
+SUPPORTED FILES
+====================================================
+
+Allow upload of:
+
+PDF
+
+DOCX
+
+TXT
+
+CSV
+
+PowerPoint
+
+Google Document Export
+
+Scanned Files
+
+Process all policy documents using:
+
+Google Document AI
+
+Store extracted text
+
+Create embeddings
+
+Load into Compliance Copilot
+
+====================================================
+POLICY CATEGORIES
+====================================================
+
+Examples:
+
+Packaging Standards
+
+Brand Standards
+
+Private Label Standards
+
+Supplier Standards
+
+Legal Standards
+
+Marketing Standards
+
+Quality Standards
+
+Artwork Standards
+
+Merchandising Standards
+
+Country Requirements
+
+Product Category Standards
+
+====================================================
+POLICY EXAMPLES
+====================================================
+
+Example:
+
+Policy:
+
+No pricing information may appear on packaging.
+
+Violation:
+
+Price detected on package.
+
+Result:
+
+Internal Standard Violation
+
+Severity:
+High
+
+Source:
+Dollar Tree Packaging Standard
+
+----------------------------------------------------
+
+Policy:
+
+Do not display promotional stickers on package artwork.
+
+Violation:
+
+Promotional sticker detected.
+
+Source:
+Brand Standard
+
+----------------------------------------------------
+
+Policy:
+
+Only approved allergen language may be used.
+
+Violation:
+
+Unapproved allergen wording.
+
+Source:
+SOP Library
+
+====================================================
+POLICY INGESTION WORKFLOW
+====================================================
+
+Upload Policy
+      ↓
+Document AI
+      ↓
+Extract Text
+      ↓
+Create Embeddings
+      ↓
+Store Metadata
+      ↓
+Index For Search
+      ↓
+Load Into Compliance Engine
+
+====================================================
+POLICY METADATA
+====================================================
+
+Store:
+
+Policy Name
+
+Policy Type
+
+Department
+
+Owner
+
+Effective Date
+
+Expiration Date
+
+Version
+
+Document Status
+
+Document Source
+
+Tags
+
+Category
+
+====================================================
+COMPLIANCE ENGINE INTEGRATION
+====================================================
+
+During package reviews validate against:
+
+FDA
+
+EPA
+
+eCFR
+
+Internal SOPs
+
+Packaging Standards
+
+Brand Standards
+
+Supplier Standards
+
+Approved Language
+
+Generate findings from internal standards.
+
+Example:
+
+External Compliance:
+Pass
+
+Internal Compliance:
+Fail
+
+Reason:
+Pricing detected on package.
+
+====================================================
+POLICY VIOLATIONS
+====================================================
+
+Generate:
+
+Violation Type
+
+Severity
+
+Policy Source
+
+Policy Name
+
+Policy Section
+
+Description
+
+Suggested Fix
+
+Confidence Score
+
+====================================================
+POLICY SEARCH
+====================================================
+
+Allow natural language search.
+
+Examples:
+
+Show policies related to packaging pricing.
+
+Show approved allergen language.
+
+Show supplier requirements.
+
+Show prohibited marketing claims.
+
+Show brand standards for food products.
+
+====================================================
+POLICY COPILOT
+====================================================
+
+Allow users to ask:
+
+What does Dollar Tree require?
+
+What internal policy applies?
+
+Show the approved standard.
+
+How was this violation determined?
+
+Show supporting documentation.
+
+====================================================
+VERSION CONTROL
+====================================================
+
+Maintain:
+
+Policy History
+
+Version History
+
+Effective Dates
+
+Change Logs
+
+Approval Workflow
+
+Audit Trail
+
+====================================================
+POLICY MONITORING
+====================================================
+
+Create alerts when:
+
+Policy Updated
+
+Policy Retired
+
+New Policy Added
+
+Policy Impacts Active Products
+
+Generate impact reports.
+
+====================================================
+SUCCESS CRITERIA
+====================================================
+
+The compliance engine must evaluate both regulatory requirements and internal company standards.
+
+Internal policies should have equal authority to FDA and eCFR requirements during package reviews.
+
+Users should be able to upload company documentation and immediately influence future compliance reviews without requiring software changes.
