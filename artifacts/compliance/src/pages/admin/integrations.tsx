@@ -72,6 +72,20 @@ export default function Integrations() {
                     <span className="font-mono bg-muted px-2 py-0.5 rounded text-xs">{p.hasKey ? "••••" + (p.keyLast4 || "") : "Missing"}</span>
                   </div>
                 </div>
+                {p.tiers && (
+                  <div className="pt-3 border-t border-border/50 space-y-1.5">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Model Tiers</div>
+                    {(["fast", "standard", "reasoning"] as const).map((t) => (
+                      <div key={t} className="flex justify-between items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">{p.tiers![t].codename}</span>
+                          <span className="capitalize"> · {t}</span>
+                        </span>
+                        <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded truncate">{p.tiers![t].model}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </CardContent>

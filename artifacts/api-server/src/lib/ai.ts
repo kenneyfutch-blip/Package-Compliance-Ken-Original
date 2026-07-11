@@ -1,5 +1,10 @@
 import type { OcrData, Regulation, PackageRow } from "@workspace/db";
-import { resolveAiClient } from "./ai-client";
+import { resolveAiClientForTier } from "./ai-client";
+import {
+  runTiered,
+  readUsage,
+  type AiOrchestration,
+} from "./ai-orchestration";
 
 export type FindingClass = "issue" | "warning" | "passed" | "recommendation";
 
@@ -28,6 +33,7 @@ export type AnalysisResult = {
   ocr: OcrData;
   recommendations: string[];
   violations: AnalyzedViolation[];
+  orchestration?: AiOrchestration;
 };
 
 function safeParse(content: string): any {
@@ -177,21 +183,39 @@ Perform:
 Respond with JSON of shape:
 {"category":string,"grade":string,"riskScore":number,"complianceStatus":string,"summary":string,"ocr":{"productName":string|null,"ingredients":string|null,"directions":string|null,"warnings":string|null,"claims":string[],"marketingCopy":string|null,"nutritionFacts":string|null,"allergenStatements":string|null,"netWeight":string|null,"countryOfOrigin":string|null,"manufacturerInfo":string|null,"expirationDate":string|null,"epaRegistrationNumbers":string|null,"hazardStatements":string|null},"recommendations":string[],"violations":[{"severity":string,"findingClass":string,"engine":string,"title":string,"description":string,"regulationRef":string|null,"recommendation":string|null,"detectedText":string|null,"suggestedText":string|null,"confidence":number,"claimFlags":string[],"page":number,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
 
-  const { client, model } = await resolveAiClient();
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 8192,
-  });
+  const { result, orchestration } = await runTiered<AnalysisResult>({
+    workload: "packaging_analysis",
+    assess: (r) => {
+      const confs = r.violations
+        .map((v) => v.confidence)
+        .filter((c): c is number => c != null);
+      const confidence = confs.length
+        ? Math.round(confs.reduce((a, b) => a + b, 0) / confs.length)
+        : null;
+      const risky = r.riskScore >= 70 || r.complianceStatus === "Failed";
+      return {
+        confidence,
+        risky,
+        reason: risky
+          ? `High-risk result (risk score ${r.riskScore})`
+          : undefined,
+      };
+    },
+    run: async ({ client, model, tier }) => {
+      const response = await client.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: tier === "reasoning" ? 16384 : 8192,
+      });
 
-  const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
+      const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
 
-  const violations: AnalyzedViolation[] = Array.isArray(parsed.violations)
-    ? parsed.violations.map((v: any) => {
+      const violations: AnalyzedViolation[] = Array.isArray(parsed.violations)
+        ? parsed.violations.map((v: any) => {
         const findingClass: FindingClass = VALID_CLASS.has(v?.findingClass)
           ? v.findingClass
           : "issue";
@@ -257,22 +281,29 @@ Respond with JSON of shape:
     hazardStatements: parsed?.ocr?.hazardStatements ?? null,
   };
 
-  return {
-    category: String(parsed?.category ?? pkg.category ?? "Uncategorized"),
-    grade: String(parsed?.grade ?? "C"),
-    riskScore: clampScore(parsed?.riskScore),
-    complianceStatus: ["Passed", "Failed", "Needs Review"].includes(
-      parsed?.complianceStatus,
-    )
-      ? parsed.complianceStatus
-      : "Needs Review",
-    summary: String(parsed?.summary ?? ""),
-    ocr,
-    recommendations: Array.isArray(parsed?.recommendations)
-      ? parsed.recommendations.map((r: any) => String(r))
-      : [],
-    violations,
-  };
+      return {
+        result: {
+          category: String(parsed?.category ?? pkg.category ?? "Uncategorized"),
+          grade: String(parsed?.grade ?? "C"),
+          riskScore: clampScore(parsed?.riskScore),
+          complianceStatus: ["Passed", "Failed", "Needs Review"].includes(
+            parsed?.complianceStatus,
+          )
+            ? parsed.complianceStatus
+            : "Needs Review",
+          summary: String(parsed?.summary ?? ""),
+          ocr,
+          recommendations: Array.isArray(parsed?.recommendations)
+            ? parsed.recommendations.map((r: any) => String(r))
+            : [],
+          violations,
+        },
+        usage: readUsage(response.usage),
+      };
+    },
+  });
+
+  return { ...result, orchestration };
 }
 
 /**
@@ -282,7 +313,7 @@ Respond with JSON of shape:
 export async function extractTextFromImage(
   imageDataUrl: string,
 ): Promise<string> {
-  const { client, model } = await resolveAiClient();
+  const { client, model } = await resolveAiClientForTier("fast");
 
   const system = `You are a precise OCR engine for retail product packaging artwork. Transcribe ALL text visible in the image verbatim — brand names, product names, ingredient lists, warnings, directions, nutrition facts, net weight, marketing claims, country of origin, manufacturer info, barcodes labels, and any fine print. Preserve the reading order roughly top-to-bottom, left-to-right. Keep original spelling exactly as printed, including any misspellings (do NOT correct them). Do not add commentary, headings, or explanations. If no text is legible, respond with an empty string. Do not use emojis.`;
 
@@ -325,7 +356,7 @@ export type ExtractedPackageFields = {
 export async function extractPackageFieldsFromImage(
   imageDataUrl: string,
 ): Promise<ExtractedPackageFields> {
-  const { client, model } = await resolveAiClient();
+  const { client, model } = await resolveAiClientForTier("fast");
 
   const system = `You extract structured metadata fields from a single retail product packaging artwork image, to pre-fill a data-entry form. Respond ONLY with valid minified JSON. Do not use emojis.
 
@@ -426,7 +457,7 @@ REVIEWER QUESTION: ${question}
 
 Answer the question using the context above. Cite the specific regulations you rely on in the citations array.`;
 
-  const { client, model } = await resolveAiClient();
+  const { client, model } = await resolveAiClientForTier("standard");
   const response = await client.chat.completions.create({
     model,
     messages: [
@@ -506,7 +537,7 @@ Focus on compliance-significant changes (claims, warnings, ingredients, regulato
 
 Respond with JSON: {"summary":string,"changes":[{"changeType":string,"category":string,"field":string|null,"before":string|null,"after":string|null,"note":string|null}]}`;
 
-  const { client, model } = await resolveAiClient();
+  const { client, model } = await resolveAiClientForTier("fast");
   const response = await client.chat.completions.create({
     model,
     messages: [

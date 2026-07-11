@@ -2829,6 +2829,22 @@ export const ListAiProvidersResponseItem = zod.object({
   "name": zod.string(),
   "providerType": zod.string(),
   "model": zod.string(),
+  "fastModel": zod.string().nullish(),
+  "reasoningModel": zod.string().nullish(),
+  "tiers": zod.object({
+  "fast": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+}),
+  "standard": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+}),
+  "reasoning": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+})
+}),
   "baseUrl": zod.string().nullish(),
   "managed": zod.boolean(),
   "active": zod.boolean(),
@@ -2853,6 +2869,8 @@ export const CreateAiProviderBody = zod.object({
   "name": zod.string().min(1),
   "providerType": zod.string().optional(),
   "model": zod.string().min(1),
+  "fastModel": zod.string().optional(),
+  "reasoningModel": zod.string().optional(),
   "baseUrl": zod.string().optional(),
   "apiKey": zod.string().optional()
 })
@@ -2862,6 +2880,22 @@ export const CreateAiProviderResponse = zod.object({
   "name": zod.string(),
   "providerType": zod.string(),
   "model": zod.string(),
+  "fastModel": zod.string().nullish(),
+  "reasoningModel": zod.string().nullish(),
+  "tiers": zod.object({
+  "fast": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+}),
+  "standard": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+}),
+  "reasoning": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+})
+}),
   "baseUrl": zod.string().nullish(),
   "managed": zod.boolean(),
   "active": zod.boolean(),
@@ -2884,6 +2918,8 @@ export const UpdateAiProviderParams = zod.object({
 export const UpdateAiProviderBody = zod.object({
   "name": zod.string().optional(),
   "model": zod.string().optional(),
+  "fastModel": zod.string().optional(),
+  "reasoningModel": zod.string().optional(),
   "baseUrl": zod.string().optional(),
   "apiKey": zod.string().optional(),
   "active": zod.boolean().optional()
@@ -2894,6 +2930,22 @@ export const UpdateAiProviderResponse = zod.object({
   "name": zod.string(),
   "providerType": zod.string(),
   "model": zod.string(),
+  "fastModel": zod.string().nullish(),
+  "reasoningModel": zod.string().nullish(),
+  "tiers": zod.object({
+  "fast": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+}),
+  "standard": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+}),
+  "reasoning": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+})
+}),
   "baseUrl": zod.string().nullish(),
   "managed": zod.boolean(),
   "active": zod.boolean(),
@@ -2928,6 +2980,22 @@ export const ActivateAiProviderResponse = zod.object({
   "name": zod.string(),
   "providerType": zod.string(),
   "model": zod.string(),
+  "fastModel": zod.string().nullish(),
+  "reasoningModel": zod.string().nullish(),
+  "tiers": zod.object({
+  "fast": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+}),
+  "standard": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+}),
+  "reasoning": zod.object({
+  "codename": zod.string(),
+  "model": zod.string()
+})
+}),
   "baseUrl": zod.string().nullish(),
   "managed": zod.boolean(),
   "active": zod.boolean(),

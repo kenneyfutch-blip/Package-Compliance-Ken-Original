@@ -12,6 +12,8 @@ export interface AiProviderInput {
   providerType?: string;
   /** @minLength 1 */
   model: string;
+  fastModel?: string;
+  reasoningModel?: string;
   baseUrl?: string;
   apiKey?: string;
 }

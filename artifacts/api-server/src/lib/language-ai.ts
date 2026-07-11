@@ -1,5 +1,9 @@
 import type { Regulation, PackageRow, ClaimReviewFlags } from "@workspace/db";
-import { resolveAiClient } from "./ai-client";
+import {
+  runTiered,
+  readUsage,
+  type AiOrchestration,
+} from "./ai-orchestration";
 
 export type LanguageFinding = {
   issueType:
@@ -25,6 +29,7 @@ export type LanguageReviewResult = {
   confidence: number;
   summary: string;
   findings: LanguageFinding[];
+  orchestration?: AiOrchestration;
 };
 
 const VALID_ISSUE_TYPES = new Set([
@@ -119,21 +124,31 @@ ${regContext || "(none provided; rely on standard US packaging regulations)"}
 Respond with JSON of shape:
 {"score":number,"confidence":number,"summary":string,"findings":[{"issueType":string,"severity":string,"originalText":string|null,"suggestedText":string|null,"reason":string|null,"regulationReference":string|null,"confidenceScore":number,"claimRiskScore":number|null,"reviewFlags":{"fda":boolean,"epa":boolean,"ftc":boolean,"legal":boolean}|null,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
 
-  const { client, model } = await resolveAiClient();
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 8192,
-  });
+  const { result, orchestration } = await runTiered<LanguageReviewResult>({
+    workload: "language_review",
+    assess: (r) => {
+      const risky = r.score < 70;
+      return {
+        confidence: Math.round((r.confidence ?? 0.8) * 100),
+        risky,
+        reason: risky ? `High-risk language score (${r.score})` : undefined,
+      };
+    },
+    run: async ({ client, model, tier }) => {
+      const response = await client.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: tier === "reasoning" ? 16384 : 8192,
+      });
 
-  const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
+      const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
 
-  const findings: LanguageFinding[] = Array.isArray(parsed.findings)
-    ? parsed.findings.map((f: any): LanguageFinding => {
+      const findings: LanguageFinding[] = Array.isArray(parsed.findings)
+        ? parsed.findings.map((f: any): LanguageFinding => {
         const issueType = VALID_ISSUE_TYPES.has(f?.issueType)
           ? f.issueType
           : "Context";
@@ -176,10 +191,22 @@ Respond with JSON of shape:
       })
     : [];
 
-  return {
-    score: clampInt(parsed?.score, 0, 100, findings.length === 0 ? 100 : 80),
-    confidence: clampUnit(parsed?.confidence, 0.8),
-    summary: String(parsed?.summary ?? ""),
-    findings,
-  };
+      return {
+        result: {
+          score: clampInt(
+            parsed?.score,
+            0,
+            100,
+            findings.length === 0 ? 100 : 80,
+          ),
+          confidence: clampUnit(parsed?.confidence, 0.8),
+          summary: String(parsed?.summary ?? ""),
+          findings,
+        },
+        usage: readUsage(response.usage),
+      };
+    },
+  });
+
+  return { ...result, orchestration };
 }

@@ -4614,6 +4614,23 @@ components:
           type: string
         model:
           type: string
+        fastModel:
+          type: ["string", "null"]
+        reasoningModel:
+          type: ["string", "null"]
+        tiers:
+          type: object
+          properties:
+            fast:
+              $ref: "#/components/schemas/AiTierModel"
+            standard:
+              $ref: "#/components/schemas/AiTierModel"
+            reasoning:
+              $ref: "#/components/schemas/AiTierModel"
+          required:
+            - fast
+            - standard
+            - reasoning
         baseUrl:
           type: ["string", "null"]
         managed:
@@ -4639,11 +4656,23 @@ components:
         - name
         - providerType
         - model
+        - tiers
         - managed
         - active
         - status
         - hasKey
         - createdAt
+
+    AiTierModel:
+      type: object
+      properties:
+        codename:
+          type: string
+        model:
+          type: string
+      required:
+        - codename
+        - model
 
     AiProviderInput:
       type: object
@@ -4656,6 +4685,10 @@ components:
         model:
           type: string
           minLength: 1
+        fastModel:
+          type: string
+        reasoningModel:
+          type: string
         baseUrl:
           type: string
         apiKey:
@@ -4670,6 +4703,10 @@ components:
         name:
           type: string
         model:
+          type: string
+        fastModel:
+          type: string
+        reasoningModel:
           type: string
         baseUrl:
           type: string

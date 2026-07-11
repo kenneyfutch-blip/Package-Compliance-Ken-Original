@@ -5,12 +5,18 @@
  * Packaging Compliance AI API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AiProviderTiers } from './aiProviderTiers';
 
 export interface AiProvider {
   id: number;
   name: string;
   providerType: string;
   model: string;
+  /** @nullable */
+  fastModel?: string | null;
+  /** @nullable */
+  reasoningModel?: string | null;
+  tiers: AiProviderTiers;
   /** @nullable */
   baseUrl?: string | null;
   managed: boolean;

@@ -1157,11 +1157,27 @@ export interface RegulationInput {
   publicationDate?: string;
 }
 
+export interface AiTierModel {
+  codename: string;
+  model: string;
+}
+
+export type AiProviderTiers = {
+  fast: AiTierModel;
+  standard: AiTierModel;
+  reasoning: AiTierModel;
+};
+
 export interface AiProvider {
   id: number;
   name: string;
   providerType: string;
   model: string;
+  /** @nullable */
+  fastModel?: string | null;
+  /** @nullable */
+  reasoningModel?: string | null;
+  tiers: AiProviderTiers;
   /** @nullable */
   baseUrl?: string | null;
   managed: boolean;
@@ -1183,6 +1199,8 @@ export interface AiProviderInput {
   providerType?: string;
   /** @minLength 1 */
   model: string;
+  fastModel?: string;
+  reasoningModel?: string;
   baseUrl?: string;
   apiKey?: string;
 }
@@ -1190,6 +1208,8 @@ export interface AiProviderInput {
 export interface AiProviderUpdate {
   name?: string;
   model?: string;
+  fastModel?: string;
+  reasoningModel?: string;
   baseUrl?: string;
   apiKey?: string;
   active?: boolean;

@@ -16,6 +16,11 @@ export const aiProvidersTable = pgTable(
     // "openai" | "openrouter" | "custom" — all OpenAI-compatible chat completions
     providerType: text("provider_type").notNull().default("openai"),
     model: text("model").notNull(),
+    // Optional per-tier model overrides. Standard tier always uses `model`.
+    // When null, fast/reasoning fall back to the managed default (managed
+    // provider) or to `model` (custom single-model provider).
+    fastModel: text("fast_model"),
+    reasoningModel: text("reasoning_model"),
     baseUrl: text("base_url"),
     // Encrypted at rest (AES-256-GCM). Never returned to the client.
     apiKey: text("api_key"),

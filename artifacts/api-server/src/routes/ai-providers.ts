@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, aiProvidersTable, type AiProvider } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { CreateAiProviderBody, UpdateAiProviderBody } from "@workspace/api-zod";
-import { buildClient } from "../lib/ai-client";
+import { buildClient, tierModelFor, TIER_CODENAMES } from "../lib/ai-client";
 import { encryptSecret } from "../lib/crypto";
 import { isValidProviderType, validateBaseUrl } from "../lib/provider-security";
 import { requirePermission } from "../lib/rbac/context";
@@ -22,11 +22,29 @@ function requireId(
 }
 
 function mapProvider(row: AiProvider) {
+  const usingManaged = row.managed || !row.apiKey;
   return {
     id: row.id,
     name: row.name,
     providerType: row.providerType,
     model: row.model,
+    fastModel: row.fastModel,
+    reasoningModel: row.reasoningModel,
+    // Effective model backing each routing tier (Luna/Terra/Sol).
+    tiers: {
+      fast: {
+        codename: TIER_CODENAMES.fast,
+        model: tierModelFor(row, "fast", usingManaged),
+      },
+      standard: {
+        codename: TIER_CODENAMES.standard,
+        model: tierModelFor(row, "standard", usingManaged),
+      },
+      reasoning: {
+        codename: TIER_CODENAMES.reasoning,
+        model: tierModelFor(row, "reasoning", usingManaged),
+      },
+    },
     baseUrl: row.baseUrl,
     managed: row.managed,
     active: row.active,
@@ -94,6 +112,8 @@ router.post(
         name,
         providerType,
         model,
+        fastModel: parsed.data.fastModel?.trim() || null,
+        reasoningModel: parsed.data.reasoningModel?.trim() || null,
         baseUrl: providerType === "openai" ? null : baseUrl,
         apiKey: apiKey ? encryptSecret(apiKey) : null,
         keyLast4: apiKey ? apiKey.slice(-4) : null,
@@ -132,6 +152,10 @@ router.patch(
     const updates: Partial<typeof aiProvidersTable.$inferInsert> = {};
     if (name !== undefined) updates.name = name;
     if (model !== undefined) updates.model = model;
+    if (parsed.data.fastModel !== undefined)
+      updates.fastModel = parsed.data.fastModel.trim() || null;
+    if (parsed.data.reasoningModel !== undefined)
+      updates.reasoningModel = parsed.data.reasoningModel.trim() || null;
     if (baseUrl !== undefined) {
       if (baseUrl) {
         const urlError = await validateBaseUrl(baseUrl);

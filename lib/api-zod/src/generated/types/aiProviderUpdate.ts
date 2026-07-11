@@ -9,6 +9,8 @@
 export interface AiProviderUpdate {
   name?: string;
   model?: string;
+  fastModel?: string;
+  reasoningModel?: string;
   baseUrl?: string;
   apiKey?: string;
   active?: boolean;

@@ -18,4 +18,5 @@
 - [Internal Policy & Standards Engine](policy-engine.md) — org policies as first-class "Internal Standard" rules; authored summary is authoritative (doc optional); non-fatal recall; version publish needs row-lock + unique index; single index-create call.
 - [API security hardening](security-hardening.md) — rate limiter keyed by user/IP (baseUrl+path, strip trailing slash); upload allowlist must keep .ai/.indd; stored-XSS fixed at SERVE time not upload; helmet CORP cross-origin.
 - [Resource Center hub](resource-center.md) — unified reference hub: regulations table = libraries + internal SOP (agency regex split); glossary/sop_document search types reserved no-ops; recently-viewed is localStorage.
+- [AI orchestration tiers](ai-orchestration-tiers.md) — Luna/Terra/Sol tiers, bounded confidence/risk escalation, keyless-custom-fallback model-resolution rule.
 - [Fast Refresh boundary crash](fast-refresh-boundary-crash.md) — "useX must be used within XProvider" white-screen in dev = a .tsx mixing component+plain-fn exports breaks HMR (context torn down); also transient during orval clean:true codegen.
