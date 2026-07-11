@@ -29,6 +29,11 @@ export interface FdaRecall {
   location: string;
   initiationDate: string | null;
   reportDate: string | null;
+  // Detail fields surfaced in the recall drill-down.
+  codeInfo: string;
+  productQuantity: string;
+  voluntaryMandated: string;
+  initialFirmNotification: string;
 }
 
 interface OpenFdaEnforcement {
@@ -44,6 +49,10 @@ interface OpenFdaEnforcement {
   country?: string;
   recall_initiation_date?: string;
   report_date?: string;
+  code_info?: string;
+  product_quantity?: string;
+  voluntary_mandated?: string;
+  initial_firm_notification?: string;
 }
 
 function mapRecall(r: OpenFdaEnforcement, category: RecallCategory): FdaRecall {
@@ -59,6 +68,10 @@ function mapRecall(r: OpenFdaEnforcement, category: RecallCategory): FdaRecall {
     location: [r.city, r.state, r.country].filter(Boolean).join(", "),
     initiationDate: formatFdaDate(r.recall_initiation_date),
     reportDate: formatFdaDate(r.report_date),
+    codeInfo: r.code_info ?? "",
+    productQuantity: r.product_quantity ?? "",
+    voluntaryMandated: r.voluntary_mandated ?? "",
+    initialFirmNotification: r.initial_firm_notification ?? "",
   };
 }
 

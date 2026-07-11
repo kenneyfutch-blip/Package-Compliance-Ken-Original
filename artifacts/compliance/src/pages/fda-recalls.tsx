@@ -1,7 +1,14 @@
 import { useState } from "react"
 import { useListFdaRecalls } from "@workspace/api-client-react"
+import type { FdaRecall } from "@workspace/api-client-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 import {
   Loader2,
@@ -11,6 +18,7 @@ import {
   MapPin,
   CalendarClock,
   AlertTriangle,
+  ExternalLink,
 } from "lucide-react"
 
 const CATEGORIES = [
@@ -36,10 +44,19 @@ function statusTone(s: string): Tone {
   return "outline"
 }
 
+// The openFDA enforcement dataset has no per-record web page; its API query
+// filtered by recall number is the authoritative source record to "click out" to.
+function openFdaRecordUrl(r: FdaRecall): string {
+  return `https://api.fda.gov/${r.category}/enforcement.json?search=recall_number:%22${encodeURIComponent(
+    r.recallNumber,
+  )}%22`
+}
+
 export default function FdaRecalls() {
   const [category, setCategory] = useState<Category>("food")
   const [input, setInput] = useState("")
   const [search, setSearch] = useState("")
+  const [selected, setSelected] = useState<FdaRecall | null>(null)
 
   const { data, isLoading, isError } = useListFdaRecalls({
     category,
@@ -121,12 +138,19 @@ export default function FdaRecalls() {
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            Showing {results.length}
+            Showing the {results.length} most recent
             {typeof data?.total === "number" ? ` of ${data.total.toLocaleString()}` : ""} recalls
+            {typeof data?.total === "number" && data.total > results.length && !search
+              ? " — refine with search to narrow the list"
+              : ""}
           </p>
           <div className="grid gap-4">
             {results.map((r, i) => (
-              <Card key={r.recallNumber || `${r.recallingFirm}-${i}`} className="hover-elevate transition-all">
+              <Card
+                key={r.recallNumber || `${r.recallingFirm}-${i}`}
+                onClick={() => setSelected(r)}
+                className="hover-elevate transition-all cursor-pointer"
+              >
                 <CardContent className="pt-5">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -175,6 +199,76 @@ export default function FdaRecalls() {
           )}
         </>
       )}
+
+      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {selected && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {selected.classification && (
+                    <Badge variant={classificationTone(selected.classification)}>
+                      {selected.classification}
+                    </Badge>
+                  )}
+                  {selected.status && (
+                    <Badge variant={statusTone(selected.status)}>{selected.status}</Badge>
+                  )}
+                  {selected.recallNumber && (
+                    <Badge variant="outline" className="font-mono text-xs">
+                      {selected.recallNumber}
+                    </Badge>
+                  )}
+                </div>
+                <DialogTitle className="text-left leading-snug pt-1">
+                  {selected.productDescription || "Untitled product"}
+                </DialogTitle>
+              </DialogHeader>
+
+              <dl className="space-y-4 text-sm">
+                <Field label="Reason for recall" value={selected.reason} />
+                <Field label="Recalling firm" value={selected.recallingFirm} />
+                <Field label="Location" value={selected.location} />
+                <Field label="Distribution pattern" value={selected.distributionPattern} />
+                <Field label="Product quantity" value={selected.productQuantity} />
+                <Field label="Code / lot information" value={selected.codeInfo} />
+                <Field label="Voluntary or mandated" value={selected.voluntaryMandated} />
+                <Field
+                  label="Initial firm notification"
+                  value={selected.initialFirmNotification}
+                />
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Initiation date" value={selected.initiationDate} />
+                  <Field label="Report date" value={selected.reportDate} />
+                </div>
+              </dl>
+
+              {selected.recallNumber && (
+                <a
+                  href={openFdaRecordUrl(selected)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline w-fit"
+                >
+                  <ExternalLink className="w-4 h-4" /> View full record on openFDA
+                </a>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function Field({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
+      <dd className="mt-0.5 leading-relaxed">{value}</dd>
     </div>
   )
 }

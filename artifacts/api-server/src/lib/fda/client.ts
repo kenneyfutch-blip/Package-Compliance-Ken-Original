@@ -158,7 +158,7 @@ export async function fdaFetch<T = unknown>({
   if (count) {
     params.push(`count=${encodeURIComponent(count)}`);
   } else {
-    const cappedLimit = Math.min(Math.max(Math.trunc(limit), 1), 50);
+    const cappedLimit = Math.min(Math.max(Math.trunc(limit), 1), 1000);
     params.push(`limit=${cappedLimit}`);
     if (sort) params.push(`sort=${encodeURIComponent(sort)}`);
   }
@@ -166,7 +166,7 @@ export async function fdaFetch<T = unknown>({
 
   const url = `${BASE_URL}/${dataset}.json?${params.join("&")}`;
   // Cache key deliberately excludes the api_key so it stays stable.
-  const cacheKey = `${dataset}|${search ?? ""}|${count ?? ""}|${sort ?? ""}|${count ? "" : Math.min(Math.max(Math.trunc(limit), 1), 50)}`;
+  const cacheKey = `${dataset}|${search ?? ""}|${count ?? ""}|${sort ?? ""}|${count ? "" : Math.min(Math.max(Math.trunc(limit), 1), 1000)}`;
 
   const cached = cacheGet(cacheKey);
   if (cached) return cached as FdaResult<T>;

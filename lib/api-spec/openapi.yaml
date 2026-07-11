@@ -2858,6 +2858,10 @@ components:
           recallingFirm,
           distributionPattern,
           location,
+          codeInfo,
+          productQuantity,
+          voluntaryMandated,
+          initialFirmNotification,
         ]
       properties:
         recallNumber:
@@ -2884,6 +2888,14 @@ components:
         reportDate:
           type: string
           nullable: true
+        codeInfo:
+          type: string
+        productQuantity:
+          type: string
+        voluntaryMandated:
+          type: string
+        initialFirmNotification:
+          type: string
 
     FdaRecallResponse:
       type: object

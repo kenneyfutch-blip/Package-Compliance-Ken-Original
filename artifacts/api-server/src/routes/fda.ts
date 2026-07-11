@@ -51,7 +51,8 @@ router.get("/fda/recalls", requirePermission("fda:read"), async (req: Request, r
   const search = typeof searchRaw === "string" ? searchRaw : undefined;
 
   const limitNum = Number(req.query["limit"]);
-  const limit = Number.isFinite(limitNum) && limitNum > 0 ? limitNum : 20;
+  const limit =
+    Number.isFinite(limitNum) && limitNum > 0 ? Math.min(limitNum, 100) : 100;
 
   try {
     const { results, total } = await fetchRecalls({ category, search, limit });

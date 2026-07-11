@@ -18,4 +18,8 @@ export interface FdaRecall {
   location: string;
   initiationDate?: string | null;
   reportDate?: string | null;
+  codeInfo: string;
+  productQuantity: string;
+  voluntaryMandated: string;
+  initialFirmNotification: string;
 }

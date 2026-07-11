@@ -1818,7 +1818,11 @@ export const ListFdaRecallsResponse = zod.object({
   "distributionPattern": zod.string(),
   "location": zod.string(),
   "initiationDate": zod.string().nullish(),
-  "reportDate": zod.string().nullish()
+  "reportDate": zod.string().nullish(),
+  "codeInfo": zod.string(),
+  "productQuantity": zod.string(),
+  "voluntaryMandated": zod.string(),
+  "initialFirmNotification": zod.string()
 })),
   "total": zod.number(),
   "disclaimer": zod.string()
