@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress"
 import { 
   ArrowLeft, BrainCircuit, CheckCircle, ShieldAlert, AlertTriangle, 
   FileText, Activity, Loader2, PlayCircle, Settings2, Info,
-  ArrowRight
+  ArrowRight, PenLine
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 
@@ -72,6 +72,11 @@ export default function ReviewWorkspace() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Link href={`/proofing/${packageId}`}>
+            <Button variant="outline" className="gap-2">
+              <PenLine className="w-4 h-4" /> Proofing Studio
+            </Button>
+          </Link>
           {pkg.status === 'Draft' || pkg.status === 'Needs Revision' ? (
             <Button variant="outline" className="gap-2 bg-success/10 text-success border-success/20 hover:bg-success/20" onClick={() => handleStatusChange('Approved')}>
               <CheckCircle className="w-4 h-4" /> Approve

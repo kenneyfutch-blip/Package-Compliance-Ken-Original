@@ -244,6 +244,134 @@ export interface PackageDetail {
   regulations: Regulation[];
 }
 
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: UploadUrlRequest;
+}
+
+export interface Proof {
+  id: number;
+  packageId: number;
+  version: number;
+  fileName: string;
+  objectPath: string;
+  contentType: string;
+  fileSize: number;
+  pageCount: number;
+  status: string;
+  uploadedByName: string;
+  createdAt: string;
+  annotationCount: number;
+  openCount: number;
+  resolvedCount: number;
+  commentCount: number;
+}
+
+export interface ProofComment {
+  id: number;
+  proofId: number;
+  /** @nullable */
+  annotationId?: number | null;
+  body: string;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface ProofAnnotation {
+  id: number;
+  proofId: number;
+  page: number;
+  kind: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  color: string;
+  resolved: boolean;
+  authorName: string;
+  createdAt: string;
+  comments: ProofComment[];
+}
+
+export interface ProofDecision {
+  id: number;
+  proofId: number;
+  decision: string;
+  /** @nullable */
+  note?: string | null;
+  reviewerName: string;
+  createdAt: string;
+}
+
+export interface ProofDetail {
+  id: number;
+  packageId: number;
+  version: number;
+  fileName: string;
+  objectPath: string;
+  contentType: string;
+  fileSize: number;
+  pageCount: number;
+  status: string;
+  uploadedByName: string;
+  createdAt: string;
+  annotationCount: number;
+  openCount: number;
+  resolvedCount: number;
+  commentCount: number;
+  annotations: ProofAnnotation[];
+  generalComments: ProofComment[];
+  decisions: ProofDecision[];
+}
+
+export interface CreateProofInput {
+  /** @minLength 1 */
+  fileName: string;
+  /** @minLength 1 */
+  objectPath: string;
+  /** @minLength 1 */
+  contentType: string;
+  fileSize?: number;
+  pageCount?: number;
+}
+
+export interface CreateAnnotationInput {
+  page?: number;
+  kind: string;
+  x: number;
+  y: number;
+  w?: number;
+  h?: number;
+  color?: string;
+  body?: string;
+}
+
+export interface UpdateAnnotationInput {
+  resolved?: boolean;
+}
+
+export interface CreateCommentInput {
+  annotationId?: number;
+  /** @minLength 1 */
+  body: string;
+}
+
+export interface ProofDecisionInput {
+  decision: string;
+  note?: string;
+  applyToPackage?: boolean;
+}
+
 export interface OcrExtractInput {
   /**
      * Data URL of the artwork image (data:image/...;base64,...)

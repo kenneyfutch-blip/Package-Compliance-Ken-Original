@@ -266,6 +266,225 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /storage/uploads/request-url:
+    post:
+      tags: [storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for direct file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/{id}/proofs:
+    get:
+      operationId: listProofs
+      tags: [proofs]
+      summary: List proof versions for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proofs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Proof"
+    post:
+      operationId: createProof
+      tags: [proofs]
+      summary: Register an uploaded proof file for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProofInput"
+      responses:
+        "201":
+          description: Created proof
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProofDetail"
+
+  /proofs/{proofId}:
+    get:
+      operationId: getProof
+      tags: [proofs]
+      summary: Get a proof with annotations, comments, and decisions
+      parameters:
+        - name: proofId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proof detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProofDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /proofs/{proofId}/annotations:
+    post:
+      operationId: createAnnotation
+      tags: [proofs]
+      summary: Add a markup annotation to a proof
+      parameters:
+        - name: proofId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAnnotationInput"
+      responses:
+        "201":
+          description: Created annotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProofAnnotation"
+
+  /annotations/{annotationId}:
+    patch:
+      operationId: updateAnnotation
+      tags: [proofs]
+      summary: Update an annotation (e.g. resolve)
+      parameters:
+        - name: annotationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAnnotationInput"
+      responses:
+        "200":
+          description: Updated annotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProofAnnotation"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteAnnotation
+      tags: [proofs]
+      summary: Delete an annotation
+      parameters:
+        - name: annotationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /proofs/{proofId}/comments:
+    post:
+      operationId: createComment
+      tags: [proofs]
+      summary: Add a comment to a proof or annotation thread
+      parameters:
+        - name: proofId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentInput"
+      responses:
+        "201":
+          description: Created comment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProofComment"
+
+  /proofs/{proofId}/decision:
+    post:
+      operationId: recordProofDecision
+      tags: [proofs]
+      summary: Record an approval decision on a proof
+      parameters:
+        - name: proofId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProofDecisionInput"
+      responses:
+        "200":
+          description: Updated proof detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProofDetail"
+
   /packages/{id}:
     get:
       operationId: getPackage
@@ -1233,6 +1452,251 @@ components:
         - recommendations
         - violations
         - regulations
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+
+    Proof:
+      type: object
+      required: [id, packageId, version, fileName, objectPath, contentType, fileSize, pageCount, status, uploadedByName, createdAt, annotationCount, openCount, resolvedCount, commentCount]
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        version:
+          type: integer
+        fileName:
+          type: string
+        objectPath:
+          type: string
+        contentType:
+          type: string
+        fileSize:
+          type: integer
+        pageCount:
+          type: integer
+        status:
+          type: string
+        uploadedByName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        annotationCount:
+          type: integer
+        openCount:
+          type: integer
+        resolvedCount:
+          type: integer
+        commentCount:
+          type: integer
+
+    ProofComment:
+      type: object
+      required: [id, proofId, body, authorName, createdAt]
+      properties:
+        id:
+          type: integer
+        proofId:
+          type: integer
+        annotationId:
+          type: ["integer", "null"]
+        body:
+          type: string
+        authorName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ProofAnnotation:
+      type: object
+      required: [id, proofId, page, kind, x, y, w, h, color, resolved, authorName, createdAt, comments]
+      properties:
+        id:
+          type: integer
+        proofId:
+          type: integer
+        page:
+          type: integer
+        kind:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+        w:
+          type: number
+        h:
+          type: number
+        color:
+          type: string
+        resolved:
+          type: boolean
+        authorName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProofComment"
+
+    ProofDecision:
+      type: object
+      required: [id, proofId, decision, reviewerName, createdAt]
+      properties:
+        id:
+          type: integer
+        proofId:
+          type: integer
+        decision:
+          type: string
+        note:
+          type: ["string", "null"]
+        reviewerName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    ProofDetail:
+      type: object
+      required: [id, packageId, version, fileName, objectPath, contentType, fileSize, pageCount, status, uploadedByName, createdAt, annotationCount, openCount, resolvedCount, commentCount, annotations, generalComments, decisions]
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        version:
+          type: integer
+        fileName:
+          type: string
+        objectPath:
+          type: string
+        contentType:
+          type: string
+        fileSize:
+          type: integer
+        pageCount:
+          type: integer
+        status:
+          type: string
+        uploadedByName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        annotationCount:
+          type: integer
+        openCount:
+          type: integer
+        resolvedCount:
+          type: integer
+        commentCount:
+          type: integer
+        annotations:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProofAnnotation"
+        generalComments:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProofComment"
+        decisions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProofDecision"
+
+    CreateProofInput:
+      type: object
+      required: [fileName, objectPath, contentType]
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+        objectPath:
+          type: string
+          minLength: 1
+        contentType:
+          type: string
+          minLength: 1
+        fileSize:
+          type: integer
+        pageCount:
+          type: integer
+
+    CreateAnnotationInput:
+      type: object
+      required: [kind, x, y]
+      properties:
+        page:
+          type: integer
+        kind:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+        w:
+          type: number
+        h:
+          type: number
+        color:
+          type: string
+        body:
+          type: string
+
+    UpdateAnnotationInput:
+      type: object
+      properties:
+        resolved:
+          type: boolean
+
+    CreateCommentInput:
+      type: object
+      required: [body]
+      properties:
+        annotationId:
+          type: integer
+        body:
+          type: string
+          minLength: 1
+
+    ProofDecisionInput:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+        note:
+          type: string
+        applyToPackage:
+          type: boolean
 
     OcrExtractInput:
       type: object

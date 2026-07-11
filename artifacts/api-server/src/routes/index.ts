@@ -8,6 +8,8 @@ import miscRouter from "./misc";
 import aiProvidersRouter from "./ai-providers";
 import violationsRouter from "./violations";
 import ocrRouter from "./ocr";
+import proofsRouter from "./proofs";
+import storageRouter from "./storage";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -23,5 +25,7 @@ router.use(miscRouter);
 router.use(aiProvidersRouter);
 router.use(violationsRouter);
 router.use(ocrRouter);
+router.use(proofsRouter);
+router.use(storageRouter);
 
 export default router;

@@ -34,6 +34,7 @@ import {
   Briefcase,
   LineChart,
   BookOpen,
+  PenLine,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -54,6 +55,7 @@ const NAV: NavEntry[] = [
       { name: "High Risk", href: "/queue/high-risk", icon: AlertTriangle },
       { name: "Bulk Review", href: "/bulk", icon: Layers },
       { name: "Fast Review", href: "/fast-review", icon: Zap },
+      { name: "Proofing Studio", href: "/proofing", icon: PenLine },
       { name: "Assigned Reviews", href: "/queue/assigned", icon: ClipboardList },
     ],
   },
@@ -122,6 +124,7 @@ const NAV: NavEntry[] = [
 function isItemActive(location: string, href: string): boolean {
   if (href === "/") return location === "/"
   if (href === "/reviews") return location === "/reviews" || location.startsWith("/reviews/")
+  if (href === "/proofing") return location === "/proofing" || location.startsWith("/proofing/")
   return location === href
 }
 

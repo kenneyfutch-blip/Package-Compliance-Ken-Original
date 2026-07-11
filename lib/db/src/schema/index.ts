@@ -2,6 +2,7 @@ export * from "./users";
 export * from "./suppliers";
 export * from "./regulations";
 export * from "./packages";
+export * from "./proofs";
 export * from "./violations";
 export * from "./audit_events";
 export * from "./notifications";

@@ -286,6 +286,386 @@ export const ExtractArtworkTextResponse = zod.object({
 
 
 /**
+ * @summary Request a presigned URL for direct file upload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+}).optional()
+})
+
+
+/**
+ * @summary List proof versions for a package
+ */
+export const ListProofsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListProofsResponseItem = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "version": zod.number(),
+  "fileName": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "fileSize": zod.number(),
+  "pageCount": zod.number(),
+  "status": zod.string(),
+  "uploadedByName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "annotationCount": zod.number(),
+  "openCount": zod.number(),
+  "resolvedCount": zod.number(),
+  "commentCount": zod.number()
+})
+export const ListProofsResponse = zod.array(ListProofsResponseItem)
+
+
+/**
+ * @summary Register an uploaded proof file for a package
+ */
+export const CreateProofParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+
+export const CreateProofBody = zod.object({
+  "fileName": zod.string().min(1),
+  "objectPath": zod.string().min(1),
+  "contentType": zod.string().min(1),
+  "fileSize": zod.number().optional(),
+  "pageCount": zod.number().optional()
+})
+
+export const CreateProofResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "version": zod.number(),
+  "fileName": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "fileSize": zod.number(),
+  "pageCount": zod.number(),
+  "status": zod.string(),
+  "uploadedByName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "annotationCount": zod.number(),
+  "openCount": zod.number(),
+  "resolvedCount": zod.number(),
+  "commentCount": zod.number(),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "page": zod.number(),
+  "kind": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number(),
+  "color": zod.string(),
+  "resolved": zod.boolean(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "annotationId": zod.number().nullish(),
+  "body": zod.string(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})),
+  "generalComments": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "annotationId": zod.number().nullish(),
+  "body": zod.string(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "decisions": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "decision": zod.string(),
+  "note": zod.string().nullish(),
+  "reviewerName": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Get a proof with annotations, comments, and decisions
+ */
+export const GetProofParams = zod.object({
+  "proofId": zod.coerce.number()
+})
+
+export const GetProofResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "version": zod.number(),
+  "fileName": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "fileSize": zod.number(),
+  "pageCount": zod.number(),
+  "status": zod.string(),
+  "uploadedByName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "annotationCount": zod.number(),
+  "openCount": zod.number(),
+  "resolvedCount": zod.number(),
+  "commentCount": zod.number(),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "page": zod.number(),
+  "kind": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number(),
+  "color": zod.string(),
+  "resolved": zod.boolean(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "annotationId": zod.number().nullish(),
+  "body": zod.string(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})),
+  "generalComments": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "annotationId": zod.number().nullish(),
+  "body": zod.string(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "decisions": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "decision": zod.string(),
+  "note": zod.string().nullish(),
+  "reviewerName": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Add a markup annotation to a proof
+ */
+export const CreateAnnotationParams = zod.object({
+  "proofId": zod.coerce.number()
+})
+
+export const CreateAnnotationBody = zod.object({
+  "page": zod.number().optional(),
+  "kind": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number().optional(),
+  "h": zod.number().optional(),
+  "color": zod.string().optional(),
+  "body": zod.string().optional()
+})
+
+export const CreateAnnotationResponse = zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "page": zod.number(),
+  "kind": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number(),
+  "color": zod.string(),
+  "resolved": zod.boolean(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "annotationId": zod.number().nullish(),
+  "body": zod.string(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Update an annotation (e.g. resolve)
+ */
+export const UpdateAnnotationParams = zod.object({
+  "annotationId": zod.coerce.number()
+})
+
+export const UpdateAnnotationBody = zod.object({
+  "resolved": zod.boolean().optional()
+})
+
+export const UpdateAnnotationResponse = zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "page": zod.number(),
+  "kind": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number(),
+  "color": zod.string(),
+  "resolved": zod.boolean(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "annotationId": zod.number().nullish(),
+  "body": zod.string(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Delete an annotation
+ */
+export const DeleteAnnotationParams = zod.object({
+  "annotationId": zod.coerce.number()
+})
+
+export const DeleteAnnotationResponse = zod.void()
+
+
+/**
+ * @summary Add a comment to a proof or annotation thread
+ */
+export const CreateCommentParams = zod.object({
+  "proofId": zod.coerce.number()
+})
+
+
+
+
+export const CreateCommentBody = zod.object({
+  "annotationId": zod.number().optional(),
+  "body": zod.string().min(1)
+})
+
+export const CreateCommentResponse = zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "annotationId": zod.number().nullish(),
+  "body": zod.string(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Record an approval decision on a proof
+ */
+export const RecordProofDecisionParams = zod.object({
+  "proofId": zod.coerce.number()
+})
+
+export const RecordProofDecisionBody = zod.object({
+  "decision": zod.string(),
+  "note": zod.string().optional(),
+  "applyToPackage": zod.boolean().optional()
+})
+
+export const RecordProofDecisionResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "version": zod.number(),
+  "fileName": zod.string(),
+  "objectPath": zod.string(),
+  "contentType": zod.string(),
+  "fileSize": zod.number(),
+  "pageCount": zod.number(),
+  "status": zod.string(),
+  "uploadedByName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "annotationCount": zod.number(),
+  "openCount": zod.number(),
+  "resolvedCount": zod.number(),
+  "commentCount": zod.number(),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "page": zod.number(),
+  "kind": zod.string(),
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number(),
+  "color": zod.string(),
+  "resolved": zod.boolean(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "comments": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "annotationId": zod.number().nullish(),
+  "body": zod.string(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})),
+  "generalComments": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "annotationId": zod.number().nullish(),
+  "body": zod.string(),
+  "authorName": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "decisions": zod.array(zod.object({
+  "id": zod.number(),
+  "proofId": zod.number(),
+  "decision": zod.string(),
+  "note": zod.string().nullish(),
+  "reviewerName": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
  * @summary Get a package with full compliance intelligence
  */
 export const GetPackageParams = zod.object({

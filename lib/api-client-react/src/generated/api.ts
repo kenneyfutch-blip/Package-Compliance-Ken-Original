@@ -30,6 +30,9 @@ import type {
   BulkAnalyzeResult,
   CopilotAnswer,
   CopilotInput,
+  CreateAnnotationInput,
+  CreateCommentInput,
+  CreateProofInput,
   DashboardStats,
   DistributionItem,
   HealthStatus,
@@ -43,6 +46,11 @@ import type {
   PackageDetail,
   PackageInput,
   PackageUpdate,
+  Proof,
+  ProofAnnotation,
+  ProofComment,
+  ProofDecisionInput,
+  ProofDetail,
   Regulation,
   RegulationInput,
   Report,
@@ -51,6 +59,9 @@ import type {
   SupplierDetail,
   SupplierInput,
   TrendPoint,
+  UpdateAnnotationInput,
+  UploadUrlRequest,
+  UploadUrlResponse,
   UserAccount,
   VendorPerformanceItem,
   ViolationWithPackage
@@ -854,6 +865,662 @@ export const useExtractArtworkText = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getExtractArtworkTextMutationOptions(options));
+    }
+
+export const getRequestUploadUrlUrl = () => {
+
+
+
+
+  return `/api/storage/uploads/request-url`
+}
+
+/**
+ * @summary Request a presigned URL for direct file upload
+ */
+export const requestUploadUrl = async (uploadUrlRequest: UploadUrlRequest, options?: RequestInit): Promise<UploadUrlResponse> => {
+
+  return customFetch<UploadUrlResponse>(getRequestUploadUrlUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(uploadUrlRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestUploadUrlMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext> => {
+
+const mutationKey = ['requestUploadUrl'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestUploadUrl>>, {data: BodyType<UploadUrlRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestUploadUrl(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestUploadUrlMutationResult = NonNullable<Awaited<ReturnType<typeof requestUploadUrl>>>
+    export type RequestUploadUrlMutationBody = BodyType<UploadUrlRequest>
+    export type RequestUploadUrlMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Request a presigned URL for direct file upload
+ */
+export const useRequestUploadUrl = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestUploadUrl>>, TError,{data: BodyType<UploadUrlRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestUploadUrl>>,
+        TError,
+        {data: BodyType<UploadUrlRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestUploadUrlMutationOptions(options));
+    }
+
+export const getListProofsUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/proofs`
+}
+
+/**
+ * @summary List proof versions for a package
+ */
+export const listProofs = async (id: number, options?: RequestInit): Promise<Proof[]> => {
+
+  return customFetch<Proof[]>(getListProofsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProofsQueryKey = (id: number,) => {
+    return [
+    `/api/packages/${id}/proofs`
+    ] as const;
+    }
+
+
+export const getListProofsQueryOptions = <TData = Awaited<ReturnType<typeof listProofs>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProofs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProofsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProofs>>> = ({ signal }) => listProofs(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProofs>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProofsQueryResult = NonNullable<Awaited<ReturnType<typeof listProofs>>>
+export type ListProofsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List proof versions for a package
+ */
+
+export function useListProofs<TData = Awaited<ReturnType<typeof listProofs>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProofs>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProofsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateProofUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/proofs`
+}
+
+/**
+ * @summary Register an uploaded proof file for a package
+ */
+export const createProof = async (id: number,
+    createProofInput: CreateProofInput, options?: RequestInit): Promise<ProofDetail> => {
+
+  return customFetch<ProofDetail>(getCreateProofUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createProofInput)
+  }
+);}
+
+
+
+
+
+export const getCreateProofMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProof>>, TError,{id: number;data: BodyType<CreateProofInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProof>>, TError,{id: number;data: BodyType<CreateProofInput>}, TContext> => {
+
+const mutationKey = ['createProof'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProof>>, {id: number;data: BodyType<CreateProofInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createProof(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProofMutationResult = NonNullable<Awaited<ReturnType<typeof createProof>>>
+    export type CreateProofMutationBody = BodyType<CreateProofInput>
+    export type CreateProofMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Register an uploaded proof file for a package
+ */
+export const useCreateProof = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProof>>, TError,{id: number;data: BodyType<CreateProofInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProof>>,
+        TError,
+        {id: number;data: BodyType<CreateProofInput>},
+        TContext
+      > => {
+      return useMutation(getCreateProofMutationOptions(options));
+    }
+
+export const getGetProofUrl = (proofId: number,) => {
+
+
+
+
+  return `/api/proofs/${proofId}`
+}
+
+/**
+ * @summary Get a proof with annotations, comments, and decisions
+ */
+export const getProof = async (proofId: number, options?: RequestInit): Promise<ProofDetail> => {
+
+  return customFetch<ProofDetail>(getGetProofUrl(proofId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProofQueryKey = (proofId: number,) => {
+    return [
+    `/api/proofs/${proofId}`
+    ] as const;
+    }
+
+
+export const getGetProofQueryOptions = <TData = Awaited<ReturnType<typeof getProof>>, TError = ErrorType<ApiError>>(proofId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProof>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProofQueryKey(proofId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProof>>> = ({ signal }) => getProof(proofId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: proofId !== null && proofId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProof>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProofQueryResult = NonNullable<Awaited<ReturnType<typeof getProof>>>
+export type GetProofQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get a proof with annotations, comments, and decisions
+ */
+
+export function useGetProof<TData = Awaited<ReturnType<typeof getProof>>, TError = ErrorType<ApiError>>(
+ proofId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProof>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProofQueryOptions(proofId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAnnotationUrl = (proofId: number,) => {
+
+
+
+
+  return `/api/proofs/${proofId}/annotations`
+}
+
+/**
+ * @summary Add a markup annotation to a proof
+ */
+export const createAnnotation = async (proofId: number,
+    createAnnotationInput: CreateAnnotationInput, options?: RequestInit): Promise<ProofAnnotation> => {
+
+  return customFetch<ProofAnnotation>(getCreateAnnotationUrl(proofId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createAnnotationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAnnotationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAnnotation>>, TError,{proofId: number;data: BodyType<CreateAnnotationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAnnotation>>, TError,{proofId: number;data: BodyType<CreateAnnotationInput>}, TContext> => {
+
+const mutationKey = ['createAnnotation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAnnotation>>, {proofId: number;data: BodyType<CreateAnnotationInput>}> = (props) => {
+          const {proofId,data} = props ?? {};
+
+          return  createAnnotation(proofId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAnnotationMutationResult = NonNullable<Awaited<ReturnType<typeof createAnnotation>>>
+    export type CreateAnnotationMutationBody = BodyType<CreateAnnotationInput>
+    export type CreateAnnotationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a markup annotation to a proof
+ */
+export const useCreateAnnotation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAnnotation>>, TError,{proofId: number;data: BodyType<CreateAnnotationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAnnotation>>,
+        TError,
+        {proofId: number;data: BodyType<CreateAnnotationInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAnnotationMutationOptions(options));
+    }
+
+export const getUpdateAnnotationUrl = (annotationId: number,) => {
+
+
+
+
+  return `/api/annotations/${annotationId}`
+}
+
+/**
+ * @summary Update an annotation (e.g. resolve)
+ */
+export const updateAnnotation = async (annotationId: number,
+    updateAnnotationInput: UpdateAnnotationInput, options?: RequestInit): Promise<ProofAnnotation> => {
+
+  return customFetch<ProofAnnotation>(getUpdateAnnotationUrl(annotationId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateAnnotationInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateAnnotationMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAnnotation>>, TError,{annotationId: number;data: BodyType<UpdateAnnotationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAnnotation>>, TError,{annotationId: number;data: BodyType<UpdateAnnotationInput>}, TContext> => {
+
+const mutationKey = ['updateAnnotation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAnnotation>>, {annotationId: number;data: BodyType<UpdateAnnotationInput>}> = (props) => {
+          const {annotationId,data} = props ?? {};
+
+          return  updateAnnotation(annotationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAnnotationMutationResult = NonNullable<Awaited<ReturnType<typeof updateAnnotation>>>
+    export type UpdateAnnotationMutationBody = BodyType<UpdateAnnotationInput>
+    export type UpdateAnnotationMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Update an annotation (e.g. resolve)
+ */
+export const useUpdateAnnotation = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAnnotation>>, TError,{annotationId: number;data: BodyType<UpdateAnnotationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAnnotation>>,
+        TError,
+        {annotationId: number;data: BodyType<UpdateAnnotationInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateAnnotationMutationOptions(options));
+    }
+
+export const getDeleteAnnotationUrl = (annotationId: number,) => {
+
+
+
+
+  return `/api/annotations/${annotationId}`
+}
+
+/**
+ * @summary Delete an annotation
+ */
+export const deleteAnnotation = async (annotationId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteAnnotationUrl(annotationId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAnnotationMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAnnotation>>, TError,{annotationId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAnnotation>>, TError,{annotationId: number}, TContext> => {
+
+const mutationKey = ['deleteAnnotation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAnnotation>>, {annotationId: number}> = (props) => {
+          const {annotationId} = props ?? {};
+
+          return  deleteAnnotation(annotationId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAnnotationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAnnotation>>>
+
+    export type DeleteAnnotationMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Delete an annotation
+ */
+export const useDeleteAnnotation = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAnnotation>>, TError,{annotationId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAnnotation>>,
+        TError,
+        {annotationId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAnnotationMutationOptions(options));
+    }
+
+export const getCreateCommentUrl = (proofId: number,) => {
+
+
+
+
+  return `/api/proofs/${proofId}/comments`
+}
+
+/**
+ * @summary Add a comment to a proof or annotation thread
+ */
+export const createComment = async (proofId: number,
+    createCommentInput: CreateCommentInput, options?: RequestInit): Promise<ProofComment> => {
+
+  return customFetch<ProofComment>(getCreateCommentUrl(proofId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createCommentInput)
+  }
+);}
+
+
+
+
+
+export const getCreateCommentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createComment>>, TError,{proofId: number;data: BodyType<CreateCommentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createComment>>, TError,{proofId: number;data: BodyType<CreateCommentInput>}, TContext> => {
+
+const mutationKey = ['createComment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createComment>>, {proofId: number;data: BodyType<CreateCommentInput>}> = (props) => {
+          const {proofId,data} = props ?? {};
+
+          return  createComment(proofId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateCommentMutationResult = NonNullable<Awaited<ReturnType<typeof createComment>>>
+    export type CreateCommentMutationBody = BodyType<CreateCommentInput>
+    export type CreateCommentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Add a comment to a proof or annotation thread
+ */
+export const useCreateComment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createComment>>, TError,{proofId: number;data: BodyType<CreateCommentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createComment>>,
+        TError,
+        {proofId: number;data: BodyType<CreateCommentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateCommentMutationOptions(options));
+    }
+
+export const getRecordProofDecisionUrl = (proofId: number,) => {
+
+
+
+
+  return `/api/proofs/${proofId}/decision`
+}
+
+/**
+ * @summary Record an approval decision on a proof
+ */
+export const recordProofDecision = async (proofId: number,
+    proofDecisionInput: ProofDecisionInput, options?: RequestInit): Promise<ProofDetail> => {
+
+  return customFetch<ProofDetail>(getRecordProofDecisionUrl(proofId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(proofDecisionInput)
+  }
+);}
+
+
+
+
+
+export const getRecordProofDecisionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordProofDecision>>, TError,{proofId: number;data: BodyType<ProofDecisionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordProofDecision>>, TError,{proofId: number;data: BodyType<ProofDecisionInput>}, TContext> => {
+
+const mutationKey = ['recordProofDecision'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordProofDecision>>, {proofId: number;data: BodyType<ProofDecisionInput>}> = (props) => {
+          const {proofId,data} = props ?? {};
+
+          return  recordProofDecision(proofId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordProofDecisionMutationResult = NonNullable<Awaited<ReturnType<typeof recordProofDecision>>>
+    export type RecordProofDecisionMutationBody = BodyType<ProofDecisionInput>
+    export type RecordProofDecisionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Record an approval decision on a proof
+ */
+export const useRecordProofDecision = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordProofDecision>>, TError,{proofId: number;data: BodyType<ProofDecisionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordProofDecision>>,
+        TError,
+        {proofId: number;data: BodyType<ProofDecisionInput>},
+        TContext
+      > => {
+      return useMutation(getRecordProofDecisionMutationOptions(options));
     }
 
 export const getGetPackageUrl = (id: number,) => {
