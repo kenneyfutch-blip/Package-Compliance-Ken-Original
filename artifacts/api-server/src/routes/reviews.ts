@@ -7,7 +7,7 @@ import {
   type PackageRow,
   type ReviewAssignmentRow,
 } from "@workspace/db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { AssignPackageReviewBody, BulkAssignReviewsBody } from "@workspace/api-zod";
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 import { packageConds, canAccessPackage, opsTeamScope } from "../lib/rbac/scope";
@@ -218,6 +218,37 @@ router.get(
   },
 );
 
+// GET /reviews/assignable — minimal people + teams list to populate the
+// assignment picker. Gated on packages:write (the same permission the assign
+// action itself requires) so any reviewer who can assign work can load it,
+// without granting admin-tier users:read / teams:read. Returns ids + names
+// only, org-scoped, and excludes external supplier accounts.
+router.get(
+  "/reviews/assignable",
+  requirePermission("packages:write"),
+  async (req: Request, res: Response): Promise<void> => {
+    if (blockSupplierUsers(req, res)) return;
+    const org = orgId(req);
+    const [users, teams] = await Promise.all([
+      db
+        .select({ id: usersTable.id, name: usersTable.name })
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.organizationId, org),
+            eq(usersTable.active, true),
+            isNull(usersTable.supplierId),
+          ),
+        ),
+      db
+        .select({ id: teamsTable.id, name: teamsTable.name })
+        .from(teamsTable)
+        .where(eq(teamsTable.organizationId, org)),
+    ]);
+    res.json({ users, teams });
+  },
+);
+
 // POST /reviews/bulk-assign — assign / reassign many reviews at once.
 router.post(
   "/reviews/bulk-assign",
@@ -256,10 +287,17 @@ router.post(
       const [user] = await db
         .select({ id: usersTable.id })
         .from(usersTable)
-        .where(and(eq(usersTable.id, uid), eq(usersTable.organizationId, organizationId)))
+        .where(
+          and(
+            eq(usersTable.id, uid),
+            eq(usersTable.organizationId, organizationId),
+            eq(usersTable.active, true),
+            isNull(usersTable.supplierId),
+          ),
+        )
         .limit(1);
       if (!user) {
-        res.status(400).json({ error: `${label} not found in your organization` });
+        res.status(400).json({ error: `${label} must be an active member of your organization` });
         return;
       }
     }
@@ -359,10 +397,17 @@ router.post(
       const [user] = await db
         .select({ id: usersTable.id })
         .from(usersTable)
-        .where(and(eq(usersTable.id, uid), eq(usersTable.organizationId, organizationId)))
+        .where(
+          and(
+            eq(usersTable.id, uid),
+            eq(usersTable.organizationId, organizationId),
+            eq(usersTable.active, true),
+            isNull(usersTable.supplierId),
+          ),
+        )
         .limit(1);
       if (!user) {
-        res.status(400).json({ error: `${label} not found in your organization` });
+        res.status(400).json({ error: `${label} must be an active member of your organization` });
         return;
       }
     }

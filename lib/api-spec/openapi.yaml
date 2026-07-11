@@ -2309,6 +2309,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/AssignmentRecommendation"
 
+  /reviews/assignable:
+    get:
+      operationId: listAssignableReviewers
+      tags: [reviews]
+      summary: List people and teams a reviewer can be assigned to (names only, no admin access)
+      responses:
+        "200":
+          description: Assignable people and teams
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignableReviewers"
+
   /reviews/bulk-assign:
     post:
       operationId: bulkAssignReviews
@@ -6872,6 +6885,32 @@ components:
         - overCapacity
         - suggested
         - reason
+
+    AssignableOption:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+        - id
+        - name
+
+    AssignableReviewers:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssignableOption"
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssignableOption"
+      required:
+        - users
+        - teams
 
     BulkAssignInput:
       type: object

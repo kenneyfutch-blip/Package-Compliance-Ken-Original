@@ -29,6 +29,7 @@ import type {
   AnnotationUpdate,
   ApiError,
   ApprovalDecisionInput,
+  AssignableReviewers,
   AssignmentListItem,
   AssignmentRecommendation,
   AuditEvent,
@@ -7477,6 +7478,83 @@ export function useRecommendReviewAssignee<TData = Awaited<ReturnType<typeof rec
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getRecommendReviewAssigneeQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAssignableReviewersUrl = () => {
+
+
+
+
+  return `/api/reviews/assignable`
+}
+
+/**
+ * @summary List people and teams a reviewer can be assigned to (names only, no admin access)
+ */
+export const listAssignableReviewers = async ( options?: RequestInit): Promise<AssignableReviewers> => {
+
+  return customFetch<AssignableReviewers>(getListAssignableReviewersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAssignableReviewersQueryKey = () => {
+    return [
+    `/api/reviews/assignable`
+    ] as const;
+    }
+
+
+export const getListAssignableReviewersQueryOptions = <TData = Awaited<ReturnType<typeof listAssignableReviewers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssignableReviewers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAssignableReviewersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAssignableReviewers>>> = ({ signal }) => listAssignableReviewers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAssignableReviewers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAssignableReviewersQueryResult = NonNullable<Awaited<ReturnType<typeof listAssignableReviewers>>>
+export type ListAssignableReviewersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List people and teams a reviewer can be assigned to (names only, no admin access)
+ */
+
+export function useListAssignableReviewers<TData = Awaited<ReturnType<typeof listAssignableReviewers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAssignableReviewers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAssignableReviewersQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

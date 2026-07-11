@@ -1,7 +1,6 @@
 import * as React from "react"
 import {
-  useListUsers,
-  useListTeams,
+  useListAssignableReviewers,
   useAssignPackageReview,
   useRecommendReviewAssignee,
   getRecommendReviewAssigneeQueryKey,
@@ -56,8 +55,9 @@ export function AssignmentDialog({
   onAssigned?: () => void
 }) {
   const { toast } = useToast()
-  const { data: users = [] } = useListUsers()
-  const { data: teams = [] } = useListTeams()
+  const { data: assignable } = useListAssignableReviewers()
+  const activeUsers = assignable?.users ?? []
+  const teams = assignable?.teams ?? []
   const assign = useAssignPackageReview()
 
   const [assigneeId, setAssigneeId] = React.useState<string>(UNASSIGNED)
@@ -90,8 +90,6 @@ export function AssignmentDialog({
   const { data: recommendation } = useRecommendReviewAssignee(recommendParams, {
     query: { enabled: open, queryKey: getRecommendReviewAssigneeQueryKey(recommendParams) },
   })
-
-  const activeUsers = users.filter((u) => u.active)
 
   function submit() {
     assign.mutate(

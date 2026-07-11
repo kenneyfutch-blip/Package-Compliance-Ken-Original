@@ -4262,6 +4262,21 @@ export const RecommendReviewAssigneeResponse = zod.object({
 
 
 /**
+ * @summary List people and teams a reviewer can be assigned to (names only, no admin access)
+ */
+export const ListAssignableReviewersResponse = zod.object({
+  "users": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})),
+  "teams": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+}))
+})
+
+
+/**
  * @summary Assign or reassign many package reviews at once
  */
 export const BulkAssignReviewsBody = zod.object({

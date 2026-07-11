@@ -18,6 +18,8 @@ export * from './annotationUpdate';
 export * from './apiError';
 export * from './approvalDecision';
 export * from './approvalDecisionInput';
+export * from './assignableOption';
+export * from './assignableReviewers';
 export * from './assignmentListItem';
 export * from './assignmentRecommendation';
 export * from './auditEvent';

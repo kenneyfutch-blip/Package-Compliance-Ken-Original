@@ -73,3 +73,17 @@ assignment flagged for manual triage (no crash).
 Reads gated `packages:read`, mutations `packages:write`, metrics/reporting
 `reports:read`. **Deliberately reused existing permission keys** so no permission
 reseed is needed. Do not invent new keys for this surface.
+
+## Assignment picker vs. admin read perms (parity rule)
+The Assign-review dialog's people/team dropdowns must be filled by a dedicated
+`/reviews/assignable` endpoint gated on `packages:write` (the same permission the
+assign action needs) — NOT by the admin-tier `users:read`/`teams:read` list
+endpoints. Otherwise any non-admin who can assign (specialist, packaging mgr,
+designer) sees empty dropdowns while the recommend chips still show (recommend is
+`packages:read`), which looks like "no assignees exist."
+**Why:** the assign action and the picker that feeds it must share one permission
+gate, or the UI silently breaks for exactly the roles meant to use it.
+**How to apply:** keep the picker's eligibility predicate (org-scoped, active,
+non-supplier) identical on BOTH the read endpoint and the write-side validation in
+`POST /packages/:id/assign` + `/reviews/bulk-assign` — else forged IDs can assign
+inactive/supplier users the picker hides.

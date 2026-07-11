@@ -1,7 +1,6 @@
 import * as React from "react"
 import {
-  useListUsers,
-  useListTeams,
+  useListAssignableReviewers,
   useBulkAssignReviews,
 } from "@workspace/api-client-react"
 import {
@@ -52,8 +51,8 @@ export function BulkAssignDialog({
   onAssigned?: () => void
 }) {
   const { toast } = useToast()
-  const { data: users = [] } = useListUsers()
-  const { data: teams = [] } = useListTeams()
+  const { data: assignable } = useListAssignableReviewers()
+  const teams = assignable?.teams ?? []
   const bulk = useBulkAssignReviews()
 
   const [assigneeId, setAssigneeId] = React.useState<string>(UNASSIGNED)
@@ -75,7 +74,7 @@ export function BulkAssignDialog({
     setComments("")
   }, [open])
 
-  const activeUsers = users.filter((u) => u.active)
+  const activeUsers = assignable?.users ?? []
 
   function submit() {
     bulk.mutate(

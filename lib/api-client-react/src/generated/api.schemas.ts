@@ -1972,6 +1972,16 @@ export interface AssignmentRecommendation {
   reason: string;
 }
 
+export interface AssignableOption {
+  id: number;
+  name: string;
+}
+
+export interface AssignableReviewers {
+  users: AssignableOption[];
+  teams: AssignableOption[];
+}
+
 export type BulkAssignInputPriority = typeof BulkAssignInputPriority[keyof typeof BulkAssignInputPriority];
 
 
