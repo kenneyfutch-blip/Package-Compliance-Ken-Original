@@ -1,0 +1,240 @@
+I have successfully configured my FDA API key in Replit Secrets.
+
+Create a Regulatory Intelligence Service that uses the FDA API key across the application.
+
+Create a dedicated architecture that supports:
+
+Regulatory Sources
+- FDA
+- EPA (future)
+- eCFR (future)
+- USDA (future)
+- FTC (future)
+- CPSC (future)
+
+====================================================
+FDA SERVICE LAYER
+====================================================
+
+Create:
+
+services/fda/
+
+Inside create:
+
+fda_client.py
+
+food_service.py
+
+drug_service.py
+
+cosmetic_service.py
+
+regulatory_router.py
+
+====================================================
+FDA CONFIGURATION
+====================================================
+
+Load API key from environment variables.
+
+FDA_API_KEY
+
+Do not expose keys in frontend code.
+
+====================================================
+SUPPORTED FDA ENDPOINTS
+====================================================
+
+Drug Labels
+
+Food Enforcement
+
+Food Events
+
+Cosmetic Events
+
+Create reusable service functions.
+
+Example:
+
+search_drug_labels()
+
+search_food_events()
+
+search_cosmetic_events()
+
+get_product_warnings()
+
+get_ingredient_information()
+
+====================================================
+REGULATORY ROUTER
+====================================================
+
+Create a category-based regulatory router.
+
+When a package is uploaded:
+
+Food
+-> FDA Food
+-> FDA Food Events
+-> FDA Food Enforcement
+
+Cosmetics
+-> FDA Cosmetics
+
+OTC Drug
+-> FDA Drug Labels
+
+Cleaning Products
+-> EPA (future)
+
+Toys
+-> CPSC (future)
+
+Organic Products
+-> USDA (future)
+
+Marketing Claims
+-> FTC (future)
+
+Users should never manually choose dataset sources.
+
+The system automatically determines applicable regulations.
+
+====================================================
+FDA KNOWLEDGE PANEL
+====================================================
+
+Add UI navigation:
+
+Regulatory Intelligence
+    FDA Food
+    FDA Drug Labels
+    FDA Cosmetics
+    FDA Search
+
+Allow compliance specialists to:
+
+Search ingredients
+
+Search FDA records
+
+Search warning statements
+
+Search approved language
+
+Search recalls
+
+Search product label examples
+
+====================================================
+COMPLIANCE ENGINE INTEGRATION
+====================================================
+
+When OCR extracts packaging text:
+
+Run category detection.
+
+Load relevant FDA sources.
+
+Inject FDA findings into compliance reviews.
+
+Use FDA data to:
+
+Validate ingredients
+
+Validate warnings
+
+Validate claims
+
+Validate allergen disclosures
+
+Validate required statements
+
+====================================================
+FDA RESULTS PANEL
+====================================================
+
+Inside package review create a new tab:
+
+FDA Intelligence
+
+Show:
+
+Category
+
+Applicable FDA Sources
+
+FDA Warnings
+
+FDA Findings
+
+Relevant Product Labels
+
+Regulatory References
+
+Source Links
+
+====================================================
+CACHE SYSTEM
+====================================================
+
+Cache FDA responses.
+
+Reduce API calls.
+
+Prevent rate limit issues.
+
+Store results locally.
+
+====================================================
+ERROR HANDLING
+====================================================
+
+If FDA unavailable:
+
+Message:
+
+FDA Source Temporarily Unavailable
+
+Continue analysis using:
+
+Internal Standards
+
+Local Regulatory Library
+
+Historical Compliance Memory
+
+Never fail entire review.
+
+====================================================
+ADMIN PAGE
+====================================================
+
+Add:
+
+Regulatory Sources
+
+Display:
+
+FDA Status
+
+Last FDA Sync
+
+Total FDA Records Cached
+
+Successful Requests
+
+Failed Requests
+
+====================================================
+COMPLIANCE GOAL
+====================================================
+
+The FDA integration should become the foundation of the compliance engine.
+
+Compliance specialists should never need to leave the platform to search FDA resources.
+
+All FDA intelligence should be accessible directly within package reviews.

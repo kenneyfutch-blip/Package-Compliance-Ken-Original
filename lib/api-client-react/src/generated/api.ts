@@ -35,6 +35,7 @@ import type {
   HealthStatus,
   ListPackagesParams,
   ListRegulationsParams,
+  ListViolationsParams,
   Notification,
   Package,
   PackageDetail,
@@ -49,7 +50,8 @@ import type {
   SupplierInput,
   TrendPoint,
   UserAccount,
-  VendorPerformanceItem
+  VendorPerformanceItem,
+  ViolationWithPackage
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -530,6 +532,90 @@ export function useGetVendorPerformance<TData = Awaited<ReturnType<typeof getVen
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetVendorPerformanceQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListViolationsUrl = (params?: ListViolationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/violations?${stringifiedParams}` : `/api/violations`
+}
+
+/**
+ * @summary List compliance violations across all packages with filters
+ */
+export const listViolations = async (params?: ListViolationsParams, options?: RequestInit): Promise<ViolationWithPackage[]> => {
+
+  return customFetch<ViolationWithPackage[]>(getListViolationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListViolationsQueryKey = (params?: ListViolationsParams,) => {
+    return [
+    `/api/violations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListViolationsQueryOptions = <TData = Awaited<ReturnType<typeof listViolations>>, TError = ErrorType<unknown>>(params?: ListViolationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listViolations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListViolationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listViolations>>> = ({ signal }) => listViolations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listViolations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListViolationsQueryResult = NonNullable<Awaited<ReturnType<typeof listViolations>>>
+export type ListViolationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List compliance violations across all packages with filters
+ */
+
+export function useListViolations<TData = Awaited<ReturnType<typeof listViolations>>, TError = ErrorType<unknown>>(
+ params?: ListViolationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listViolations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListViolationsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

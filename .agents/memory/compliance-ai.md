@@ -17,6 +17,13 @@ AI packaging-compliance review tool. Reviewers submit product packaging artwork 
 - **Violation bboxes are AI-estimated** normalized 0–1 coords, overlaid as hotspots on artwork image. **Why:** no real OCR/coordinate data; approximate boxes are acceptable for the review viewer.
 - **No real file/OCR parsing**; analysis is on pasted "extracted artwork text". Artwork images (`public/artwork/pkg-*.png`) are illustrative, served at `/artwork/...`.
 - **Auth deferred** — no Clerk/Replit auth yet.
+- **Engine labels are free-form AI strings**, not a clean enum (e.g. "FTC/Country of Origin", "Spelling/Grammar/Style"). Any grouping (heatmaps, distributions, category filters) MUST normalize via `normalizeEngine()` in `artifacts/compliance/src/lib/compliance.ts` into canonical buckets. **Why:** the model emits varied labels; grouping on raw strings fragments the data.
+- **Violation "resolved" is violation-level** (`violations.status` in Resolved/Fixed/Accepted/Closed), NOT package `complianceStatus`. `GET /violations?resolved=true|false` filters on violation status. **Why:** a passed package can still have open findings and vice-versa.
+- **`GET /violations`** (global, cross-package) powers the AI Compliance nav section. Selects only needed columns + package context (never full rows — avoids pulling heavy OCR/bbox JSON), severity-ranked ordering with id tie-breaker, `limit`(≤500)/`offset` pagination.
+
+## Navigation (grouped IA)
+- Sidebar is grouped + collapsible (`components/layout.tsx`, `NAV` array): Dashboard / Review Queue / Packages / Regulatory Intelligence / AI Compliance / Suppliers / Reports / Audit / Admin. Group auto-opens when it contains the active route.
+- Bucket pages reuse one generic `PackagesView` (status/risk filtered); regulatory libraries reuse `RegulatoryLibrary` filtered by agency (`/regulatory/:agency`, sop→Internal). Topbar search pushes `/packages?q=` (read via wouter `useSearch`).
 
 ## How to apply
 - Reseed with `npx tsx artifacts/api-server/src/seed.ts` (runs real OpenAI; ~3 min). Seed artwork URLs are hardcoded to `/artwork/pkg-N.png` keyed by product.

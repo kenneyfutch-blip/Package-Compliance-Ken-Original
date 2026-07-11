@@ -6,6 +6,7 @@ import regulationsRouter from "./regulations";
 import suppliersRouter from "./suppliers";
 import miscRouter from "./misc";
 import aiProvidersRouter from "./ai-providers";
+import violationsRouter from "./violations";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(regulationsRouter);
 router.use(suppliersRouter);
 router.use(miscRouter);
 router.use(aiProvidersRouter);
+router.use(violationsRouter);
 
 export default router;

@@ -28,6 +28,8 @@ tags:
     description: Admin and users
   - name: ai
     description: AI model provider configuration
+  - name: violations
+    description: Cross-package compliance violations and AI recommendations
 paths:
   /healthz:
     get:
@@ -116,6 +118,66 @@ paths:
                 items:
                   $ref: "#/components/schemas/VendorPerformanceItem"
 
+  /violations:
+    get:
+      operationId: listViolations
+      tags: [violations]
+      summary: List compliance violations across all packages with filters
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: engine
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: vendor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: resolved
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of violations with package context
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ViolationWithPackage"
   /packages:
     get:
       operationId: listPackages
@@ -888,6 +950,63 @@ components:
         - description
         - status
         - createdAt
+
+    ViolationWithPackage:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        severity:
+          type: string
+        engine:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        regulationRef:
+          type: ["string", "null"]
+        recommendation:
+          type: ["string", "null"]
+        detectedText:
+          type: ["string", "null"]
+        suggestedText:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        packageSku:
+          type: string
+        packageName:
+          type: string
+        vendor:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        packageStatus:
+          type: string
+        complianceStatus:
+          type: ["string", "null"]
+        grade:
+          type: ["string", "null"]
+        riskScore:
+          type: ["integer", "null"]
+      required:
+        - id
+        - packageId
+        - severity
+        - engine
+        - title
+        - description
+        - status
+        - createdAt
+        - packageSku
+        - packageName
+        - packageStatus
 
     OcrData:
       type: object

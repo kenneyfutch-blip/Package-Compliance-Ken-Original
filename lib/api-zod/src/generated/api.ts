@@ -81,6 +81,46 @@ export const GetVendorPerformanceResponse = zod.array(GetVendorPerformanceRespon
 
 
 /**
+ * @summary List compliance violations across all packages with filters
+ */
+export const ListViolationsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "engine": zod.coerce.string().optional(),
+  "severity": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional(),
+  "vendor": zod.coerce.string().optional(),
+  "category": zod.coerce.string().optional(),
+  "resolved": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
+})
+
+export const ListViolationsResponseItem = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "severity": zod.string(),
+  "engine": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "regulationRef": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "detectedText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "packageSku": zod.string(),
+  "packageName": zod.string(),
+  "vendor": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "packageStatus": zod.string(),
+  "complianceStatus": zod.string().nullish(),
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish()
+})
+export const ListViolationsResponse = zod.array(ListViolationsResponseItem)
+
+
+/**
  * @summary List packaging reviews with optional filters
  */
 export const ListPackagesQueryParams = zod.object({

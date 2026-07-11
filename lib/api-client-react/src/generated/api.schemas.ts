@@ -74,6 +74,38 @@ export interface Violation {
   createdAt: string;
 }
 
+export interface ViolationWithPackage {
+  id: number;
+  packageId: number;
+  severity: string;
+  engine: string;
+  title: string;
+  description: string;
+  /** @nullable */
+  regulationRef?: string | null;
+  /** @nullable */
+  recommendation?: string | null;
+  /** @nullable */
+  detectedText?: string | null;
+  /** @nullable */
+  suggestedText?: string | null;
+  status: string;
+  createdAt: string;
+  packageSku: string;
+  packageName: string;
+  /** @nullable */
+  vendor?: string | null;
+  /** @nullable */
+  category?: string | null;
+  packageStatus: string;
+  /** @nullable */
+  complianceStatus?: string | null;
+  /** @nullable */
+  grade?: string | null;
+  /** @nullable */
+  riskScore?: number | null;
+}
+
 export interface OcrData {
   /** @nullable */
   productName?: string | null;
@@ -422,6 +454,18 @@ export interface UserAccount {
   active: boolean;
   createdAt: string;
 }
+
+export type ListViolationsParams = {
+search?: string;
+engine?: string;
+severity?: string;
+status?: string;
+vendor?: string;
+category?: string;
+resolved?: string;
+limit?: number;
+offset?: number;
+};
 
 export type ListPackagesParams = {
 search?: string;
