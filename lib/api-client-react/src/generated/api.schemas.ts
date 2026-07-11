@@ -5,6 +5,100 @@
  * Packaging Compliance AI API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface Policy {
+  id: number;
+  name: string;
+  policyType?: string | null;
+  category: string;
+  department?: string | null;
+  owner?: string | null;
+  source?: string | null;
+  summary?: string | null;
+  status: string;
+  defaultSeverity: string;
+  tags: string[];
+  effectiveDate?: string | null;
+  expirationDate?: string | null;
+  version: number;
+  documentUrl?: string | null;
+  fileName?: string | null;
+  contentType?: string | null;
+  extractedText?: string | null;
+  extractionStatus: string;
+  extractionEngine?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PolicyInput {
+  name: string;
+  category: string;
+  policyType?: string | null;
+  department?: string | null;
+  owner?: string | null;
+  source?: string | null;
+  summary?: string | null;
+  status?: string | null;
+  defaultSeverity?: string | null;
+  tags?: string[] | null;
+  effectiveDate?: string | null;
+  expirationDate?: string | null;
+  documentUrl?: string | null;
+  fileName?: string | null;
+  contentType?: string | null;
+}
+
+export interface PolicyUpdate {
+  name?: string;
+  category?: string;
+  policyType?: string | null;
+  department?: string | null;
+  owner?: string | null;
+  source?: string | null;
+  summary?: string | null;
+  status?: string;
+  defaultSeverity?: string;
+  tags?: string[] | null;
+  effectiveDate?: string | null;
+  expirationDate?: string | null;
+}
+
+export interface PolicyVersionInput {
+  changeNote?: string | null;
+}
+
+export interface PolicyMatch {
+  id: number;
+  name: string;
+  category: string;
+  policyType?: string | null;
+  source?: string | null;
+  summary?: string | null;
+  defaultSeverity: string;
+  effectiveDate?: string | null;
+  expirationDate?: string | null;
+  version: number;
+  similarity: number;
+}
+
+export interface PolicyVersion {
+  id: number;
+  policyId: number;
+  version: number;
+  name: string;
+  category: string;
+  status: string;
+  summary?: string | null;
+  defaultSeverity?: string | null;
+  documentUrl?: string | null;
+  fileName?: string | null;
+  effectiveDate?: string | null;
+  expirationDate?: string | null;
+  changeNote?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+}
+
 export interface FdaRecall {
   recallNumber: string;
   category: string;
@@ -1715,5 +1809,16 @@ export type ListReviewAssignmentsParams = {
 status?: string;
 teamId?: number;
 assigneeUserId?: number;
+};
+
+export type ListPoliciesParams = {
+search?: string;
+category?: string;
+status?: string;
+};
+
+export type SearchPoliciesParams = {
+q: string;
+limit?: number;
 };
 

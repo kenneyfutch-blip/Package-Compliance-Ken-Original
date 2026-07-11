@@ -95,6 +95,7 @@ export async function analyzePackaging(
   pkg: PackageRow,
   regulations: Regulation[],
   priorKnowledge?: string,
+  internalStandards?: string,
 ): Promise<AnalysisResult> {
   const regContext = regulations
     .map(
@@ -114,6 +115,7 @@ You must run ALL of these detection engines and label each violation's "engine" 
 6. "Packaging Formatting" — formatting/layout compliance: required type sizes, principal display panel placement, contrast/legibility, required panels present, net quantity placement.
 7. "Dollar Tree Standards" — internal Dollar Tree packaging standards: consistent brand presentation, required $1.25/price legends where applicable, barcode/UPC presence and placement, supplier and item number, no unapproved third-party trademarks, approved claim language.
 8. "Category Regulation" — product-category-specific regulatory violations based on the declared category and product type (e.g. CPSC toy safety age grading, USDA labeling, textile fiber content/care labels, children's product tracking labels).
+9. "Internal Standard" — company-specific internal policies and standards (packaging, brand, supplier, legal, artwork, marketing) that are provided in the INTERNAL COMPANY STANDARDS section below. These carry EQUAL authority to government regulations: when the packaging violates one of the provided internal policies, raise a violation labeled engine "Internal Standard". Only raise Internal Standard violations for policies explicitly provided below — never invent internal policies.
 
 Marketing CLAIM detection: whenever you detect a marketing claim (e.g. "Kills 99.9% of Germs", "Organic", "Natural", "Safe", "Chemical Free", "Eco Friendly", "Clinically Proven", "Doctor Recommended"), create a violation and, in the description, state which authority should review it (Potential EPA Review / Potential FDA Review / Potential FTC Review / Potential Legal Review).`;
 
@@ -141,6 +143,10 @@ ${regContext || "(none provided; rely on standard US packaging regulations)"}
 ${
   priorKnowledge && priorKnowledge.trim()
     ? `\nINSTITUTIONAL COMPLIANCE MEMORY (how reviewers resolved similar findings on past packages — use this to stay consistent with precedent, prefer the same regulation citations and fixes when the same issue recurs, but still analyze this package on its own merits):\n${priorKnowledge}\n`
+    : ""
+}${
+  internalStandards && internalStandards.trim()
+    ? `\nINTERNAL COMPANY STANDARDS (internal Dollar Tree policies uploaded by compliance managers — these carry EQUAL authority to FDA/EPA/eCFR regulations. Evaluate the packaging against EACH policy below; when the packaging violates one, produce a finding with engine "Internal Standard", severity matching the policy, detectedText for the offending copy/element (or null if a required element is missing), regulationRef set to the policy Source, and cite the specific policy name in the description. Internal compliance can FAIL even when external regulatory compliance passes.):\n${internalStandards}\n`
     : ""
 }
 Perform:

@@ -40,6 +40,10 @@ import {
   ensureInitialVersion,
 } from "../lib/packageService";
 import { analyzePackaging, askCompliancePilot } from "../lib/ai";
+import {
+  retrieveRelevantPolicies,
+  formatPoliciesForPrompt,
+} from "../lib/policies/engine";
 import { logger } from "../lib/logger";
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 import { packageConds, canAccessPackage } from "../lib/rbac/scope";
@@ -101,6 +105,27 @@ async function priorKnowledgeFor(
     return formatMemoryForPrompt(similar) || undefined;
   } catch (err) {
     logger.error({ err }, "Compliance memory recall failed");
+    return undefined;
+  }
+}
+
+// Internal Policy & Standards recall: fetch the org's active internal policies
+// most relevant to this package and format them for the AI review prompt so they
+// participate in analysis with equal authority to government regulations.
+// Non-fatal — a recall miss must never block analysis.
+async function relevantPoliciesFor(
+  pkg: PackageRow,
+  req: Request,
+): Promise<string | undefined> {
+  try {
+    const policies = await retrieveRelevantPolicies({
+      organizationId: orgId(req),
+      queryText: packageQueryText(pkg),
+      limit: 8,
+    });
+    return formatPoliciesForPrompt(policies) || undefined;
+  } catch (err) {
+    logger.error({ err }, "Internal policy recall failed");
     return undefined;
   }
 }
@@ -317,7 +342,13 @@ router.post(
       try {
         const regulations = await loadRegulations();
         const priorKnowledge = await priorKnowledgeFor(current, req);
-        const result = await analyzePackaging(current, regulations, priorKnowledge);
+        const internalStandards = await relevantPoliciesFor(current, req);
+        const result = await analyzePackaging(
+          current,
+          regulations,
+          priorKnowledge,
+          internalStandards,
+        );
         const version = await ensureInitialVersion(current);
         await applyAnalysis(current, result, version.id, organizationId);
         const [refreshed] = await db
@@ -509,7 +540,13 @@ router.post(
     try {
       const regulations = await loadRegulations();
       const priorKnowledge = await priorKnowledgeFor(pkg, req);
-      const result = await analyzePackaging(pkg, regulations, priorKnowledge);
+      const internalStandards = await relevantPoliciesFor(pkg, req);
+      const result = await analyzePackaging(
+        pkg,
+        regulations,
+        priorKnowledge,
+        internalStandards,
+      );
       const version = await ensureInitialVersion(pkg);
       await applyAnalysis(pkg, result, version.id, orgId(req));
     } catch (err) {
@@ -576,7 +613,13 @@ router.post(
       try {
         const regulations = await loadRegulations();
         const priorKnowledge = await priorKnowledgeFor(current, req);
-        const result = await analyzePackaging(current, regulations, priorKnowledge);
+        const internalStandards = await relevantPoliciesFor(current, req);
+        const result = await analyzePackaging(
+          current,
+          regulations,
+          priorKnowledge,
+          internalStandards,
+        );
         const version = await ensureInitialVersion(current);
         await applyAnalysis(current, result, version.id, orgId(req));
         const [refreshed] = await db
@@ -727,7 +770,13 @@ router.post(
     for (const pkg of rows) {
       try {
         const priorKnowledge = await priorKnowledgeFor(pkg, req);
-        const result = await analyzePackaging(pkg, regulations, priorKnowledge);
+        const internalStandards = await relevantPoliciesFor(pkg, req);
+        const result = await analyzePackaging(
+          pkg,
+          regulations,
+          priorKnowledge,
+          internalStandards,
+        );
         const version = await ensureInitialVersion(pkg);
         await applyAnalysis(pkg, result, version.id, organizationId);
         analyzed += 1;

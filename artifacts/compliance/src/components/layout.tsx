@@ -42,6 +42,7 @@ import {
   Gauge,
   Activity,
   Plug,
+  ScrollText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -129,6 +130,14 @@ const NAV: NavEntry[] = [
   },
   {
     type: "group",
+    name: "Resources",
+    icon: BookOpen,
+    items: [
+      { name: "Policy Repository", href: "/resources/policies", icon: ScrollText },
+    ],
+  },
+  {
+    type: "group",
     name: "Administration",
     icon: Cog,
     items: [
@@ -137,6 +146,7 @@ const NAV: NavEntry[] = [
       { name: "Activity Monitor", href: "/admin/activity", icon: Activity },
       { name: "Usage Analytics", href: "/admin/usage", icon: LineChart },
       { name: "Integrations", href: "/admin/integrations", icon: Plug },
+      { name: "Policy Management", href: "/admin/policies", icon: ScrollText },
       { name: "User Management", href: "/operations/users", icon: Users },
       { name: "Team Management", href: "/operations/teams", icon: UsersRound },
       { name: "Roles & Permissions", href: "/operations/roles", icon: ShieldCheck },

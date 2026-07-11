@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { ensureAuditImmutability } from "./lib/audit";
 import { initJobs } from "./lib/jobs";
 import { ensureMemoryIndexes } from "./lib/memory/engine";
+import { ensurePolicyIndexes } from "./lib/policies/engine";
 import { initMaintenance } from "./lib/maintenance/archive";
 import { backfillSupplierLinks } from "./lib/suppliers/link";
 
@@ -33,6 +34,9 @@ app.listen(port, (err) => {
 
   // Create the vector ANN index for Compliance Memory semantic search.
   void ensureMemoryIndexes();
+
+  // Create the vector ANN index for Internal Policy & Standards search.
+  void ensurePolicyIndexes();
 
   // Link legacy packages and memory rows to their master supplier record by id
   // (idempotent, non-fatal) so supplier scoping no longer relies on vendor names.

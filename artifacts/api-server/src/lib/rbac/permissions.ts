@@ -30,6 +30,8 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: "regulations:read", category: "regulations", description: "View the regulation library" },
   { key: "regulations:write", category: "regulations", description: "Edit the regulation library" },
   { key: "fda:read", category: "regulations", description: "Query live FDA intelligence" },
+  { key: "policies:read", category: "policies", description: "View internal policies and standards" },
+  { key: "policies:write", category: "policies", description: "Create, edit, and version internal policies" },
   { key: "audit:read", category: "audit", description: "View the audit trail" },
   { key: "notifications:read", category: "notifications", description: "View notifications" },
   { key: "ai_providers:read", category: "administration", description: "View AI provider configuration" },
@@ -72,6 +74,7 @@ export const ROLES: RoleDef[] = [
       "reports:read", "reports:write",
       "regulations:read", "regulations:write", "fda:read", "audit:read", "notifications:read",
       "ai_providers:read", "users:read", "users:write", "teams:read", "teams:write",
+      "policies:read", "policies:write",
     ],
   },
   {
@@ -86,6 +89,7 @@ export const ROLES: RoleDef[] = [
       "reports:read", "reports:write",
       "regulations:read", "fda:read", "audit:read", "notifications:read",
       "users:read", "teams:read",
+      "policies:read", "policies:write",
     ],
   },
   {
@@ -98,6 +102,7 @@ export const ROLES: RoleDef[] = [
       "violations:read", "violations:write", "proofs:read", "proofs:write", "proofs:decide",
       "suppliers:read", "submissions:read", "submissions:review", "reports:read", "reports:write",
       "regulations:read", "fda:read", "audit:read", "notifications:read",
+      "policies:read",
     ],
   },
   {
@@ -109,6 +114,7 @@ export const ROLES: RoleDef[] = [
       "dashboard:read", "packages:read", "packages:write",
       "violations:read", "proofs:read", "proofs:write",
       "suppliers:read", "reports:read", "regulations:read", "fda:read", "notifications:read",
+      "policies:read",
     ],
   },
   {
@@ -120,6 +126,7 @@ export const ROLES: RoleDef[] = [
       "dashboard:read", "packages:read", "packages:write",
       "violations:read", "proofs:read", "proofs:write",
       "reports:read", "regulations:read", "fda:read", "notifications:read",
+      "policies:read",
     ],
   },
   {
@@ -131,6 +138,7 @@ export const ROLES: RoleDef[] = [
       "dashboard:read", "packages:read", "violations:read", "violations:write",
       "proofs:read", "proofs:decide", "reports:read",
       "regulations:read", "regulations:write", "fda:read", "audit:read", "notifications:read",
+      "policies:read", "policies:write",
     ],
   },
   {
@@ -141,6 +149,7 @@ export const ROLES: RoleDef[] = [
     permissions: [
       "dashboard:read", "packages:read", "violations:read", "suppliers:read", "submissions:read",
       "reports:read", "regulations:read", "audit:read", "notifications:read",
+      "policies:read",
     ],
   },
   {
@@ -162,6 +171,7 @@ export const ROLES: RoleDef[] = [
     permissions: [
       "dashboard:read", "packages:read", "violations:read",
       "regulations:read", "notifications:read",
+      "policies:read",
     ],
   },
 ];

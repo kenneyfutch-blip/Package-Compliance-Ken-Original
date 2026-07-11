@@ -62,6 +62,7 @@ import type {
   ListFdaRecallsParams,
   ListLanguageFindingsParams,
   ListPackagesParams,
+  ListPoliciesParams,
   ListRegulationsParams,
   ListReviewAssignmentsParams,
   ListSupplierSubmissionsParams,
@@ -76,6 +77,12 @@ import type {
   PackageUpdate,
   PackageVersion,
   PackageVersionInput,
+  Policy,
+  PolicyInput,
+  PolicyMatch,
+  PolicyUpdate,
+  PolicyVersion,
+  PolicyVersionInput,
   ProofExport,
   QueueMetrics,
   Regulation,
@@ -90,6 +97,7 @@ import type {
   ReviewTaskInput,
   ReviewTaskUpdate,
   RoleInfo,
+  SearchPoliciesParams,
   SubmissionInput,
   SubmissionReviewInput,
   Supplier,
@@ -6831,5 +6839,613 @@ export const useAutoAssignPackageReview = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getAutoAssignPackageReviewMutationOptions(options));
+    }
+
+export const getListPoliciesUrl = (params?: ListPoliciesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/policies?${stringifiedParams}` : `/api/policies`
+}
+
+/**
+ * @summary List internal policies and standards
+ */
+export const listPolicies = async (params?: ListPoliciesParams, options?: RequestInit): Promise<Policy[]> => {
+
+  return customFetch<Policy[]>(getListPoliciesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPoliciesQueryKey = (params?: ListPoliciesParams,) => {
+    return [
+    `/api/policies`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPoliciesQueryOptions = <TData = Awaited<ReturnType<typeof listPolicies>>, TError = ErrorType<unknown>>(params?: ListPoliciesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPoliciesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPolicies>>> = ({ signal }) => listPolicies(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPolicies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPoliciesQueryResult = NonNullable<Awaited<ReturnType<typeof listPolicies>>>
+export type ListPoliciesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List internal policies and standards
+ */
+
+export function useListPolicies<TData = Awaited<ReturnType<typeof listPolicies>>, TError = ErrorType<unknown>>(
+ params?: ListPoliciesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPoliciesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePolicyUrl = () => {
+
+
+
+
+  return `/api/policies`
+}
+
+/**
+ * @summary Create an internal policy (optionally from an uploaded document)
+ */
+export const createPolicy = async (policyInput: PolicyInput, options?: RequestInit): Promise<Policy> => {
+
+  return customFetch<Policy>(getCreatePolicyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(policyInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePolicyMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPolicy>>, TError,{data: BodyType<PolicyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPolicy>>, TError,{data: BodyType<PolicyInput>}, TContext> => {
+
+const mutationKey = ['createPolicy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPolicy>>, {data: BodyType<PolicyInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPolicy(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePolicyMutationResult = NonNullable<Awaited<ReturnType<typeof createPolicy>>>
+    export type CreatePolicyMutationBody = BodyType<PolicyInput>
+    export type CreatePolicyMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create an internal policy (optionally from an uploaded document)
+ */
+export const useCreatePolicy = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPolicy>>, TError,{data: BodyType<PolicyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPolicy>>,
+        TError,
+        {data: BodyType<PolicyInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePolicyMutationOptions(options));
+    }
+
+export const getSearchPoliciesUrl = (params: SearchPoliciesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/policies/search?${stringifiedParams}` : `/api/policies/search`
+}
+
+/**
+ * @summary Natural-language semantic search over internal policies
+ */
+export const searchPolicies = async (params: SearchPoliciesParams, options?: RequestInit): Promise<PolicyMatch[]> => {
+
+  return customFetch<PolicyMatch[]>(getSearchPoliciesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchPoliciesQueryKey = (params?: SearchPoliciesParams,) => {
+    return [
+    `/api/policies/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchPoliciesQueryOptions = <TData = Awaited<ReturnType<typeof searchPolicies>>, TError = ErrorType<unknown>>(params: SearchPoliciesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchPoliciesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchPolicies>>> = ({ signal }) => searchPolicies(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchPolicies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchPoliciesQueryResult = NonNullable<Awaited<ReturnType<typeof searchPolicies>>>
+export type SearchPoliciesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Natural-language semantic search over internal policies
+ */
+
+export function useSearchPolicies<TData = Awaited<ReturnType<typeof searchPolicies>>, TError = ErrorType<unknown>>(
+ params: SearchPoliciesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchPolicies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchPoliciesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPolicyUrl = (id: number,) => {
+
+
+
+
+  return `/api/policies/${id}`
+}
+
+/**
+ * @summary Get a single policy
+ */
+export const getPolicy = async (id: number, options?: RequestInit): Promise<Policy> => {
+
+  return customFetch<Policy>(getGetPolicyUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPolicyQueryKey = (id: number,) => {
+    return [
+    `/api/policies/${id}`
+    ] as const;
+    }
+
+
+export const getGetPolicyQueryOptions = <TData = Awaited<ReturnType<typeof getPolicy>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPolicyQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPolicy>>> = ({ signal }) => getPolicy(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPolicy>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPolicyQueryResult = NonNullable<Awaited<ReturnType<typeof getPolicy>>>
+export type GetPolicyQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get a single policy
+ */
+
+export function useGetPolicy<TData = Awaited<ReturnType<typeof getPolicy>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPolicy>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPolicyQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdatePolicyUrl = (id: number,) => {
+
+
+
+
+  return `/api/policies/${id}`
+}
+
+/**
+ * @summary Update or archive a policy
+ */
+export const updatePolicy = async (id: number,
+    policyUpdate: PolicyUpdate, options?: RequestInit): Promise<Policy> => {
+
+  return customFetch<Policy>(getUpdatePolicyUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(policyUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePolicyMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePolicy>>, TError,{id: number;data: BodyType<PolicyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePolicy>>, TError,{id: number;data: BodyType<PolicyUpdate>}, TContext> => {
+
+const mutationKey = ['updatePolicy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePolicy>>, {id: number;data: BodyType<PolicyUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePolicy(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePolicyMutationResult = NonNullable<Awaited<ReturnType<typeof updatePolicy>>>
+    export type UpdatePolicyMutationBody = BodyType<PolicyUpdate>
+    export type UpdatePolicyMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Update or archive a policy
+ */
+export const useUpdatePolicy = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePolicy>>, TError,{id: number;data: BodyType<PolicyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePolicy>>,
+        TError,
+        {id: number;data: BodyType<PolicyUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePolicyMutationOptions(options));
+    }
+
+export const getListPolicyVersionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/policies/${id}/versions`
+}
+
+/**
+ * @summary List immutable version snapshots of a policy
+ */
+export const listPolicyVersions = async (id: number, options?: RequestInit): Promise<PolicyVersion[]> => {
+
+  return customFetch<PolicyVersion[]>(getListPolicyVersionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPolicyVersionsQueryKey = (id: number,) => {
+    return [
+    `/api/policies/${id}/versions`
+    ] as const;
+    }
+
+
+export const getListPolicyVersionsQueryOptions = <TData = Awaited<ReturnType<typeof listPolicyVersions>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPolicyVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPolicyVersionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPolicyVersions>>> = ({ signal }) => listPolicyVersions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPolicyVersions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPolicyVersionsQueryResult = NonNullable<Awaited<ReturnType<typeof listPolicyVersions>>>
+export type ListPolicyVersionsQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary List immutable version snapshots of a policy
+ */
+
+export function useListPolicyVersions<TData = Awaited<ReturnType<typeof listPolicyVersions>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPolicyVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPolicyVersionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePolicyVersionUrl = (id: number,) => {
+
+
+
+
+  return `/api/policies/${id}/versions`
+}
+
+/**
+ * @summary Publish a new version of a policy (snapshots the current state)
+ */
+export const createPolicyVersion = async (id: number,
+    policyVersionInput: PolicyVersionInput, options?: RequestInit): Promise<Policy> => {
+
+  return customFetch<Policy>(getCreatePolicyVersionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(policyVersionInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePolicyVersionMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPolicyVersion>>, TError,{id: number;data: BodyType<PolicyVersionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPolicyVersion>>, TError,{id: number;data: BodyType<PolicyVersionInput>}, TContext> => {
+
+const mutationKey = ['createPolicyVersion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPolicyVersion>>, {id: number;data: BodyType<PolicyVersionInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createPolicyVersion(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePolicyVersionMutationResult = NonNullable<Awaited<ReturnType<typeof createPolicyVersion>>>
+    export type CreatePolicyVersionMutationBody = BodyType<PolicyVersionInput>
+    export type CreatePolicyVersionMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Publish a new version of a policy (snapshots the current state)
+ */
+export const useCreatePolicyVersion = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPolicyVersion>>, TError,{id: number;data: BodyType<PolicyVersionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPolicyVersion>>,
+        TError,
+        {id: number;data: BodyType<PolicyVersionInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePolicyVersionMutationOptions(options));
+    }
+
+export const getReprocessPolicyUrl = (id: number,) => {
+
+
+
+
+  return `/api/policies/${id}/reprocess`
+}
+
+/**
+ * @summary Re-extract the policy document text and re-embed the policy
+ */
+export const reprocessPolicy = async (id: number, options?: RequestInit): Promise<Policy> => {
+
+  return customFetch<Policy>(getReprocessPolicyUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getReprocessPolicyMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reprocessPolicy>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reprocessPolicy>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['reprocessPolicy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reprocessPolicy>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  reprocessPolicy(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReprocessPolicyMutationResult = NonNullable<Awaited<ReturnType<typeof reprocessPolicy>>>
+
+    export type ReprocessPolicyMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Re-extract the policy document text and re-embed the policy
+ */
+export const useReprocessPolicy = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reprocessPolicy>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reprocessPolicy>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getReprocessPolicyMutationOptions(options));
     }
 

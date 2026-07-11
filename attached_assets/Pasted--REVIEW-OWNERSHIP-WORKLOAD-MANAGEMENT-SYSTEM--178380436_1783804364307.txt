@@ -1,0 +1,493 @@
+====================================================
+REVIEW OWNERSHIP & WORKLOAD MANAGEMENT SYSTEM
+====================================================
+
+Build a centralized Review Ownership and Workload Management system.
+
+The purpose of this system is to ensure:
+
+- Every review has a clear owner
+- Managers can monitor workload
+- Specialists know their queue
+- Duplicate work is prevented
+- Team capacity is visible
+- Assignment status is visible throughout the application
+- All review ownership changes are tracked
+
+====================================================
+ASSIGNMENT MODEL
+====================================================
+
+Every package review must support:
+
+Assigned Team
+
+Assigned User
+
+Assigned By
+
+Assigned Date
+
+Due Date
+
+Priority
+
+Current Status
+
+SLA Status
+
+Review Stage
+
+Review Lock Status
+
+====================================================
+PACKAGE REVIEW CARD
+====================================================
+
+Every package card throughout the application must display:
+
+Assigned User
+
+Assigned Team
+
+Reviewer Avatar
+
+Status
+
+Priority
+
+Due Date
+
+Last Activity
+
+Example:
+
+PK-ORG-789
+
+Assigned To:
+Dana Whitfield
+
+Team:
+Food Compliance
+
+Status:
+In Review
+
+Last Activity:
+15 Minutes Ago
+
+====================================================
+GLOBAL ASSIGNMENT VISIBILITY
+====================================================
+
+Whenever a package is assigned:
+
+The assignment must immediately appear in:
+
+Review Grid
+
+Package Detail Page
+
+Review Workspace
+
+Manager Dashboard
+
+Specialist Dashboard
+
+Team Dashboard
+
+Notifications
+
+Activity Timeline
+
+Audit Logs
+
+====================================================
+SPECIALIST DASHBOARD
+====================================================
+
+Create a dedicated dashboard for every specialist.
+
+Menu:
+
+My Work
+
+Display:
+
+Assigned Reviews
+
+Open Reviews
+
+Pending Reviews
+
+Completed Reviews
+
+Critical Reviews
+
+Overdue Reviews
+
+Workload %
+
+SLA Compliance
+
+Average Completion Time
+
+Reviews By Priority
+
+Review Queue
+
+Example:
+
+Dana Whitfield
+
+Assigned:
+48 Reviews
+
+Open:
+22
+
+Critical:
+5
+
+Completed Today:
+12
+
+Workload:
+92%
+
+====================================================
+MANAGER DASHBOARD
+====================================================
+
+Create a workload dashboard for managers.
+
+Display:
+
+Users
+
+Assigned Reviews
+
+Open Reviews
+
+Completed Today
+
+Critical Reviews
+
+Overdue Reviews
+
+Utilization %
+
+Current Status
+
+Last Activity
+
+Example:
+
+Dana Whitfield
+48 Assigned
+22 Open
+92% Utilization
+
+Marcus Lee
+15 Assigned
+4 Open
+32% Utilization
+
+====================================================
+TEAM DASHBOARD
+====================================================
+
+Display:
+
+Food Compliance Team
+
+Assigned Reviews
+
+Completed Reviews
+
+Critical Findings
+
+Open Reviews
+
+Team Capacity
+
+Team SLA Performance
+
+====================================================
+ASSIGNMENT WORKFLOW
+====================================================
+
+Single Assignment
+
+Manager
+↓
+Assign Review
+↓
+Specialist Dashboard Updated
+
+====================================================
+
+Bulk Assignment
+
+Manager Selects:
+
+50 Reviews
+
+Assign To:
+
+Dana Whitfield
+
+Result:
+
+Dana Dashboard Updates
+
+Workload Metrics Update
+
+Assignment History Created
+
+Notification Sent
+
+====================================================
+ASSIGNMENT HISTORY
+====================================================
+
+Track:
+
+Assigned By
+
+Assigned To
+
+Previous Owner
+
+New Owner
+
+Date Assigned
+
+Reason
+
+Comments
+
+====================================================
+REVIEW OWNERSHIP
+====================================================
+
+Every package must have a clear owner.
+
+Display:
+
+Review Owner
+
+Review Team
+
+Backup Reviewer
+
+Manager
+
+No package should ever display:
+
+Unclear Ownership
+
+====================================================
+REVIEW STATUS TRACKING
+====================================================
+
+Statuses:
+
+Unassigned
+
+Assigned
+
+In Review
+
+Needs Revision
+
+Awaiting Approval
+
+Approved
+
+Rejected
+
+Escalated
+
+Closed
+
+====================================================
+WORKLOAD BALANCING
+====================================================
+
+Provide workload calculations.
+
+Display:
+
+Assigned Count
+
+Active Count
+
+Pending Count
+
+Critical Count
+
+Overdue Count
+
+Utilization %
+
+Capacity %
+
+Average Review Duration
+
+====================================================
+SMART ASSIGNMENT RECOMMENDATIONS
+====================================================
+
+Suggest assignment based on:
+
+Category Expertise
+
+Current Workload
+
+Review Volume
+
+Experience Level
+
+Availability
+
+Example:
+
+Dana at 95% utilization
+
+Recommend:
+
+Assign To Marcus Lee
+
+====================================================
+CURRENT USER PRESENCE
+====================================================
+
+Display:
+
+Online Users
+
+Users Reviewing
+
+Users Approving
+
+Users Commenting
+
+Users Idle
+
+Users Offline
+
+====================================================
+REVIEW LOCKING
+====================================================
+
+When a specialist begins a review:
+
+Display:
+
+Currently Reviewing
+
+Reviewer Name
+
+Review Start Time
+
+Prevent duplicate ownership confusion.
+
+====================================================
+PERSONAL DASHBOARD
+====================================================
+
+Create:
+
+My Reviews
+
+My Approvals
+
+My Tasks
+
+My Notifications
+
+My SLA Metrics
+
+My Performance
+
+My Activity
+
+====================================================
+NOTIFICATIONS
+====================================================
+
+Notify users when:
+
+Review Assigned
+
+Review Reassigned
+
+Priority Changed
+
+Due Date Changed
+
+Review Escalated
+
+Approval Required
+
+====================================================
+DATABASE TABLES
+====================================================
+
+review_assignments
+
+review_assignment_history
+
+review_owners
+
+review_presence
+
+review_workloads
+
+specialist_capacity
+
+team_capacity
+
+assignment_notifications
+
+====================================================
+AUDIT LOGS
+====================================================
+
+Track:
+
+Assignment Created
+
+Assignment Changed
+
+Assignment Removed
+
+Bulk Assignment
+
+Workload Balancing
+
+Ownership Changes
+
+====================================================
+SUCCESS CRITERIA
+====================================================
+
+Managers should immediately know:
+
+- Who owns each review
+- How many reviews each person has
+- Which reviews are overdue
+- Which specialists are overloaded
+- Which specialists are underutilized
+
+Specialists should immediately know:
+
+- What is assigned to them
+- What is due next
+- What is highest priority
+- What reviews are waiting for action
+
+Assignment information must be visible everywhere a package review appears.
+
+There should never be ambiguity about who is responsible for a review.

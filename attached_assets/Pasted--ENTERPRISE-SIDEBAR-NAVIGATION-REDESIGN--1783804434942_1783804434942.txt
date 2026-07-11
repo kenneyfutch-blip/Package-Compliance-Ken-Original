@@ -1,0 +1,251 @@
+====================================================
+ENTERPRISE SIDEBAR NAVIGATION REDESIGN
+====================================================
+
+Redesign the left navigation to improve usability and scalability.
+
+The navigation is becoming a long list of modules and needs clear visual grouping.
+
+Implement section headers, dividers, spacing, and grouping.
+
+====================================================
+NAVIGATION STRUCTURE
+====================================================
+
+HOME
+
+Dashboard
+
+----------------------------------------------------
+
+REVIEW OPERATIONS
+
+Review Queue
+
+My Reviews
+
+Team Reviews
+
+Workload Dashboard
+
+Review Assignments
+
+----------------------------------------------------
+
+PRODUCTS
+
+Packages
+
+Package Versions
+
+Version Comparison
+
+Package Search
+
+----------------------------------------------------
+
+COMPLIANCE
+
+Regulatory Intelligence
+
+AI Compliance
+
+Violations Center
+
+Language Review
+
+Compliance Memory
+
+Claim Reviews
+
+----------------------------------------------------
+
+PARTNERS
+
+Suppliers
+
+Supplier Scorecards
+
+Supplier Performance
+
+Supplier Risk
+
+----------------------------------------------------
+
+KNOWLEDGE
+
+Resources
+
+SOP Library
+
+Policy Repository
+
+Approved Language
+
+Knowledge Center
+
+Training Center
+
+----------------------------------------------------
+
+ANALYTICS
+
+Reports
+
+Executive Dashboard
+
+Risk Analytics
+
+Regulatory Reports
+
+Team Performance
+
+----------------------------------------------------
+
+ADMINISTRATION
+
+Administration
+
+User Management
+
+Role Management
+
+Tenant Management
+
+System Health
+
+Audit Center
+
+====================================================
+VISUAL REQUIREMENTS
+====================================================
+
+Add:
+
+Section Headers
+
+Horizontal Dividers
+
+Additional Vertical Spacing
+
+Improved Typography
+
+Grouped Navigation
+
+Collapsed Sections
+
+Expand / Collapse Controls
+
+====================================================
+SECTION HEADER STYLE
+====================================================
+
+Examples:
+
+REVIEW OPERATIONS
+
+PRODUCTS
+
+COMPLIANCE
+
+PARTNERS
+
+KNOWLEDGE
+
+ANALYTICS
+
+ADMINISTRATION
+
+Headers should:
+
+- Be smaller than menu items
+- Use muted text color
+- Be uppercase
+- Include spacing above and below
+
+====================================================
+ACTIVE ITEM STYLING
+====================================================
+
+Current page should display:
+
+- Highlighted background
+- Colored left border
+- Active icon color
+- Active text color
+
+====================================================
+COLLAPSIBLE GROUPS
+====================================================
+
+Allow users to collapse sections.
+
+Example:
+
+▼ COMPLIANCE
+
+    Regulatory Intelligence
+    AI Compliance
+    Violations Center
+
+Collapse to:
+
+▶ COMPLIANCE
+
+====================================================
+USER WORKSPACE
+====================================================
+
+Add a top section:
+
+MY WORK
+
+My Reviews
+
+My Approvals
+
+My Tasks
+
+My Notifications
+
+This gives specialists immediate access to work queues.
+
+====================================================
+MANAGER WORKSPACE
+====================================================
+
+Managers should see:
+
+TEAM MANAGEMENT
+
+Team Dashboard
+
+Assignments
+
+Workload
+
+Escalations
+
+SLA Tracking
+
+====================================================
+SIDEBAR GOAL
+====================================================
+
+The sidebar should feel like an enterprise application.
+
+Users should immediately understand:
+
+Where to review packages
+
+Where to manage regulations
+
+Where to access knowledge
+
+Where to manage suppliers
+
+Where to view reports
+
+Where to administer the system
+
+Navigation should scale to 50+ modules without appearing as one long list.

@@ -38,6 +38,8 @@ tags:
     description: Review assignment, load balancing, SLA/workload reporting, and escalation
   - name: operations
     description: Operations console — teams, roles, queue performance, and system health
+  - name: policies
+    description: Internal Policy & Standards Engine — company-specific standards that participate in reviews with equal authority to government regulations
 paths:
   /healthz:
     get:
@@ -2153,8 +2155,462 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /policies:
+    get:
+      operationId: listPolicies
+      tags: [policies]
+      summary: List internal policies and standards
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Policy"
+    post:
+      operationId: createPolicy
+      tags: [policies]
+      summary: Create an internal policy (optionally from an uploaded document)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyInput"
+      responses:
+        "201":
+          description: Created policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+
+  /policies/search:
+    get:
+      operationId: searchPolicies
+      tags: [policies]
+      summary: Natural-language semantic search over internal policies
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ranked matching policies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PolicyMatch"
+
+  /policies/{id}:
+    get:
+      operationId: getPolicy
+      tags: [policies]
+      summary: Get a single policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updatePolicy
+      tags: [policies]
+      summary: Update or archive a policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyUpdate"
+      responses:
+        "200":
+          description: Updated policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /policies/{id}/versions:
+    get:
+      operationId: listPolicyVersions
+      tags: [policies]
+      summary: List immutable version snapshots of a policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Version history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PolicyVersion"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    post:
+      operationId: createPolicyVersion
+      tags: [policies]
+      summary: Publish a new version of a policy (snapshots the current state)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyVersionInput"
+      responses:
+        "200":
+          description: Updated policy at the new version
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /policies/{id}/reprocess:
+    post:
+      operationId: reprocessPolicy
+      tags: [policies]
+      summary: Re-extract the policy document text and re-embed the policy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reprocessed policy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Policy"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   schemas:
+    Policy:
+      type: object
+      required:
+        [
+          id,
+          name,
+          category,
+          status,
+          defaultSeverity,
+          tags,
+          version,
+          extractionStatus,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        policyType:
+          type: string
+          nullable: true
+        category:
+          type: string
+        department:
+          type: string
+          nullable: true
+        owner:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        status:
+          type: string
+        defaultSeverity:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        effectiveDate:
+          type: string
+          nullable: true
+        expirationDate:
+          type: string
+          nullable: true
+        version:
+          type: integer
+        documentUrl:
+          type: string
+          nullable: true
+        fileName:
+          type: string
+          nullable: true
+        contentType:
+          type: string
+          nullable: true
+        extractedText:
+          type: string
+          nullable: true
+        extractionStatus:
+          type: string
+        extractionEngine:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    PolicyInput:
+      type: object
+      required: [name, category]
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        policyType:
+          type: string
+          nullable: true
+        department:
+          type: string
+          nullable: true
+        owner:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        defaultSeverity:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        effectiveDate:
+          type: string
+          nullable: true
+        expirationDate:
+          type: string
+          nullable: true
+        documentUrl:
+          type: string
+          nullable: true
+        fileName:
+          type: string
+          nullable: true
+        contentType:
+          type: string
+          nullable: true
+
+    PolicyUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        policyType:
+          type: string
+          nullable: true
+        department:
+          type: string
+          nullable: true
+        owner:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        status:
+          type: string
+        defaultSeverity:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+        effectiveDate:
+          type: string
+          nullable: true
+        expirationDate:
+          type: string
+          nullable: true
+
+    PolicyVersionInput:
+      type: object
+      properties:
+        changeNote:
+          type: string
+          nullable: true
+
+    PolicyMatch:
+      type: object
+      required: [id, name, category, defaultSeverity, version, similarity]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        policyType:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        defaultSeverity:
+          type: string
+        effectiveDate:
+          type: string
+          nullable: true
+        expirationDate:
+          type: string
+          nullable: true
+        version:
+          type: integer
+        similarity:
+          type: number
+
+    PolicyVersion:
+      type: object
+      required: [id, policyId, version, name, category, status, createdAt]
+      properties:
+        id:
+          type: integer
+        policyId:
+          type: integer
+        version:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        defaultSeverity:
+          type: string
+          nullable: true
+        documentUrl:
+          type: string
+          nullable: true
+        fileName:
+          type: string
+          nullable: true
+        effectiveDate:
+          type: string
+          nullable: true
+        expirationDate:
+          type: string
+          nullable: true
+        changeNote:
+          type: string
+          nullable: true
+        createdBy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
     FdaRecall:
       type: object
       required:

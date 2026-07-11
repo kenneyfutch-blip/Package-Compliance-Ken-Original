@@ -3915,3 +3915,288 @@ export const AutoAssignPackageReviewResponse = zod.object({
 })
 
 
+/**
+ * @summary List internal policies and standards
+ */
+export const ListPoliciesQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "category": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListPoliciesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "policyType": zod.string().nullish(),
+  "category": zod.string(),
+  "department": zod.string().nullish(),
+  "owner": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "status": zod.string(),
+  "defaultSeverity": zod.string(),
+  "tags": zod.array(zod.string()),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "version": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListPoliciesResponse = zod.array(ListPoliciesResponseItem)
+
+
+/**
+ * @summary Create an internal policy (optionally from an uploaded document)
+ */
+export const CreatePolicyBody = zod.object({
+  "name": zod.string(),
+  "category": zod.string(),
+  "policyType": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "owner": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "defaultSeverity": zod.string().nullish(),
+  "tags": zod.array(zod.string()).nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish()
+})
+
+export const CreatePolicyResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "policyType": zod.string().nullish(),
+  "category": zod.string(),
+  "department": zod.string().nullish(),
+  "owner": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "status": zod.string(),
+  "defaultSeverity": zod.string(),
+  "tags": zod.array(zod.string()),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "version": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Natural-language semantic search over internal policies
+ */
+export const SearchPoliciesQueryParams = zod.object({
+  "q": zod.coerce.string(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const SearchPoliciesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "policyType": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "defaultSeverity": zod.string(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "version": zod.number(),
+  "similarity": zod.number()
+})
+export const SearchPoliciesResponse = zod.array(SearchPoliciesResponseItem)
+
+
+/**
+ * @summary Get a single policy
+ */
+export const GetPolicyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPolicyResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "policyType": zod.string().nullish(),
+  "category": zod.string(),
+  "department": zod.string().nullish(),
+  "owner": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "status": zod.string(),
+  "defaultSeverity": zod.string(),
+  "tags": zod.array(zod.string()),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "version": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update or archive a policy
+ */
+export const UpdatePolicyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePolicyBody = zod.object({
+  "name": zod.string().optional(),
+  "category": zod.string().optional(),
+  "policyType": zod.string().nullish(),
+  "department": zod.string().nullish(),
+  "owner": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "defaultSeverity": zod.string().optional(),
+  "tags": zod.array(zod.string()).nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish()
+})
+
+export const UpdatePolicyResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "policyType": zod.string().nullish(),
+  "category": zod.string(),
+  "department": zod.string().nullish(),
+  "owner": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "status": zod.string(),
+  "defaultSeverity": zod.string(),
+  "tags": zod.array(zod.string()),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "version": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary List immutable version snapshots of a policy
+ */
+export const ListPolicyVersionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListPolicyVersionsResponseItem = zod.object({
+  "id": zod.number(),
+  "policyId": zod.number(),
+  "version": zod.number(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "status": zod.string(),
+  "summary": zod.string().nullish(),
+  "defaultSeverity": zod.string().nullish(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "changeNote": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListPolicyVersionsResponse = zod.array(ListPolicyVersionsResponseItem)
+
+
+/**
+ * @summary Publish a new version of a policy (snapshots the current state)
+ */
+export const CreatePolicyVersionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreatePolicyVersionBody = zod.object({
+  "changeNote": zod.string().nullish()
+})
+
+export const CreatePolicyVersionResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "policyType": zod.string().nullish(),
+  "category": zod.string(),
+  "department": zod.string().nullish(),
+  "owner": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "status": zod.string(),
+  "defaultSeverity": zod.string(),
+  "tags": zod.array(zod.string()),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "version": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Re-extract the policy document text and re-embed the policy
+ */
+export const ReprocessPolicyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReprocessPolicyResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "policyType": zod.string().nullish(),
+  "category": zod.string(),
+  "department": zod.string().nullish(),
+  "owner": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "status": zod.string(),
+  "defaultSeverity": zod.string(),
+  "tags": zod.array(zod.string()),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "version": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
