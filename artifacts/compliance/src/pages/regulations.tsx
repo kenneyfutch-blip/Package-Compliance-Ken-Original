@@ -51,12 +51,32 @@ export default function RegulationsPage() {
               <p className="text-sm text-foreground/80 leading-relaxed mb-4">
                 {reg.summary}
               </p>
-              <div className="flex gap-4 text-xs text-muted-foreground bg-accent/50 p-3 rounded-md">
+              <div className="flex flex-wrap gap-4 text-xs text-muted-foreground bg-accent/50 p-3 rounded-md">
                 {reg.section && <span className="flex items-center gap-1"><BookOpen className="w-3 h-3"/> Section: {reg.section}</span>}
-                {reg.source && <span className="flex items-center gap-1"><Scale className="w-3 h-3"/> Source: {reg.source}</span>}
-                <a href="#" className="ml-auto flex items-center gap-1 text-primary hover:underline">
-                  View Full Text <ExternalLink className="w-3 h-3" />
-                </a>
+                {reg.source && (
+                  /^https?:\/\//i.test(reg.source) ? (
+                    <a
+                      href={reg.source}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-primary hover:underline break-all"
+                    >
+                      <Scale className="w-3 h-3 shrink-0"/> Source: {reg.source}
+                    </a>
+                  ) : (
+                    <span className="flex items-center gap-1"><Scale className="w-3 h-3"/> Source: {reg.source}</span>
+                  )
+                )}
+                {reg.source && /^https?:\/\//i.test(reg.source) && (
+                  <a
+                    href={reg.source}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-auto flex items-center gap-1 text-primary hover:underline shrink-0"
+                  >
+                    View Full Text <ExternalLink className="w-3 h-3" />
+                  </a>
+                )}
               </div>
             </CardContent>
           </Card>

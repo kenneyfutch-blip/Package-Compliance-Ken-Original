@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { Search, Loader2, Scale, BookOpen } from "lucide-react"
+import { Search, Loader2, Scale, BookOpen, ExternalLink } from "lucide-react"
 
 interface Props {
   agency: string // "FDA" | "EPA" | "CPSC" | "FTC" | "USDA" | "Internal"
@@ -95,7 +95,21 @@ export default function RegulatoryLibrary({ agency, title, subtitle }: Props) {
                     {r.regulationText && (
                       <div className="rounded-lg bg-accent/50 p-3 text-sm leading-relaxed">{r.regulationText}</div>
                     )}
-                    {r.source && <p className="text-xs text-muted-foreground">Source: {r.source}</p>}
+                    {r.source && (
+                      /^https?:\/\//i.test(r.source) ? (
+                        <a
+                          href={r.source}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline break-all"
+                        >
+                          Source: {r.source}
+                          <ExternalLink className="w-3 h-3 shrink-0" />
+                        </a>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Source: {r.source}</p>
+                      )
+                    )}
                   </AccordionContent>
                 </AccordionItem>
               ))}
