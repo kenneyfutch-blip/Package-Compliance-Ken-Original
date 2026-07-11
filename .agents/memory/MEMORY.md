@@ -4,3 +4,4 @@
 - [openFDA integration](openfda.md) — server-only key proxy; 404=empty results, YYYYMMDD dates, per-category enforcement endpoints, 503-vs-502.
 - [Tenancy, RBAC & Teams](tenancy-rbac.md) — code is source of truth for roles/perms; Clerk provisioning + org scoping; requiredPermFor gates nav+routes; global regulations/ai_providers; append-only audit.
 - [AI Language Review Engine](language-review.md) — 6-layer copy review + quality score; sync, latest-only in a txn, reused perms, bounded historical-usage query, SQL-joined findings list.
+- [Google Document AI extraction](document-ai.md) — enterprise OCR layer; strict 3-trigger contract, content-hash cache, extraction/reasoning/validation separation, SSRF boundary, unconfigured no-op.

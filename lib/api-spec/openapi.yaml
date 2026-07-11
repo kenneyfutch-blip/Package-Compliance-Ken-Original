@@ -32,6 +32,8 @@ tags:
     description: Cross-package compliance violations and AI recommendations
   - name: language
     description: AI Language Review Engine — spelling, grammar, context, regulatory, marketing claims, and brand language
+  - name: document-ai
+    description: Google Document AI extraction — OCR text, page coordinates, and packaging component detection
 paths:
   /healthz:
     get:
@@ -580,6 +582,104 @@ paths:
                 $ref: "#/components/schemas/PackageDetail"
         "404":
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /document-ai/status:
+    get:
+      operationId: getDocumentAiStatus
+      tags: [document-ai]
+      summary: Google Document AI configuration status
+      responses:
+        "200":
+          description: Document AI status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentAiStatus"
+
+  /packages/{id}/extraction:
+    get:
+      operationId: getPackageExtraction
+      tags: [document-ai]
+      summary: Latest cached Document AI extraction for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest extraction or null
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/DocumentExtraction"
+                  - type: "null"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/{id}/extractions:
+    get:
+      operationId: listPackageExtractions
+      tags: [document-ai]
+      summary: Document AI extraction history for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Extraction history (newest first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentExtraction"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /packages/{id}/reprocess:
+    post:
+      operationId: reprocessPackage
+      tags: [document-ai]
+      summary: Re-run Document AI extraction and analysis for a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reprocess result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReprocessResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: Document AI not configured
           content:
             application/json:
               schema:
@@ -2052,6 +2152,15 @@ components:
         languageAnalyzedAt:
           type: ["string", "null"]
           format: date-time
+        extractionStatus:
+          type: ["string", "null"]
+        extractionConfidence:
+          type: ["number", "null"]
+        extractionEngine:
+          type: ["string", "null"]
+        extractedAt:
+          type: ["string", "null"]
+          format: date-time
         analyzedAt:
           type: ["string", "null"]
           format: date-time
@@ -2075,6 +2184,164 @@ components:
         - minorCount
         - createdAt
         - updatedAt
+
+    DocumentAiStatus:
+      type: object
+      properties:
+        configured:
+          type: boolean
+        engine:
+          type: string
+        processorType:
+          type: string
+        location:
+          type: ["string", "null"]
+        projectConfigured:
+          type: boolean
+        locationConfigured:
+          type: boolean
+        processorConfigured:
+          type: boolean
+        serviceAccountConfigured:
+          type: boolean
+      required:
+        - configured
+        - engine
+
+    ExtractionBbox:
+      type: object
+      properties:
+        x:
+          type: number
+        y:
+          type: number
+        w:
+          type: number
+        h:
+          type: number
+      required: [x, y, w, h]
+
+    ExtractionBlock:
+      type: object
+      properties:
+        text:
+          type: string
+        confidence:
+          type: ["number", "null"]
+        bbox:
+          oneOf:
+            - $ref: "#/components/schemas/ExtractionBbox"
+            - type: "null"
+      required: [text]
+
+    ExtractionPage:
+      type: object
+      properties:
+        pageNumber:
+          type: integer
+        width:
+          type: number
+        height:
+          type: number
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtractionBlock"
+      required: [pageNumber, blocks]
+
+    ExtractedComponent:
+      type: object
+      properties:
+        type:
+          type: string
+        text:
+          type: string
+        confidence:
+          type: ["number", "null"]
+        page:
+          type: ["integer", "null"]
+        bbox:
+          oneOf:
+            - $ref: "#/components/schemas/ExtractionBbox"
+            - type: "null"
+        source:
+          type: string
+          enum: [documentai, heuristic]
+      required: [type, text, source]
+
+    DocumentExtraction:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        proofId:
+          type: ["integer", "null"]
+        version:
+          type: integer
+        status:
+          type: string
+        engine:
+          type: string
+        processor:
+          type: ["string", "null"]
+        sourceType:
+          type: string
+        sourceName:
+          type: ["string", "null"]
+        sourceHash:
+          type: string
+        text:
+          type: ["string", "null"]
+        pages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtractionPage"
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtractedComponent"
+        confidence:
+          type: ["number", "null"]
+        pageCount:
+          type: integer
+        error:
+          type: ["string", "null"]
+        processedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - packageId
+        - version
+        - status
+        - engine
+        - sourceType
+        - sourceHash
+        - pages
+        - components
+        - pageCount
+        - createdAt
+        - updatedAt
+
+    ReprocessResult:
+      type: object
+      properties:
+        extraction:
+          oneOf:
+            - $ref: "#/components/schemas/DocumentExtraction"
+            - type: "null"
+        package:
+          $ref: "#/components/schemas/PackageDetail"
+      required:
+        - package
 
     PackageDetail:
       type: object
@@ -2121,6 +2388,15 @@ components:
           type: ["string", "null"]
         extractedText:
           type: ["string", "null"]
+        extractionStatus:
+          type: ["string", "null"]
+        extractionConfidence:
+          type: ["number", "null"]
+        extractionEngine:
+          type: ["string", "null"]
+        extractedAt:
+          type: ["string", "null"]
+          format: date-time
         criticalCount:
           type: integer
         majorCount:

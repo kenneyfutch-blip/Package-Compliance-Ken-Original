@@ -7,6 +7,7 @@ import type {
   NotificationRow,
   ReportRow,
   UserRow,
+  DocumentExtractionRow,
 } from "@workspace/db";
 
 function iso(d: Date | null | undefined): string | null {
@@ -42,9 +43,37 @@ export function mapPackage(p: PackageRow) {
     languageIssueCount: p.languageIssueCount,
     languageCriticalCount: p.languageCriticalCount,
     languageAnalyzedAt: iso(p.languageAnalyzedAt),
+    extractionStatus: p.extractionStatus,
+    extractionConfidence: p.extractionConfidence,
+    extractionEngine: p.extractionEngine,
+    extractedAt: iso(p.extractedAt),
     analyzedAt: iso(p.analyzedAt),
     createdAt: iso(p.createdAt)!,
     updatedAt: iso(p.updatedAt)!,
+  };
+}
+
+export function mapExtraction(e: DocumentExtractionRow) {
+  return {
+    id: e.id,
+    packageId: e.packageId,
+    proofId: e.proofId,
+    version: e.version,
+    status: e.status,
+    engine: e.engine,
+    processor: e.processor,
+    sourceType: e.sourceType,
+    sourceName: e.sourceName,
+    sourceHash: e.sourceHash,
+    text: e.text,
+    pages: e.pages ?? [],
+    components: e.components ?? [],
+    confidence: e.confidence,
+    pageCount: e.pageCount,
+    error: e.error,
+    processedAt: iso(e.processedAt),
+    createdAt: iso(e.createdAt)!,
+    updatedAt: iso(e.updatedAt)!,
   };
 }
 

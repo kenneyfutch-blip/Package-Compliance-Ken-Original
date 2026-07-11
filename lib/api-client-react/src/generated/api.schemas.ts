@@ -391,7 +391,96 @@ export interface Package {
   /** @nullable */
   languageAnalyzedAt?: string | null;
   /** @nullable */
+  extractionStatus?: string | null;
+  /** @nullable */
+  extractionConfidence?: number | null;
+  /** @nullable */
+  extractionEngine?: string | null;
+  /** @nullable */
+  extractedAt?: string | null;
+  /** @nullable */
   analyzedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocumentAiStatus {
+  configured: boolean;
+  engine: string;
+  processorType?: string;
+  /** @nullable */
+  location?: string | null;
+  projectConfigured?: boolean;
+  locationConfigured?: boolean;
+  processorConfigured?: boolean;
+  serviceAccountConfigured?: boolean;
+}
+
+export interface ExtractionBbox {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface ExtractionBlock {
+  text: string;
+  /** @nullable */
+  confidence?: number | null;
+  bbox?: ExtractionBbox | null;
+}
+
+export interface ExtractionPage {
+  pageNumber: number;
+  width?: number;
+  height?: number;
+  blocks: ExtractionBlock[];
+}
+
+export type ExtractedComponentSource = typeof ExtractedComponentSource[keyof typeof ExtractedComponentSource];
+
+
+export const ExtractedComponentSource = {
+  documentai: 'documentai',
+  heuristic: 'heuristic',
+} as const;
+
+export interface ExtractedComponent {
+  type: string;
+  text: string;
+  /** @nullable */
+  confidence?: number | null;
+  /** @nullable */
+  page?: number | null;
+  bbox?: ExtractionBbox | null;
+  source: ExtractedComponentSource;
+}
+
+export interface DocumentExtraction {
+  id: number;
+  packageId: number;
+  /** @nullable */
+  proofId?: number | null;
+  version: number;
+  status: string;
+  engine: string;
+  /** @nullable */
+  processor?: string | null;
+  sourceType: string;
+  /** @nullable */
+  sourceName?: string | null;
+  sourceHash: string;
+  /** @nullable */
+  text?: string | null;
+  pages: ExtractionPage[];
+  components: ExtractedComponent[];
+  /** @nullable */
+  confidence?: number | null;
+  pageCount: number;
+  /** @nullable */
+  error?: string | null;
+  /** @nullable */
+  processedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -449,6 +538,14 @@ export interface PackageDetail {
   summary?: string | null;
   /** @nullable */
   extractedText?: string | null;
+  /** @nullable */
+  extractionStatus?: string | null;
+  /** @nullable */
+  extractionConfidence?: number | null;
+  /** @nullable */
+  extractionEngine?: string | null;
+  /** @nullable */
+  extractedAt?: string | null;
   criticalCount: number;
   majorCount: number;
   minorCount: number;
@@ -460,6 +557,11 @@ export interface PackageDetail {
   recommendations: string[];
   violations: Violation[];
   regulations: Regulation[];
+}
+
+export interface ReprocessResult {
+  extraction?: DocumentExtraction | null;
+  package: PackageDetail;
 }
 
 export interface UploadUrlRequest {

@@ -37,6 +37,8 @@ import type {
   CreateProofInput,
   DashboardStats,
   DistributionItem,
+  DocumentAiStatus,
+  DocumentExtraction,
   FdaIntelligence,
   FdaRecallResponse,
   FdaStatus,
@@ -69,6 +71,7 @@ import type {
   RegulationInput,
   Report,
   ReportInput,
+  ReprocessResult,
   Supplier,
   SupplierDetail,
   SupplierInput,
@@ -1827,6 +1830,308 @@ export const useAnalyzePackage = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getAnalyzePackageMutationOptions(options));
+    }
+
+export const getGetDocumentAiStatusUrl = () => {
+
+
+
+
+  return `/api/document-ai/status`
+}
+
+/**
+ * @summary Google Document AI configuration status
+ */
+export const getDocumentAiStatus = async ( options?: RequestInit): Promise<DocumentAiStatus> => {
+
+  return customFetch<DocumentAiStatus>(getGetDocumentAiStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDocumentAiStatusQueryKey = () => {
+    return [
+    `/api/document-ai/status`
+    ] as const;
+    }
+
+
+export const getGetDocumentAiStatusQueryOptions = <TData = Awaited<ReturnType<typeof getDocumentAiStatus>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentAiStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDocumentAiStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocumentAiStatus>>> = ({ signal }) => getDocumentAiStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDocumentAiStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDocumentAiStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getDocumentAiStatus>>>
+export type GetDocumentAiStatusQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Google Document AI configuration status
+ */
+
+export function useGetDocumentAiStatus<TData = Awaited<ReturnType<typeof getDocumentAiStatus>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDocumentAiStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDocumentAiStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetPackageExtractionUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/extraction`
+}
+
+/**
+ * @summary Latest cached Document AI extraction for a package
+ */
+export const getPackageExtraction = async (id: number, options?: RequestInit): Promise<DocumentExtraction | null> => {
+
+  return customFetch<DocumentExtraction | null>(getGetPackageExtractionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetPackageExtractionQueryKey = (id: number,) => {
+    return [
+    `/api/packages/${id}/extraction`
+    ] as const;
+    }
+
+
+export const getGetPackageExtractionQueryOptions = <TData = Awaited<ReturnType<typeof getPackageExtraction>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPackageExtraction>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetPackageExtractionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getPackageExtraction>>> = ({ signal }) => getPackageExtraction(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getPackageExtraction>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetPackageExtractionQueryResult = NonNullable<Awaited<ReturnType<typeof getPackageExtraction>>>
+export type GetPackageExtractionQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Latest cached Document AI extraction for a package
+ */
+
+export function useGetPackageExtraction<TData = Awaited<ReturnType<typeof getPackageExtraction>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getPackageExtraction>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetPackageExtractionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListPackageExtractionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/extractions`
+}
+
+/**
+ * @summary Document AI extraction history for a package
+ */
+export const listPackageExtractions = async (id: number, options?: RequestInit): Promise<DocumentExtraction[]> => {
+
+  return customFetch<DocumentExtraction[]>(getListPackageExtractionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPackageExtractionsQueryKey = (id: number,) => {
+    return [
+    `/api/packages/${id}/extractions`
+    ] as const;
+    }
+
+
+export const getListPackageExtractionsQueryOptions = <TData = Awaited<ReturnType<typeof listPackageExtractions>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPackageExtractions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPackageExtractionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPackageExtractions>>> = ({ signal }) => listPackageExtractions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPackageExtractions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPackageExtractionsQueryResult = NonNullable<Awaited<ReturnType<typeof listPackageExtractions>>>
+export type ListPackageExtractionsQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Document AI extraction history for a package
+ */
+
+export function useListPackageExtractions<TData = Awaited<ReturnType<typeof listPackageExtractions>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPackageExtractions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPackageExtractionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getReprocessPackageUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/reprocess`
+}
+
+/**
+ * @summary Re-run Document AI extraction and analysis for a package
+ */
+export const reprocessPackage = async (id: number, options?: RequestInit): Promise<ReprocessResult> => {
+
+  return customFetch<ReprocessResult>(getReprocessPackageUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getReprocessPackageMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reprocessPackage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reprocessPackage>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['reprocessPackage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reprocessPackage>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  reprocessPackage(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReprocessPackageMutationResult = NonNullable<Awaited<ReturnType<typeof reprocessPackage>>>
+
+    export type ReprocessPackageMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Re-run Document AI extraction and analysis for a package
+ */
+export const useReprocessPackage = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reprocessPackage>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reprocessPackage>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getReprocessPackageMutationOptions(options));
     }
 
 export const getAskCopilotUrl = (id: number,) => {

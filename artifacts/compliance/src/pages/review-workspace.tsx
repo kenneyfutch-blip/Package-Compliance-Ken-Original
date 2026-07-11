@@ -1,8 +1,9 @@
 import { useState } from "react"
 import { useParams, Link } from "wouter"
-import { useGetPackage, useAnalyzePackage, useUpdatePackage, getGetPackageQueryKey, useGetLanguageReview, useRunLanguageReview, getGetLanguageReviewQueryKey } from "@workspace/api-client-react"
+import { useGetPackage, useAnalyzePackage, useUpdatePackage, getGetPackageQueryKey, useGetLanguageReview, useRunLanguageReview, getGetLanguageReviewQueryKey, useGetPackageExtraction, getGetPackageExtractionQueryKey } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { LanguageReviewTab } from "@/components/language-review-tab"
+import { DocumentAiTab } from "@/components/document-ai-tab"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +12,7 @@ import { Progress } from "@/components/ui/progress"
 import { 
   ArrowLeft, BrainCircuit, CheckCircle, ShieldAlert, AlertTriangle, 
   FileText, Activity, Loader2, PlayCircle, Settings2, Info,
-  ArrowRight, PenLine, Languages
+  ArrowRight, PenLine, Languages, ScanText
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { FdaIntelligenceTab } from "@/components/fda-intelligence-tab"
@@ -30,6 +31,9 @@ export default function ReviewWorkspace() {
   const runLanguage = useRunLanguageReview()
   const { data: languageReview } = useGetLanguageReview(packageId, {
     query: { enabled: !!packageId, queryKey: getGetLanguageReviewQueryKey(packageId) },
+  })
+  const { data: extraction } = useGetPackageExtraction(packageId, {
+    query: { enabled: !!packageId, queryKey: getGetPackageExtractionQueryKey(packageId) },
   })
   const [tab, setTab] = useState("violations")
 
@@ -127,7 +131,22 @@ export default function ReviewWorkspace() {
                  <img src={pkg.artworkUrl} alt={pkg.name} className="max-h-[600px] object-contain shadow-xl" />
                  {/* Render bounding boxes if we had actual pixel dimensions, 
                      for now we simulate the CSS overlay idea */}
-                 {tab === "language"
+                 {tab === "documentai"
+                   ? (extraction?.pages ?? []).flatMap((p) =>
+                       p.blocks.map((b, i) => b.bbox && (
+                         <div
+                           key={`block-${p.pageNumber}-${i}`}
+                           className="hotspot-box hotspot-minor"
+                           style={{
+                             left: `${b.bbox.x * 100}%`,
+                             top: `${b.bbox.y * 100}%`,
+                             width: `${b.bbox.w * 100}%`,
+                             height: `${b.bbox.h * 100}%`
+                           }}
+                           title={b.text}
+                         />
+                       )))
+                   : tab === "language"
                    ? (languageReview?.findings ?? []).map((f, i) => f.bbox && (
                        <div
                          key={`lang-${i}`}
@@ -198,6 +217,7 @@ export default function ReviewWorkspace() {
                 <TabsTrigger value="violations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">Violations</TabsTrigger>
                 <TabsTrigger value="language" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1 gap-1.5"><Languages className="w-3.5 h-3.5" /> Language Review</TabsTrigger>
                 <TabsTrigger value="fda" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">FDA Intelligence</TabsTrigger>
+                <TabsTrigger value="documentai" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1 gap-1.5"><ScanText className="w-3.5 h-3.5" /> Document AI</TabsTrigger>
                 <TabsTrigger value="ocr" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">Extracted Data</TabsTrigger>
                 <TabsTrigger value="copilot" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">AI Copilot</TabsTrigger>
               </TabsList>
@@ -289,6 +309,10 @@ export default function ReviewWorkspace() {
 
               <TabsContent value="fda" className="m-0 p-4">
                 <FdaIntelligenceTab packageId={packageId} />
+              </TabsContent>
+
+              <TabsContent value="documentai" className="m-0 p-4">
+                <DocumentAiTab packageId={packageId} />
               </TabsContent>
 
               <TabsContent value="ocr" className="m-0 p-4 space-y-4">

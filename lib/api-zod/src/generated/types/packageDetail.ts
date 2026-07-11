@@ -44,6 +44,14 @@ export interface PackageDetail {
   summary?: string | null;
   /** @nullable */
   extractedText?: string | null;
+  /** @nullable */
+  extractionStatus?: string | null;
+  /** @nullable */
+  extractionConfidence?: number | null;
+  /** @nullable */
+  extractionEngine?: string | null;
+  /** @nullable */
+  extractedAt?: Date | null;
   criticalCount: number;
   majorCount: number;
   minorCount: number;

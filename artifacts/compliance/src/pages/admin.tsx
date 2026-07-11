@@ -7,6 +7,7 @@ import {
   SpellCheck, MessageSquareWarning, Pill, Leaf, AlertTriangle, LayoutTemplate, Store, Gavel,
 } from "lucide-react"
 import { AiIntegrations } from "@/components/ai-integrations"
+import { DocumentAiStatusCard } from "@/components/document-ai-status-card"
 
 const CAPABILITIES = [
   { icon: SpellCheck, name: "Spelling & Grammar", desc: "Misspellings, grammar, punctuation, and typography errors in artwork copy." },
@@ -30,6 +31,8 @@ export default function AdminPage() {
       </div>
 
       <AiIntegrations />
+
+      <DocumentAiStatusCard />
 
       <Card>
         <CardHeader>

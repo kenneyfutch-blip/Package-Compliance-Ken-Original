@@ -49,6 +49,14 @@ export interface Package {
   /** @nullable */
   languageAnalyzedAt?: Date | null;
   /** @nullable */
+  extractionStatus?: string | null;
+  /** @nullable */
+  extractionConfidence?: number | null;
+  /** @nullable */
+  extractionEngine?: string | null;
+  /** @nullable */
+  extractedAt?: Date | null;
+  /** @nullable */
   analyzedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;

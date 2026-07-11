@@ -12,6 +12,7 @@
   "dependencies": {
     "@clerk/express": "^2.1.39",
     "@clerk/shared": "^4.25.2",
+    "@google-cloud/documentai": "^9.6.2",
     "@google-cloud/storage": "^7.21.0",
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",

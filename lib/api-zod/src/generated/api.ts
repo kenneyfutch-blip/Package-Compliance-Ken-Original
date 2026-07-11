@@ -160,6 +160,10 @@ export const ListPackagesResponseItem = zod.object({
   "languageIssueCount": zod.number().optional(),
   "languageCriticalCount": zod.number().optional(),
   "languageAnalyzedAt": zod.coerce.date().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
   "analyzedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -215,6 +219,10 @@ export const CreatePackageResponse = zod.object({
   "artworkUrl": zod.string().nullish(),
   "summary": zod.string().nullish(),
   "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
   "criticalCount": zod.number(),
   "majorCount": zod.number(),
   "minorCount": zod.number(),
@@ -698,6 +706,10 @@ export const GetPackageResponse = zod.object({
   "artworkUrl": zod.string().nullish(),
   "summary": zod.string().nullish(),
   "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
   "criticalCount": zod.number(),
   "majorCount": zod.number(),
   "minorCount": zod.number(),
@@ -794,6 +806,10 @@ export const UpdatePackageResponse = zod.object({
   "artworkUrl": zod.string().nullish(),
   "summary": zod.string().nullish(),
   "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
   "criticalCount": zod.number(),
   "majorCount": zod.number(),
   "minorCount": zod.number(),
@@ -892,6 +908,10 @@ export const AnalyzePackageResponse = zod.object({
   "artworkUrl": zod.string().nullish(),
   "summary": zod.string().nullish(),
   "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
   "criticalCount": zod.number(),
   "majorCount": zod.number(),
   "minorCount": zod.number(),
@@ -948,6 +968,275 @@ export const AnalyzePackageResponse = zod.object({
   "publicationDate": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 }))
+})
+
+
+/**
+ * @summary Google Document AI configuration status
+ */
+export const GetDocumentAiStatusResponse = zod.object({
+  "configured": zod.boolean(),
+  "engine": zod.string(),
+  "processorType": zod.string().optional(),
+  "location": zod.string().nullish(),
+  "projectConfigured": zod.boolean().optional(),
+  "locationConfigured": zod.boolean().optional(),
+  "processorConfigured": zod.boolean().optional(),
+  "serviceAccountConfigured": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Latest cached Document AI extraction for a package
+ */
+export const GetPackageExtractionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetPackageExtractionResponse = zod.union([zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "proofId": zod.number().nullish(),
+  "version": zod.number(),
+  "status": zod.string(),
+  "engine": zod.string(),
+  "processor": zod.string().nullish(),
+  "sourceType": zod.string(),
+  "sourceName": zod.string().nullish(),
+  "sourceHash": zod.string(),
+  "text": zod.string().nullish(),
+  "pages": zod.array(zod.object({
+  "pageNumber": zod.number(),
+  "width": zod.number().optional(),
+  "height": zod.number().optional(),
+  "blocks": zod.array(zod.object({
+  "text": zod.string(),
+  "confidence": zod.number().nullish(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional()
+}))
+})),
+  "components": zod.array(zod.object({
+  "type": zod.string(),
+  "text": zod.string(),
+  "confidence": zod.number().nullish(),
+  "page": zod.number().nullish(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "source": zod.enum(['documentai', 'heuristic'])
+})),
+  "confidence": zod.number().nullish(),
+  "pageCount": zod.number(),
+  "error": zod.string().nullish(),
+  "processedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()])
+
+
+/**
+ * @summary Document AI extraction history for a package
+ */
+export const ListPackageExtractionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListPackageExtractionsResponseItem = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "proofId": zod.number().nullish(),
+  "version": zod.number(),
+  "status": zod.string(),
+  "engine": zod.string(),
+  "processor": zod.string().nullish(),
+  "sourceType": zod.string(),
+  "sourceName": zod.string().nullish(),
+  "sourceHash": zod.string(),
+  "text": zod.string().nullish(),
+  "pages": zod.array(zod.object({
+  "pageNumber": zod.number(),
+  "width": zod.number().optional(),
+  "height": zod.number().optional(),
+  "blocks": zod.array(zod.object({
+  "text": zod.string(),
+  "confidence": zod.number().nullish(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional()
+}))
+})),
+  "components": zod.array(zod.object({
+  "type": zod.string(),
+  "text": zod.string(),
+  "confidence": zod.number().nullish(),
+  "page": zod.number().nullish(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "source": zod.enum(['documentai', 'heuristic'])
+})),
+  "confidence": zod.number().nullish(),
+  "pageCount": zod.number(),
+  "error": zod.string().nullish(),
+  "processedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListPackageExtractionsResponse = zod.array(ListPackageExtractionsResponseItem)
+
+
+/**
+ * @summary Re-run Document AI extraction and analysis for a package
+ */
+export const ReprocessPackageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReprocessPackageResponse = zod.object({
+  "extraction": zod.union([zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "proofId": zod.number().nullish(),
+  "version": zod.number(),
+  "status": zod.string(),
+  "engine": zod.string(),
+  "processor": zod.string().nullish(),
+  "sourceType": zod.string(),
+  "sourceName": zod.string().nullish(),
+  "sourceHash": zod.string(),
+  "text": zod.string().nullish(),
+  "pages": zod.array(zod.object({
+  "pageNumber": zod.number(),
+  "width": zod.number().optional(),
+  "height": zod.number().optional(),
+  "blocks": zod.array(zod.object({
+  "text": zod.string(),
+  "confidence": zod.number().nullish(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional()
+}))
+})),
+  "components": zod.array(zod.object({
+  "type": zod.string(),
+  "text": zod.string(),
+  "confidence": zod.number().nullish(),
+  "page": zod.number().nullish(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "source": zod.enum(['documentai', 'heuristic'])
+})),
+  "confidence": zod.number().nullish(),
+  "pageCount": zod.number(),
+  "error": zod.string().nullish(),
+  "processedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.null()]).optional(),
+  "package": zod.object({
+  "id": zod.number(),
+  "sku": zod.string(),
+  "upc": zod.string().nullish(),
+  "name": zod.string(),
+  "brand": zod.string(),
+  "vendor": zod.string(),
+  "category": zod.string(),
+  "country": zod.string().nullish(),
+  "netWeight": zod.string().nullish(),
+  "dimensions": zod.string().nullish(),
+  "packageType": zod.string().nullish(),
+  "productType": zod.string().nullish(),
+  "manufacturingRegion": zod.string().nullish(),
+  "status": zod.string(),
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "complianceStatus": zod.string(),
+  "reviewer": zod.string().nullish(),
+  "artworkUrl": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "analyzedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "ocr": zod.union([zod.object({
+  "productName": zod.string().nullish(),
+  "ingredients": zod.string().nullish(),
+  "directions": zod.string().nullish(),
+  "warnings": zod.string().nullish(),
+  "claims": zod.array(zod.string()).optional(),
+  "marketingCopy": zod.string().nullish(),
+  "nutritionFacts": zod.string().nullish(),
+  "allergenStatements": zod.string().nullish(),
+  "netWeight": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "manufacturerInfo": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "epaRegistrationNumbers": zod.string().nullish(),
+  "hazardStatements": zod.string().nullish()
+}),zod.null()]).optional(),
+  "recommendations": zod.array(zod.string()),
+  "violations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "severity": zod.string(),
+  "engine": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "regulationRef": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "detectedText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "regulations": zod.array(zod.object({
+  "id": zod.number(),
+  "agency": zod.string(),
+  "category": zod.string(),
+  "ruleCode": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "regulationText": zod.string().nullish(),
+  "section": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "publicationDate": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+})
 })
 
 
@@ -1603,6 +1892,10 @@ export const GetSupplierResponse = zod.object({
   "languageIssueCount": zod.number().optional(),
   "languageCriticalCount": zod.number().optional(),
   "languageAnalyzedAt": zod.coerce.date().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
   "analyzedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()

@@ -31,7 +31,9 @@ import {
   mapPackageDetail,
   mapAuditEvent,
   mapReport,
+  mapExtraction,
 } from "../lib/mappers";
+import { runExtraction } from "../lib/document-ai/service";
 import {
   analyzePackaging,
   askCompliancePilot,
@@ -273,11 +275,29 @@ router.post(
     });
 
     let current = inserted;
-    if (data.extractedText && data.extractedText.trim()) {
+
+    // Extraction layer: Google Document AI runs on new-package upload. When it
+    // is not configured, this is a no-op and we fall back to any supplied text.
+    try {
+      const run = await runExtraction({ req, pkg: inserted });
+      if (run.outcome === "Complete" || run.outcome === "Cached") {
+        const [afterExtract] = await db
+          .select()
+          .from(packagesTable)
+          .where(eq(packagesTable.id, inserted.id));
+        if (afterExtract) current = afterExtract;
+      }
+    } catch (err) {
+      logger.error({ err }, "Document extraction failed on create");
+    }
+
+    // Reasoning layer: OpenAI analysis runs once we have extracted text, whether
+    // it came from Document AI or was supplied on the request.
+    if (current.extractedText && current.extractedText.trim()) {
       try {
         const regulations = await loadRegulations();
-        const result = await analyzePackaging(inserted, regulations);
-        await applyAnalysis(inserted, result, organizationId);
+        const result = await analyzePackaging(current, regulations);
+        await applyAnalysis(current, result, organizationId);
         const [refreshed] = await db
           .select()
           .from(packagesTable)
@@ -429,6 +449,75 @@ router.post(
       .from(packagesTable)
       .where(eq(packagesTable.id, id));
     res.json(await buildDetail(refreshed!));
+  },
+);
+
+// POST /packages/:id/reprocess
+// Manual reprocess: force Google Document AI to re-extract the source document
+// (bypassing the cache), then re-run OpenAI analysis on the fresh text. This is
+// one of the only triggers allowed to invoke Document AI.
+router.post(
+  "/packages/:id/reprocess",
+  requirePermission("packages:analyze"),
+  async (req: Request, res: Response): Promise<void> => {
+    const id = requireId(req.params["id"], res);
+    if (id === null) return;
+    const pkg = await loadOwnedPackage(req, res, id);
+    if (!pkg) return;
+
+    const run = await runExtraction({ req, pkg, force: true });
+
+    if (run.outcome === "NotConfigured") {
+      res.status(503).json({
+        error:
+          "Google Document AI is not configured. Add the Document AI environment variables to enable extraction.",
+      });
+      return;
+    }
+    if (run.outcome === "Skipped") {
+      res.status(422).json({
+        error: run.message ?? "No source document available to extract.",
+      });
+      return;
+    }
+    if (run.outcome === "Unsupported") {
+      res.status(415).json({
+        error: run.message ?? "Unsupported document type for extraction.",
+      });
+      return;
+    }
+    if (run.outcome === "Failed") {
+      res.status(502).json({
+        error: run.message ?? "Document extraction failed. Please retry.",
+      });
+      return;
+    }
+
+    // Extraction succeeded (Complete or Cached). Re-run reasoning on the text.
+    const [afterExtract] = await db
+      .select()
+      .from(packagesTable)
+      .where(eq(packagesTable.id, id));
+    let current = afterExtract ?? pkg;
+    if (current.extractedText && current.extractedText.trim()) {
+      try {
+        const regulations = await loadRegulations();
+        const result = await analyzePackaging(current, regulations);
+        await applyAnalysis(current, result, orgId(req));
+        const [refreshed] = await db
+          .select()
+          .from(packagesTable)
+          .where(eq(packagesTable.id, id));
+        if (refreshed) current = refreshed;
+      } catch (err) {
+        logger.error({ err }, "Re-analysis after reprocess failed");
+      }
+    }
+
+    res.json({
+      extraction: run.extraction ? mapExtraction(run.extraction) : null,
+      package: await buildDetail(current),
+    });
   },
 );
 

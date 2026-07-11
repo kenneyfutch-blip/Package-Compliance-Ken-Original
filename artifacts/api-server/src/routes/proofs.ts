@@ -23,6 +23,8 @@ import {
 import { requirePermission, orgId } from "../lib/rbac/context";
 import { canAccessPackage } from "../lib/rbac/scope";
 import { writeAudit } from "../lib/audit";
+import { runExtraction } from "../lib/document-ai/service";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -329,6 +331,20 @@ router.post(
       packageId,
       detail: `${data.fileName} uploaded as version ${nextVersion}.`,
     });
+
+    // Extraction layer: a new version is one of the allowed Document AI
+    // triggers. Runs synchronously; failures never block the upload response.
+    try {
+      const [pkgRow] = await db
+        .select()
+        .from(packagesTable)
+        .where(eq(packagesTable.id, packageId));
+      if (pkgRow) {
+        await runExtraction({ req, pkg: pkgRow, proof: inserted });
+      }
+    } catch (err) {
+      logger.error({ err }, "Document extraction failed on version upload");
+    }
 
     const detail = await loadProofDetail(inserted.id);
     res.status(201).json(detail);

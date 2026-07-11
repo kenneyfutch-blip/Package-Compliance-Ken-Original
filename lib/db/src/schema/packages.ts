@@ -3,6 +3,7 @@ import {
   serial,
   text,
   integer,
+  real,
   timestamp,
   jsonb,
 } from "drizzle-orm/pg-core";
@@ -47,6 +48,12 @@ export const packagesTable = pgTable("packages", {
   artworkUrl: text("artwork_url"),
   summary: text("summary"),
   extractedText: text("extracted_text"),
+  // Google Document AI extraction status/metadata, denormalized for fast list
+  // rendering. The full cached result lives in document_extractions.
+  extractionStatus: text("extraction_status"),
+  extractionConfidence: real("extraction_confidence"),
+  extractionEngine: text("extraction_engine"),
+  extractedAt: timestamp("extracted_at", { withTimezone: true }),
   ocr: jsonb("ocr").$type<OcrData | null>(),
   recommendations: jsonb("recommendations").$type<string[]>().notNull().default([]),
   criticalCount: integer("critical_count").notNull().default(0),

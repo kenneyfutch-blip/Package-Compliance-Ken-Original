@@ -6,6 +6,7 @@ export * from "./suppliers";
 export * from "./regulations";
 export * from "./packages";
 export * from "./proofs";
+export * from "./document-extractions";
 export * from "./violations";
 export * from "./language";
 export * from "./audit_events";

@@ -111,6 +111,20 @@ export class ObjectStorageService {
     return new Response(webStream, { headers });
   }
 
+  // Read a stored object fully into memory. Used by the Document AI extraction
+  // pipeline, which needs the raw bytes (not a stream) to send to the processor.
+  async downloadObjectBytes(
+    file: File,
+  ): Promise<{ buffer: Buffer; contentType: string; size: number }> {
+    const [metadata] = await file.getMetadata();
+    const [contents] = await file.download();
+    return {
+      buffer: contents,
+      contentType: (metadata.contentType as string) || "application/octet-stream",
+      size: Number(metadata.size ?? contents.length),
+    };
+  }
+
   async getObjectEntityUploadURL(): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
