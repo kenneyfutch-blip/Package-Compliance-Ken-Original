@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, regulationsTable, policiesTable } from "@workspace/db";
+import { db, regulationsTable, policiesTable, sopDocumentsTable } from "@workspace/db";
 import { and, eq, or, ilike, sql, type SQL } from "drizzle-orm";
 import { orgId, hasPermission, requireAnyPermission } from "../lib/rbac/context";
 
@@ -18,7 +18,11 @@ const router: IRouter = Router();
 
 // Reserved section keys whose data model does not exist yet. Their search/count
 // wiring is present so the follow-on features drop in without re-plumbing.
-type ReservedType = "glossary" | "sop_document";
+type ReservedType = "glossary";
+
+function sopHref(id: number): string {
+  return `/resources/sop?doc=${id}`;
+}
 
 // Does this regulation belong to the Internal SOP library rather than an
 // external agency library? Kept in sync with the client-side classifier in
@@ -70,6 +74,7 @@ router.get(
     }
 
     let policyCount = 0;
+    let sopDocumentCount = 0;
     if (canPolicies) {
       const [row] = await db
         .select({ count: sql<number>`count(*)::int` })
@@ -81,6 +86,17 @@ router.get(
           ),
         );
       policyCount = row?.count ?? 0;
+
+      const [sopRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(sopDocumentsTable)
+        .where(
+          and(
+            eq(sopDocumentsTable.organizationId, orgId(req)),
+            eq(sopDocumentsTable.status, "active"),
+          ),
+        );
+      sopDocumentCount = sopRow?.count ?? 0;
     }
 
     const groups = [
@@ -114,9 +130,9 @@ router.get(
         type: "sop_document",
         label: "SOP Documents",
         description: "Uploadable SOP documents with version history and comparison.",
-        count: 0,
+        count: sopDocumentCount,
         href: "/resources/sop",
-        available: false,
+        available: canPolicies,
       },
       {
         type: "glossary",
@@ -265,10 +281,46 @@ router.get(
       }
     }
 
-    // Reserved types (glossary, SOP documents): the data model does not exist
-    // yet. The wiring is intentionally present so the follow-on features only
-    // need to add their query here — until then they contribute no results.
-    const reserved: ReservedType[] = ["glossary", "sop_document"];
+    // SOP documents (org scoped). Match on title, category, owner, and the text
+    // extracted from the current uploaded file so an SOP is findable by content.
+    if (canPolicies && wants("sop_document")) {
+      const sopRows = await db
+        .select()
+        .from(sopDocumentsTable)
+        .where(
+          and(
+            eq(sopDocumentsTable.organizationId, orgId(req)),
+            eq(sopDocumentsTable.status, "active"),
+            or(
+              ilike(sopDocumentsTable.title, term),
+              ilike(sopDocumentsTable.category, term),
+              ilike(sopDocumentsTable.owner, term),
+              ilike(sopDocumentsTable.extractedText, term),
+            ) as SQL,
+          ),
+        )
+        .limit(limit);
+      for (const s of sopRows) {
+        results.push({
+          type: "sop_document",
+          typeLabel: "SOP Document",
+          refId: String(s.id),
+          title: s.title,
+          subtitle: s.owner ?? null,
+          description: s.fileName ?? null,
+          category: s.category,
+          source: s.owner ?? null,
+          badge: `v${s.currentVersion}`,
+          href: sopHref(s.id),
+          similarity: null,
+        });
+      }
+    }
+
+    // Reserved types (glossary): the data model does not exist yet. The wiring is
+    // intentionally present so the follow-on feature only needs to add its query
+    // here — until then it contributes no results.
+    const reserved: ReservedType[] = ["glossary"];
     for (const _t of reserved) {
       if (!wants(_t)) continue;
       // No-op: no records to search yet.

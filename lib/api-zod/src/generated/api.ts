@@ -4571,6 +4571,251 @@ export const ReprocessPolicyResponse = zod.object({
 
 
 /**
+ * @summary List SOP documents
+ */
+export const ListSopDocumentsQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "category": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional()
+})
+
+export const ListSopDocumentsResponseItem = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "owner": zod.string().nullish(),
+  "status": zod.string(),
+  "currentVersion": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListSopDocumentsResponse = zod.array(ListSopDocumentsResponseItem)
+
+
+/**
+ * @summary Create an SOP document from an uploaded file (first version)
+ */
+export const CreateSopDocumentBody = zod.object({
+  "title": zod.string(),
+  "category": zod.string(),
+  "owner": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "changeNote": zod.string().nullish()
+})
+
+export const CreateSopDocumentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "owner": zod.string().nullish(),
+  "status": zod.string(),
+  "currentVersion": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get a single SOP document
+ */
+export const GetSopDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSopDocumentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "owner": zod.string().nullish(),
+  "status": zod.string(),
+  "currentVersion": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update SOP document metadata or archive it
+ */
+export const UpdateSopDocumentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSopDocumentBody = zod.object({
+  "title": zod.string().optional(),
+  "category": zod.string().optional(),
+  "owner": zod.string().nullish(),
+  "status": zod.string().optional(),
+  "effectiveDate": zod.string().nullish()
+})
+
+export const UpdateSopDocumentResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "owner": zod.string().nullish(),
+  "status": zod.string(),
+  "currentVersion": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary List the full version history of an SOP document
+ */
+export const ListSopDocumentVersionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListSopDocumentVersionsResponseItem = zod.object({
+  "id": zod.number(),
+  "sopDocumentId": zod.number(),
+  "version": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "changeNote": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListSopDocumentVersionsResponse = zod.array(ListSopDocumentVersionsResponseItem)
+
+
+/**
+ * @summary Upload a new file as a new version of the SOP document
+ */
+export const CreateSopDocumentVersionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateSopDocumentVersionBody = zod.object({
+  "documentUrl": zod.string(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "changeNote": zod.string().nullish()
+})
+
+export const CreateSopDocumentVersionResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "category": zod.string(),
+  "owner": zod.string().nullish(),
+  "status": zod.string(),
+  "currentVersion": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Side-by-side text diff between two versions of an SOP document
+ */
+export const CompareSopDocumentVersionsParams = zod.object({
+  "id": zod.coerce.number(),
+  "versionA": zod.coerce.number().describe('Version id (either order; the older one is shown on the left).'),
+  "versionB": zod.coerce.number()
+})
+
+export const CompareSopDocumentVersionsResponse = zod.object({
+  "documentId": zod.number(),
+  "title": zod.string(),
+  "older": zod.object({
+  "id": zod.number(),
+  "sopDocumentId": zod.number(),
+  "version": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "changeNote": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.string()
+}),
+  "newer": zod.object({
+  "id": zod.number(),
+  "sopDocumentId": zod.number(),
+  "version": zod.number(),
+  "documentUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "contentType": zod.string().nullish(),
+  "extractionStatus": zod.string(),
+  "extractionEngine": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "changeNote": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.string()
+}),
+  "rows": zod.array(zod.object({
+  "type": zod.string().describe('unchanged | added | removed | changed'),
+  "left": zod.string().nullish(),
+  "right": zod.string().nullish()
+})),
+  "summary": zod.object({
+  "added": zod.number(),
+  "removed": zod.number(),
+  "changed": zod.number(),
+  "unchanged": zod.number()
+})
+})
+
+
+/**
  * @summary Aggregate counts for every reference resource type in the Resource Center
  */
 export const GetResourceOverviewResponse = zod.object({

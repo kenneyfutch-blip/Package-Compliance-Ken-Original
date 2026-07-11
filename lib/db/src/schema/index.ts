@@ -23,3 +23,4 @@ export * from "./compliance-memory";
 export * from "./ecfr";
 export * from "./policies";
 export * from "./policy_versions";
+export * from "./sop_documents";

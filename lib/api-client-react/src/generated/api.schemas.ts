@@ -99,6 +99,92 @@ export interface PolicyVersion {
   createdAt: string;
 }
 
+export interface SopDocument {
+  id: number;
+  title: string;
+  category: string;
+  owner?: string | null;
+  status: string;
+  currentVersion: number;
+  documentUrl?: string | null;
+  fileName?: string | null;
+  contentType?: string | null;
+  extractedText?: string | null;
+  extractionStatus: string;
+  extractionEngine?: string | null;
+  effectiveDate?: string | null;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SopDocumentInput {
+  title: string;
+  category: string;
+  owner?: string | null;
+  status?: string | null;
+  effectiveDate?: string | null;
+  documentUrl?: string | null;
+  fileName?: string | null;
+  contentType?: string | null;
+  changeNote?: string | null;
+}
+
+export interface SopDocumentUpdate {
+  title?: string;
+  category?: string;
+  owner?: string | null;
+  status?: string;
+  effectiveDate?: string | null;
+}
+
+export interface SopDocumentVersionInput {
+  documentUrl: string;
+  fileName?: string | null;
+  contentType?: string | null;
+  effectiveDate?: string | null;
+  changeNote?: string | null;
+}
+
+export interface SopDocumentVersion {
+  id: number;
+  sopDocumentId: number;
+  version: number;
+  documentUrl?: string | null;
+  fileName?: string | null;
+  contentType?: string | null;
+  extractionStatus: string;
+  extractionEngine?: string | null;
+  effectiveDate?: string | null;
+  changeNote?: string | null;
+  createdBy?: string | null;
+  createdAt: string;
+}
+
+export interface SopDiffRow {
+  /** unchanged | added | removed | changed */
+  type: string;
+  left?: string | null;
+  right?: string | null;
+}
+
+export interface SopDiffSummary {
+  added: number;
+  removed: number;
+  changed: number;
+  unchanged: number;
+}
+
+export interface SopDiff {
+  documentId: number;
+  title: string;
+  older: SopDocumentVersion;
+  newer: SopDocumentVersion;
+  rows: SopDiffRow[];
+  summary: SopDiffSummary;
+}
+
 export interface ResourceGroupSummary {
   /** Stable resource-type key (regulation, internal_sop, policy, glossary, sop_document, guide). */
   type: string;
@@ -2125,6 +2211,12 @@ status?: string;
 export type SearchPoliciesParams = {
 q: string;
 limit?: number;
+};
+
+export type ListSopDocumentsParams = {
+search?: string;
+category?: string;
+status?: string;
 };
 
 export type SearchResourcesParams = {

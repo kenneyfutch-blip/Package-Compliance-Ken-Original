@@ -22,6 +22,7 @@ import opsRouter from "./ops";
 import complianceMemoryRouter from "./compliance-memory";
 import proofingRouter from "./proofing";
 import policiesRouter from "./policies";
+import sopDocumentsRouter from "./sop-documents";
 import resourcesRouter from "./resources";
 import { requireAuth } from "../middlewares/requireAuth";
 
@@ -52,6 +53,7 @@ router.use(teamsRouter);
 router.use(opsRouter);
 router.use(complianceMemoryRouter);
 router.use(policiesRouter);
+router.use(sopDocumentsRouter);
 router.use(resourcesRouter);
 
 export default router;

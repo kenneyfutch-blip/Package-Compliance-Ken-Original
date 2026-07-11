@@ -73,6 +73,7 @@ import type {
   ListPoliciesParams,
   ListRegulationsParams,
   ListReviewAssignmentsParams,
+  ListSopDocumentsParams,
   ListSupplierSubmissionsParams,
   ListViolationsParams,
   Me,
@@ -114,6 +115,12 @@ import type {
   SearchEcfrParams,
   SearchPoliciesParams,
   SearchResourcesParams,
+  SopDiff,
+  SopDocument,
+  SopDocumentInput,
+  SopDocumentUpdate,
+  SopDocumentVersion,
+  SopDocumentVersionInput,
   SubmissionInput,
   SubmissionReviewInput,
   Supplier,
@@ -8160,6 +8167,546 @@ export const useReprocessPolicy = <TError = ErrorType<ApiError>,
       > => {
       return useMutation(getReprocessPolicyMutationOptions(options));
     }
+
+export const getListSopDocumentsUrl = (params?: ListSopDocumentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/sop-documents?${stringifiedParams}` : `/api/sop-documents`
+}
+
+/**
+ * @summary List SOP documents
+ */
+export const listSopDocuments = async (params?: ListSopDocumentsParams, options?: RequestInit): Promise<SopDocument[]> => {
+
+  return customFetch<SopDocument[]>(getListSopDocumentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSopDocumentsQueryKey = (params?: ListSopDocumentsParams,) => {
+    return [
+    `/api/sop-documents`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListSopDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof listSopDocuments>>, TError = ErrorType<unknown>>(params?: ListSopDocumentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSopDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSopDocumentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSopDocuments>>> = ({ signal }) => listSopDocuments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSopDocuments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSopDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listSopDocuments>>>
+export type ListSopDocumentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List SOP documents
+ */
+
+export function useListSopDocuments<TData = Awaited<ReturnType<typeof listSopDocuments>>, TError = ErrorType<unknown>>(
+ params?: ListSopDocumentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSopDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSopDocumentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSopDocumentUrl = () => {
+
+
+
+
+  return `/api/sop-documents`
+}
+
+/**
+ * @summary Create an SOP document from an uploaded file (first version)
+ */
+export const createSopDocument = async (sopDocumentInput: SopDocumentInput, options?: RequestInit): Promise<SopDocument> => {
+
+  return customFetch<SopDocument>(getCreateSopDocumentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sopDocumentInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSopDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSopDocument>>, TError,{data: BodyType<SopDocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSopDocument>>, TError,{data: BodyType<SopDocumentInput>}, TContext> => {
+
+const mutationKey = ['createSopDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSopDocument>>, {data: BodyType<SopDocumentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createSopDocument(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSopDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof createSopDocument>>>
+    export type CreateSopDocumentMutationBody = BodyType<SopDocumentInput>
+    export type CreateSopDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create an SOP document from an uploaded file (first version)
+ */
+export const useCreateSopDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSopDocument>>, TError,{data: BodyType<SopDocumentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSopDocument>>,
+        TError,
+        {data: BodyType<SopDocumentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSopDocumentMutationOptions(options));
+    }
+
+export const getGetSopDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/sop-documents/${id}`
+}
+
+/**
+ * @summary Get a single SOP document
+ */
+export const getSopDocument = async (id: number, options?: RequestInit): Promise<SopDocument> => {
+
+  return customFetch<SopDocument>(getGetSopDocumentUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSopDocumentQueryKey = (id: number,) => {
+    return [
+    `/api/sop-documents/${id}`
+    ] as const;
+    }
+
+
+export const getGetSopDocumentQueryOptions = <TData = Awaited<ReturnType<typeof getSopDocument>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSopDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSopDocumentQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSopDocument>>> = ({ signal }) => getSopDocument(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSopDocument>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSopDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getSopDocument>>>
+export type GetSopDocumentQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get a single SOP document
+ */
+
+export function useGetSopDocument<TData = Awaited<ReturnType<typeof getSopDocument>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSopDocument>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSopDocumentQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateSopDocumentUrl = (id: number,) => {
+
+
+
+
+  return `/api/sop-documents/${id}`
+}
+
+/**
+ * @summary Update SOP document metadata or archive it
+ */
+export const updateSopDocument = async (id: number,
+    sopDocumentUpdate: SopDocumentUpdate, options?: RequestInit): Promise<SopDocument> => {
+
+  return customFetch<SopDocument>(getUpdateSopDocumentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sopDocumentUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateSopDocumentMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSopDocument>>, TError,{id: number;data: BodyType<SopDocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSopDocument>>, TError,{id: number;data: BodyType<SopDocumentUpdate>}, TContext> => {
+
+const mutationKey = ['updateSopDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSopDocument>>, {id: number;data: BodyType<SopDocumentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateSopDocument(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSopDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof updateSopDocument>>>
+    export type UpdateSopDocumentMutationBody = BodyType<SopDocumentUpdate>
+    export type UpdateSopDocumentMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Update SOP document metadata or archive it
+ */
+export const useUpdateSopDocument = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSopDocument>>, TError,{id: number;data: BodyType<SopDocumentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSopDocument>>,
+        TError,
+        {id: number;data: BodyType<SopDocumentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateSopDocumentMutationOptions(options));
+    }
+
+export const getListSopDocumentVersionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/sop-documents/${id}/versions`
+}
+
+/**
+ * @summary List the full version history of an SOP document
+ */
+export const listSopDocumentVersions = async (id: number, options?: RequestInit): Promise<SopDocumentVersion[]> => {
+
+  return customFetch<SopDocumentVersion[]>(getListSopDocumentVersionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSopDocumentVersionsQueryKey = (id: number,) => {
+    return [
+    `/api/sop-documents/${id}/versions`
+    ] as const;
+    }
+
+
+export const getListSopDocumentVersionsQueryOptions = <TData = Awaited<ReturnType<typeof listSopDocumentVersions>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSopDocumentVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSopDocumentVersionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSopDocumentVersions>>> = ({ signal }) => listSopDocumentVersions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSopDocumentVersions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSopDocumentVersionsQueryResult = NonNullable<Awaited<ReturnType<typeof listSopDocumentVersions>>>
+export type ListSopDocumentVersionsQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary List the full version history of an SOP document
+ */
+
+export function useListSopDocumentVersions<TData = Awaited<ReturnType<typeof listSopDocumentVersions>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSopDocumentVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSopDocumentVersionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateSopDocumentVersionUrl = (id: number,) => {
+
+
+
+
+  return `/api/sop-documents/${id}/versions`
+}
+
+/**
+ * @summary Upload a new file as a new version of the SOP document
+ */
+export const createSopDocumentVersion = async (id: number,
+    sopDocumentVersionInput: SopDocumentVersionInput, options?: RequestInit): Promise<SopDocument> => {
+
+  return customFetch<SopDocument>(getCreateSopDocumentVersionUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sopDocumentVersionInput)
+  }
+);}
+
+
+
+
+
+export const getCreateSopDocumentVersionMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSopDocumentVersion>>, TError,{id: number;data: BodyType<SopDocumentVersionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSopDocumentVersion>>, TError,{id: number;data: BodyType<SopDocumentVersionInput>}, TContext> => {
+
+const mutationKey = ['createSopDocumentVersion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSopDocumentVersion>>, {id: number;data: BodyType<SopDocumentVersionInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  createSopDocumentVersion(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSopDocumentVersionMutationResult = NonNullable<Awaited<ReturnType<typeof createSopDocumentVersion>>>
+    export type CreateSopDocumentVersionMutationBody = BodyType<SopDocumentVersionInput>
+    export type CreateSopDocumentVersionMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Upload a new file as a new version of the SOP document
+ */
+export const useCreateSopDocumentVersion = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSopDocumentVersion>>, TError,{id: number;data: BodyType<SopDocumentVersionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSopDocumentVersion>>,
+        TError,
+        {id: number;data: BodyType<SopDocumentVersionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSopDocumentVersionMutationOptions(options));
+    }
+
+export const getCompareSopDocumentVersionsUrl = (id: number,
+    versionA: number,
+    versionB: number,) => {
+
+
+
+
+  return `/api/sop-documents/${id}/compare/${versionA}/${versionB}`
+}
+
+/**
+ * @summary Side-by-side text diff between two versions of an SOP document
+ */
+export const compareSopDocumentVersions = async (id: number,
+    versionA: number,
+    versionB: number, options?: RequestInit): Promise<SopDiff> => {
+
+  return customFetch<SopDiff>(getCompareSopDocumentVersionsUrl(id,versionA,versionB),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCompareSopDocumentVersionsQueryKey = (id: number,
+    versionA: number,
+    versionB: number,) => {
+    return [
+    `/api/sop-documents/${id}/compare/${versionA}/${versionB}`
+    ] as const;
+    }
+
+
+export const getCompareSopDocumentVersionsQueryOptions = <TData = Awaited<ReturnType<typeof compareSopDocumentVersions>>, TError = ErrorType<ApiError>>(id: number,
+    versionA: number,
+    versionB: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof compareSopDocumentVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCompareSopDocumentVersionsQueryKey(id,versionA,versionB);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof compareSopDocumentVersions>>> = ({ signal }) => compareSopDocumentVersions(id,versionA,versionB, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined && versionA !== null && versionA !== undefined && versionB !== null && versionB !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof compareSopDocumentVersions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CompareSopDocumentVersionsQueryResult = NonNullable<Awaited<ReturnType<typeof compareSopDocumentVersions>>>
+export type CompareSopDocumentVersionsQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Side-by-side text diff between two versions of an SOP document
+ */
+
+export function useCompareSopDocumentVersions<TData = Awaited<ReturnType<typeof compareSopDocumentVersions>>, TError = ErrorType<ApiError>>(
+ id: number,
+    versionA: number,
+    versionB: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof compareSopDocumentVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCompareSopDocumentVersionsQueryOptions(id,versionA,versionB,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetResourceOverviewUrl = () => {
 
