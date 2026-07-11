@@ -5,15 +5,123 @@ import {
 } from '@workspace/api-zod';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import { getAuth } from '@clerk/express';
+import { db } from '@workspace/db';
+import {
+  packageVersionsTable,
+  packagesTable,
+  proofsTable,
+  reportsTable,
+  supplierSubmissionsTable,
+} from '@workspace/db';
+import { eq, or } from 'drizzle-orm';
 
 import {
   ObjectNotFoundError,
   ObjectStorageService,
 } from '../lib/objectStorage';
 import { requireAnyPermission } from '../lib/rbac/context';
+import { canAccessObjectOwner, type ObjectOwner } from '../lib/rbac/scope';
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
+
+/**
+ * Reverse-map a private object path (/objects/...) to the record that owns it,
+ * so private downloads can be authorized with the same tenant/supplier scoping
+ * as the rest of the app. Returns null when no record references the path;
+ * callers treat that as "not found" and deny access (deny-by-default).
+ */
+async function resolveObjectOwner(
+  objectPath: string,
+): Promise<ObjectOwner | null> {
+  // Proof/version artwork (current file or attached preview) -> owning package.
+  const [version] = await db
+    .select({ packageId: packageVersionsTable.packageId })
+    .from(packageVersionsTable)
+    .where(
+      or(
+        eq(packageVersionsTable.fileUrl, objectPath),
+        eq(packageVersionsTable.previewUrl, objectPath),
+      ),
+    )
+    .limit(1);
+  let packageId: number | null | undefined = version?.packageId;
+
+  // Package headline artwork -> the package itself.
+  if (packageId == null) {
+    const [pkg] = await db
+      .select({
+        organizationId: packagesTable.organizationId,
+        vendor: packagesTable.vendor,
+      })
+      .from(packagesTable)
+      .where(eq(packagesTable.artworkUrl, objectPath))
+      .limit(1);
+    if (pkg) {
+      return {
+        kind: 'package',
+        organizationId: pkg.organizationId,
+        vendor: pkg.vendor,
+      };
+    }
+  }
+
+  // Legacy proof uploads -> owning package.
+  if (packageId == null) {
+    const [proof] = await db
+      .select({ packageId: proofsTable.packageId })
+      .from(proofsTable)
+      .where(eq(proofsTable.objectPath, objectPath))
+      .limit(1);
+    packageId = proof?.packageId;
+  }
+
+  // Exported (annotated) proof PDFs -> owning package.
+  if (packageId == null) {
+    const [report] = await db
+      .select({ packageId: reportsTable.packageId })
+      .from(reportsTable)
+      .where(eq(reportsTable.objectPath, objectPath))
+      .limit(1);
+    packageId = report?.packageId;
+  }
+
+  if (packageId != null) {
+    const [pkg] = await db
+      .select({
+        organizationId: packagesTable.organizationId,
+        vendor: packagesTable.vendor,
+      })
+      .from(packagesTable)
+      .where(eq(packagesTable.id, packageId))
+      .limit(1);
+    if (!pkg) return null;
+    return {
+      kind: 'package',
+      organizationId: pkg.organizationId,
+      vendor: pkg.vendor,
+    };
+  }
+
+  // Supplier submission artwork -> owning supplier (org + supplier scoped).
+  const [submission] = await db
+    .select({
+      organizationId: supplierSubmissionsTable.organizationId,
+      supplierId: supplierSubmissionsTable.supplierId,
+    })
+    .from(supplierSubmissionsTable)
+    .where(eq(supplierSubmissionsTable.artworkUrl, objectPath))
+    .limit(1);
+  if (submission) {
+    return {
+      kind: 'supplier',
+      organizationId: submission.organizationId,
+      supplierId: submission.supplierId,
+    };
+  }
+
+  return null;
+}
 
 /**
  * POST /storage/uploads/request-url
@@ -106,28 +214,27 @@ router.get(
  * These are served from a separate path from /public-objects and can optionally
  * be protected with authentication or ACL checks based on the use case.
  */
-router.get('/storage/objects/*path', async (req: Request, res: Response) => {
+router.get(
+  '/storage/objects/*path',
+  requireAnyPermission('proofs:read', 'packages:read'),
+  async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join('/') : raw;
     const objectPath = `/objects/${wildcardPath}`;
+
+    // Authorize BEFORE touching storage: map the object back to the record that
+    // owns it and apply the caller's org/supplier scope. Unknown or out-of-scope
+    // objects return 404 so we never confirm their existence or leak another
+    // tenant's / supplier's proof artifact to a signed-in but unauthorized user.
+    const owner = await resolveObjectOwner(objectPath);
+    if (!owner || !canAccessObjectOwner(req, owner)) {
+      res.status(404).json({ error: 'Object not found' });
+      return;
+    }
+
     const objectFile =
       await objectStorageService.getObjectEntityFile(objectPath);
-
-    // --- Protected route example (uncomment when using replit-auth) ---
-    // if (!req.isAuthenticated()) {
-    //   res.status(401).json({ error: "Unauthorized" });
-    //   return;
-    // }
-    // const canAccess = await objectStorageService.canAccessObjectEntity({
-    //   userId: req.user.id,
-    //   objectFile,
-    //   requestedPermission: ObjectPermission.READ,
-    // });
-    // if (!canAccess) {
-    //   res.status(403).json({ error: "Forbidden" });
-    //   return;
-    // }
 
     const response = await objectStorageService.downloadObject(objectFile);
 

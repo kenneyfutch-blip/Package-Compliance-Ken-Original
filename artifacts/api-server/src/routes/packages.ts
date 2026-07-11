@@ -3,7 +3,6 @@ import { db } from "@workspace/db";
 import {
   packagesTable,
   violationsTable,
-  regulationsTable,
   auditEventsTable,
   reportsTable,
   type PackageRow,
@@ -28,17 +27,18 @@ import {
 } from "@workspace/api-zod";
 import {
   mapPackage,
-  mapPackageDetail,
   mapAuditEvent,
   mapReport,
   mapExtraction,
 } from "../lib/mappers";
 import { runExtraction } from "../lib/document-ai/service";
 import {
-  analyzePackaging,
-  askCompliancePilot,
-  type AnalysisResult,
-} from "../lib/ai";
+  applyAnalysis,
+  buildDetail,
+  loadRegulations,
+  ensureInitialVersion,
+} from "../lib/packageService";
+import { analyzePackaging, askCompliancePilot } from "../lib/ai";
 import { logger } from "../lib/logger";
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 import { packageConds, canAccessPackage } from "../lib/rbac/scope";
@@ -121,104 +121,6 @@ function requireId(
     return null;
   }
   return id;
-}
-
-function gradeToStatus(complianceStatus: string): string {
-  if (complianceStatus === "Passed") return "Approved";
-  if (complianceStatus === "Failed") return "Needs Revision";
-  return "AI Review";
-}
-
-async function applyAnalysis(
-  pkg: PackageRow,
-  result: AnalysisResult,
-  organizationId: number,
-): Promise<void> {
-  const counts = result.violations.reduce(
-    (acc, v) => {
-      if (v.severity === "critical") acc.critical += 1;
-      else if (v.severity === "major") acc.major += 1;
-      else if (v.severity === "minor") acc.minor += 1;
-      return acc;
-    },
-    { critical: 0, major: 0, minor: 0 },
-  );
-
-  await db
-    .update(packagesTable)
-    .set({
-      category: result.category,
-      grade: result.grade,
-      riskScore: result.riskScore,
-      complianceStatus: result.complianceStatus,
-      status: gradeToStatus(result.complianceStatus),
-      summary: result.summary,
-      ocr: result.ocr,
-      recommendations: result.recommendations,
-      criticalCount: counts.critical,
-      majorCount: counts.major,
-      minorCount: counts.minor,
-      analyzedAt: new Date(),
-    })
-    .where(eq(packagesTable.id, pkg.id));
-
-  await db.delete(violationsTable).where(eq(violationsTable.packageId, pkg.id));
-
-  if (result.violations.length > 0) {
-    await db.insert(violationsTable).values(
-      result.violations.map((v) => ({
-        organizationId,
-        packageId: pkg.id,
-        severity: v.severity,
-        engine: v.engine,
-        title: v.title,
-        description: v.description,
-        regulationRef: v.regulationRef,
-        recommendation: v.recommendation,
-        detectedText: v.detectedText,
-        suggestedText: v.suggestedText,
-        bboxX: v.bbox?.x ?? null,
-        bboxY: v.bbox?.y ?? null,
-        bboxW: v.bbox?.w ?? null,
-        bboxH: v.bbox?.h ?? null,
-        status: "Open",
-      })),
-    );
-  }
-
-  const regulationRefs = Array.from(
-    new Set(
-      result.violations
-        .map((v) => v.regulationRef)
-        .filter((r): r is string => Boolean(r)),
-    ),
-  );
-
-  await db.insert(auditEventsTable).values({
-    organizationId,
-    packageId: pkg.id,
-    entityType: "package",
-    entityId: pkg.id,
-    actor: "AI Compliance Engine",
-    action: "Analysis completed",
-    detail: `Grade ${result.grade}, risk ${result.riskScore}, ${result.violations.length} issue(s) detected. Status: ${result.complianceStatus}.`,
-    regulationRefs,
-  });
-}
-
-async function loadRegulations() {
-  return db.select().from(regulationsTable);
-}
-
-async function buildDetail(pkg: PackageRow) {
-  const [violations, regulations] = await Promise.all([
-    db
-      .select()
-      .from(violationsTable)
-      .where(eq(violationsTable.packageId, pkg.id)),
-    loadRegulations(),
-  ]);
-  return mapPackageDetail(pkg, violations, regulations);
 }
 
 // GET /packages
@@ -358,7 +260,8 @@ router.post(
         const regulations = await loadRegulations();
         const priorKnowledge = await priorKnowledgeFor(current, req);
         const result = await analyzePackaging(current, regulations, priorKnowledge);
-        await applyAnalysis(current, result, organizationId);
+        const version = await ensureInitialVersion(current);
+        await applyAnalysis(current, result, version.id, organizationId);
         const [refreshed] = await db
           .select()
           .from(packagesTable)
@@ -549,7 +452,8 @@ router.post(
       const regulations = await loadRegulations();
       const priorKnowledge = await priorKnowledgeFor(pkg, req);
       const result = await analyzePackaging(pkg, regulations, priorKnowledge);
-      await applyAnalysis(pkg, result, orgId(req));
+      const version = await ensureInitialVersion(pkg);
+      await applyAnalysis(pkg, result, version.id, orgId(req));
     } catch (err) {
       logger.error({ err }, "Analysis failed");
       res.status(502).json({ error: "AI analysis failed. Please retry." });
@@ -615,7 +519,8 @@ router.post(
         const regulations = await loadRegulations();
         const priorKnowledge = await priorKnowledgeFor(current, req);
         const result = await analyzePackaging(current, regulations, priorKnowledge);
-        await applyAnalysis(current, result, orgId(req));
+        const version = await ensureInitialVersion(current);
+        await applyAnalysis(current, result, version.id, orgId(req));
         const [refreshed] = await db
           .select()
           .from(packagesTable)
@@ -765,7 +670,8 @@ router.post(
       try {
         const priorKnowledge = await priorKnowledgeFor(pkg, req);
         const result = await analyzePackaging(pkg, regulations, priorKnowledge);
-        await applyAnalysis(pkg, result, organizationId);
+        const version = await ensureInitialVersion(pkg);
+        await applyAnalysis(pkg, result, version.id, organizationId);
         analyzed += 1;
         if (result.complianceStatus === "Passed") passed += 1;
         else if (result.complianceStatus === "Failed") failed += 1;

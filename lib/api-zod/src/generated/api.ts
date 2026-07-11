@@ -166,7 +166,8 @@ export const ListPackagesResponseItem = zod.object({
   "extractedAt": zod.coerce.date().nullish(),
   "analyzedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "approvalStatus": zod.string()
 })
 export const ListPackagesResponse = zod.array(ListPackagesResponseItem)
 
@@ -263,6 +264,10 @@ export const CreatePackageResponse = zod.object({
   "w": zod.number(),
   "h": zod.number()
 }),zod.null()]).optional(),
+  "page": zod.number().optional(),
+  "confidence": zod.number().nullish(),
+  "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
+  "claimFlags": zod.array(zod.string()).optional(),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -278,7 +283,103 @@ export const CreatePackageResponse = zod.object({
   "source": zod.string().nullish(),
   "publicationDate": zod.string().nullish(),
   "createdAt": zod.coerce.date()
+})),
+  "approvalStatus": zod.string(),
+  "currentVersionId": zod.number().nullish(),
+  "versions": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
 }))
+})),
+  "tasks": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "assignedRole": zod.string().nullish(),
+  "assignee": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string(),
+  "violationId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "approvals": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "decision": zod.string(),
+  "reviewer": zod.string(),
+  "reviewerRole": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "scorecard": zod.object({
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "passedCount": zod.number(),
+  "recommendationCount": zod.number(),
+  "openComments": zod.number(),
+  "openTasks": zod.number(),
+  "aiFindings": zod.number(),
+  "recommendation": zod.string(),
+  "readiness": zod.string(),
+  "readinessScore": zod.number()
+})
 })
 
 
@@ -294,386 +395,6 @@ export const ExtractArtworkTextBody = zod.object({
 
 export const ExtractArtworkTextResponse = zod.object({
   "text": zod.string()
-})
-
-
-/**
- * @summary Request a presigned URL for direct file upload
- */
-
-
-
-
-
-export const RequestUploadUrlBody = zod.object({
-  "name": zod.string().min(1),
-  "size": zod.number().min(1),
-  "contentType": zod.string().min(1)
-})
-
-
-
-
-
-
-export const RequestUploadUrlResponse = zod.object({
-  "uploadURL": zod.string(),
-  "objectPath": zod.string(),
-  "metadata": zod.object({
-  "name": zod.string().min(1),
-  "size": zod.number().min(1),
-  "contentType": zod.string().min(1)
-}).optional()
-})
-
-
-/**
- * @summary List proof versions for a package
- */
-export const ListProofsParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const ListProofsResponseItem = zod.object({
-  "id": zod.number(),
-  "packageId": zod.number(),
-  "version": zod.number(),
-  "fileName": zod.string(),
-  "objectPath": zod.string(),
-  "contentType": zod.string(),
-  "fileSize": zod.number(),
-  "pageCount": zod.number(),
-  "status": zod.string(),
-  "uploadedByName": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "annotationCount": zod.number(),
-  "openCount": zod.number(),
-  "resolvedCount": zod.number(),
-  "commentCount": zod.number()
-})
-export const ListProofsResponse = zod.array(ListProofsResponseItem)
-
-
-/**
- * @summary Register an uploaded proof file for a package
- */
-export const CreateProofParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-
-
-
-
-
-export const CreateProofBody = zod.object({
-  "fileName": zod.string().min(1),
-  "objectPath": zod.string().min(1),
-  "contentType": zod.string().min(1),
-  "fileSize": zod.number().optional(),
-  "pageCount": zod.number().optional()
-})
-
-export const CreateProofResponse = zod.object({
-  "id": zod.number(),
-  "packageId": zod.number(),
-  "version": zod.number(),
-  "fileName": zod.string(),
-  "objectPath": zod.string(),
-  "contentType": zod.string(),
-  "fileSize": zod.number(),
-  "pageCount": zod.number(),
-  "status": zod.string(),
-  "uploadedByName": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "annotationCount": zod.number(),
-  "openCount": zod.number(),
-  "resolvedCount": zod.number(),
-  "commentCount": zod.number(),
-  "annotations": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "page": zod.number(),
-  "kind": zod.string(),
-  "x": zod.number(),
-  "y": zod.number(),
-  "w": zod.number(),
-  "h": zod.number(),
-  "color": zod.string(),
-  "resolved": zod.boolean(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "comments": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "annotationId": zod.number().nullish(),
-  "body": zod.string(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date()
-}))
-})),
-  "generalComments": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "annotationId": zod.number().nullish(),
-  "body": zod.string(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date()
-})),
-  "decisions": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "decision": zod.string(),
-  "note": zod.string().nullish(),
-  "reviewerName": zod.string(),
-  "createdAt": zod.coerce.date()
-}))
-})
-
-
-/**
- * @summary Get a proof with annotations, comments, and decisions
- */
-export const GetProofParams = zod.object({
-  "proofId": zod.coerce.number()
-})
-
-export const GetProofResponse = zod.object({
-  "id": zod.number(),
-  "packageId": zod.number(),
-  "version": zod.number(),
-  "fileName": zod.string(),
-  "objectPath": zod.string(),
-  "contentType": zod.string(),
-  "fileSize": zod.number(),
-  "pageCount": zod.number(),
-  "status": zod.string(),
-  "uploadedByName": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "annotationCount": zod.number(),
-  "openCount": zod.number(),
-  "resolvedCount": zod.number(),
-  "commentCount": zod.number(),
-  "annotations": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "page": zod.number(),
-  "kind": zod.string(),
-  "x": zod.number(),
-  "y": zod.number(),
-  "w": zod.number(),
-  "h": zod.number(),
-  "color": zod.string(),
-  "resolved": zod.boolean(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "comments": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "annotationId": zod.number().nullish(),
-  "body": zod.string(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date()
-}))
-})),
-  "generalComments": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "annotationId": zod.number().nullish(),
-  "body": zod.string(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date()
-})),
-  "decisions": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "decision": zod.string(),
-  "note": zod.string().nullish(),
-  "reviewerName": zod.string(),
-  "createdAt": zod.coerce.date()
-}))
-})
-
-
-/**
- * @summary Add a markup annotation to a proof
- */
-export const CreateAnnotationParams = zod.object({
-  "proofId": zod.coerce.number()
-})
-
-export const CreateAnnotationBody = zod.object({
-  "page": zod.number().optional(),
-  "kind": zod.string(),
-  "x": zod.number(),
-  "y": zod.number(),
-  "w": zod.number().optional(),
-  "h": zod.number().optional(),
-  "color": zod.string().optional(),
-  "body": zod.string().optional()
-})
-
-export const CreateAnnotationResponse = zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "page": zod.number(),
-  "kind": zod.string(),
-  "x": zod.number(),
-  "y": zod.number(),
-  "w": zod.number(),
-  "h": zod.number(),
-  "color": zod.string(),
-  "resolved": zod.boolean(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "comments": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "annotationId": zod.number().nullish(),
-  "body": zod.string(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date()
-}))
-})
-
-
-/**
- * @summary Update an annotation (e.g. resolve)
- */
-export const UpdateAnnotationParams = zod.object({
-  "annotationId": zod.coerce.number()
-})
-
-export const UpdateAnnotationBody = zod.object({
-  "resolved": zod.boolean().optional()
-})
-
-export const UpdateAnnotationResponse = zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "page": zod.number(),
-  "kind": zod.string(),
-  "x": zod.number(),
-  "y": zod.number(),
-  "w": zod.number(),
-  "h": zod.number(),
-  "color": zod.string(),
-  "resolved": zod.boolean(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "comments": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "annotationId": zod.number().nullish(),
-  "body": zod.string(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date()
-}))
-})
-
-
-/**
- * @summary Delete an annotation
- */
-export const DeleteAnnotationParams = zod.object({
-  "annotationId": zod.coerce.number()
-})
-
-export const DeleteAnnotationResponse = zod.void()
-
-
-/**
- * @summary Add a comment to a proof or annotation thread
- */
-export const CreateCommentParams = zod.object({
-  "proofId": zod.coerce.number()
-})
-
-
-
-
-export const CreateCommentBody = zod.object({
-  "annotationId": zod.number().optional(),
-  "body": zod.string().min(1)
-})
-
-export const CreateCommentResponse = zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "annotationId": zod.number().nullish(),
-  "body": zod.string(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date()
-})
-
-
-/**
- * @summary Record an approval decision on a proof
- */
-export const RecordProofDecisionParams = zod.object({
-  "proofId": zod.coerce.number()
-})
-
-export const RecordProofDecisionBody = zod.object({
-  "decision": zod.string(),
-  "note": zod.string().optional(),
-  "applyToPackage": zod.boolean().optional()
-})
-
-export const RecordProofDecisionResponse = zod.object({
-  "id": zod.number(),
-  "packageId": zod.number(),
-  "version": zod.number(),
-  "fileName": zod.string(),
-  "objectPath": zod.string(),
-  "contentType": zod.string(),
-  "fileSize": zod.number(),
-  "pageCount": zod.number(),
-  "status": zod.string(),
-  "uploadedByName": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "annotationCount": zod.number(),
-  "openCount": zod.number(),
-  "resolvedCount": zod.number(),
-  "commentCount": zod.number(),
-  "annotations": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "page": zod.number(),
-  "kind": zod.string(),
-  "x": zod.number(),
-  "y": zod.number(),
-  "w": zod.number(),
-  "h": zod.number(),
-  "color": zod.string(),
-  "resolved": zod.boolean(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date(),
-  "comments": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "annotationId": zod.number().nullish(),
-  "body": zod.string(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date()
-}))
-})),
-  "generalComments": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "annotationId": zod.number().nullish(),
-  "body": zod.string(),
-  "authorName": zod.string(),
-  "createdAt": zod.coerce.date()
-})),
-  "decisions": zod.array(zod.object({
-  "id": zod.number(),
-  "proofId": zod.number(),
-  "decision": zod.string(),
-  "note": zod.string().nullish(),
-  "reviewerName": zod.string(),
-  "createdAt": zod.coerce.date()
-}))
 })
 
 
@@ -750,6 +471,10 @@ export const GetPackageResponse = zod.object({
   "w": zod.number(),
   "h": zod.number()
 }),zod.null()]).optional(),
+  "page": zod.number().optional(),
+  "confidence": zod.number().nullish(),
+  "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
+  "claimFlags": zod.array(zod.string()).optional(),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -765,7 +490,103 @@ export const GetPackageResponse = zod.object({
   "source": zod.string().nullish(),
   "publicationDate": zod.string().nullish(),
   "createdAt": zod.coerce.date()
+})),
+  "approvalStatus": zod.string(),
+  "currentVersionId": zod.number().nullish(),
+  "versions": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
 }))
+})),
+  "tasks": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "assignedRole": zod.string().nullish(),
+  "assignee": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string(),
+  "violationId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "approvals": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "decision": zod.string(),
+  "reviewer": zod.string(),
+  "reviewerRole": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "scorecard": zod.object({
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "passedCount": zod.number(),
+  "recommendationCount": zod.number(),
+  "openComments": zod.number(),
+  "openTasks": zod.number(),
+  "aiFindings": zod.number(),
+  "recommendation": zod.string(),
+  "readiness": zod.string(),
+  "readinessScore": zod.number()
+})
 })
 
 
@@ -850,6 +671,10 @@ export const UpdatePackageResponse = zod.object({
   "w": zod.number(),
   "h": zod.number()
 }),zod.null()]).optional(),
+  "page": zod.number().optional(),
+  "confidence": zod.number().nullish(),
+  "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
+  "claimFlags": zod.array(zod.string()).optional(),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -865,7 +690,103 @@ export const UpdatePackageResponse = zod.object({
   "source": zod.string().nullish(),
   "publicationDate": zod.string().nullish(),
   "createdAt": zod.coerce.date()
+})),
+  "approvalStatus": zod.string(),
+  "currentVersionId": zod.number().nullish(),
+  "versions": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
 }))
+})),
+  "tasks": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "assignedRole": zod.string().nullish(),
+  "assignee": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string(),
+  "violationId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "approvals": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "decision": zod.string(),
+  "reviewer": zod.string(),
+  "reviewerRole": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "scorecard": zod.object({
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "passedCount": zod.number(),
+  "recommendationCount": zod.number(),
+  "openComments": zod.number(),
+  "openTasks": zod.number(),
+  "aiFindings": zod.number(),
+  "recommendation": zod.string(),
+  "readiness": zod.string(),
+  "readinessScore": zod.number()
+})
 })
 
 
@@ -952,6 +873,10 @@ export const AnalyzePackageResponse = zod.object({
   "w": zod.number(),
   "h": zod.number()
 }),zod.null()]).optional(),
+  "page": zod.number().optional(),
+  "confidence": zod.number().nullish(),
+  "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
+  "claimFlags": zod.array(zod.string()).optional(),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -967,7 +892,103 @@ export const AnalyzePackageResponse = zod.object({
   "source": zod.string().nullish(),
   "publicationDate": zod.string().nullish(),
   "createdAt": zod.coerce.date()
+})),
+  "approvalStatus": zod.string(),
+  "currentVersionId": zod.number().nullish(),
+  "versions": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
 }))
+})),
+  "tasks": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "assignedRole": zod.string().nullish(),
+  "assignee": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string(),
+  "violationId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "approvals": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "decision": zod.string(),
+  "reviewer": zod.string(),
+  "reviewerRole": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "scorecard": zod.object({
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "passedCount": zod.number(),
+  "recommendationCount": zod.number(),
+  "openComments": zod.number(),
+  "openTasks": zod.number(),
+  "aiFindings": zod.number(),
+  "recommendation": zod.string(),
+  "readiness": zod.string(),
+  "readinessScore": zod.number()
+})
 })
 
 
@@ -1220,6 +1241,10 @@ export const ReprocessPackageResponse = zod.object({
   "w": zod.number(),
   "h": zod.number()
 }),zod.null()]).optional(),
+  "page": zod.number().optional(),
+  "confidence": zod.number().nullish(),
+  "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
+  "claimFlags": zod.array(zod.string()).optional(),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -1235,7 +1260,103 @@ export const ReprocessPackageResponse = zod.object({
   "source": zod.string().nullish(),
   "publicationDate": zod.string().nullish(),
   "createdAt": zod.coerce.date()
+})),
+  "approvalStatus": zod.string(),
+  "currentVersionId": zod.number().nullish(),
+  "versions": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
 }))
+})),
+  "tasks": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "assignedRole": zod.string().nullish(),
+  "assignee": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string(),
+  "violationId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "approvals": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "decision": zod.string(),
+  "reviewer": zod.string(),
+  "reviewerRole": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "scorecard": zod.object({
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "passedCount": zod.number(),
+  "recommendationCount": zod.number(),
+  "openComments": zod.number(),
+  "openTasks": zod.number(),
+  "aiFindings": zod.number(),
+  "recommendation": zod.string(),
+  "readiness": zod.string(),
+  "readinessScore": zod.number()
+})
 })
 })
 
@@ -1913,7 +2034,8 @@ export const GetSupplierResponse = zod.object({
   "extractedAt": zod.coerce.date().nullish(),
   "analyzedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "approvalStatus": zod.string()
 })),
   "contacts": zod.array(zod.object({
   "id": zod.number(),
@@ -2669,6 +2791,815 @@ export const TestAiProviderResponse = zod.object({
   "status": zod.string(),
   "message": zod.string().nullish()
 })
+
+
+/**
+ * @summary List versions of a package
+ */
+export const ListPackageVersionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListPackageVersionsResponseItem = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListPackageVersionsResponse = zod.array(ListPackageVersionsResponseItem)
+
+
+/**
+ * @summary Add a new artwork version to a package (optionally re-analyze)
+ */
+export const CreatePackageVersionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreatePackageVersionBody = zod.object({
+  "label": zod.string().optional(),
+  "fileUrl": zod.string().optional(),
+  "fileName": zod.string().optional(),
+  "fileType": zod.string().optional(),
+  "previewUrl": zod.string().optional(),
+  "pageCount": zod.number().optional(),
+  "extractedText": zod.string().optional(),
+  "notes": zod.string().optional(),
+  "analyze": zod.boolean().optional().describe('When true, re-run AI analysis against this version\'s copy.')
+})
+
+export const CreatePackageVersionResponse = zod.object({
+  "id": zod.number(),
+  "sku": zod.string(),
+  "upc": zod.string().nullish(),
+  "name": zod.string(),
+  "brand": zod.string(),
+  "vendor": zod.string(),
+  "category": zod.string(),
+  "country": zod.string().nullish(),
+  "netWeight": zod.string().nullish(),
+  "dimensions": zod.string().nullish(),
+  "packageType": zod.string().nullish(),
+  "productType": zod.string().nullish(),
+  "manufacturingRegion": zod.string().nullish(),
+  "status": zod.string(),
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "complianceStatus": zod.string(),
+  "reviewer": zod.string().nullish(),
+  "artworkUrl": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "analyzedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "ocr": zod.union([zod.object({
+  "productName": zod.string().nullish(),
+  "ingredients": zod.string().nullish(),
+  "directions": zod.string().nullish(),
+  "warnings": zod.string().nullish(),
+  "claims": zod.array(zod.string()).optional(),
+  "marketingCopy": zod.string().nullish(),
+  "nutritionFacts": zod.string().nullish(),
+  "allergenStatements": zod.string().nullish(),
+  "netWeight": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "manufacturerInfo": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "epaRegistrationNumbers": zod.string().nullish(),
+  "hazardStatements": zod.string().nullish()
+}),zod.null()]).optional(),
+  "recommendations": zod.array(zod.string()),
+  "violations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "severity": zod.string(),
+  "engine": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "regulationRef": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "detectedText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "page": zod.number().optional(),
+  "confidence": zod.number().nullish(),
+  "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
+  "claimFlags": zod.array(zod.string()).optional(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "regulations": zod.array(zod.object({
+  "id": zod.number(),
+  "agency": zod.string(),
+  "category": zod.string(),
+  "ruleCode": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "regulationText": zod.string().nullish(),
+  "section": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "publicationDate": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "approvalStatus": zod.string(),
+  "currentVersionId": zod.number().nullish(),
+  "versions": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
+}))
+})),
+  "tasks": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "assignedRole": zod.string().nullish(),
+  "assignee": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string(),
+  "violationId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "approvals": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "decision": zod.string(),
+  "reviewer": zod.string(),
+  "reviewerRole": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "scorecard": zod.object({
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "passedCount": zod.number(),
+  "recommendationCount": zod.number(),
+  "openComments": zod.number(),
+  "openTasks": zod.number(),
+  "aiFindings": zod.number(),
+  "recommendation": zod.string(),
+  "readiness": zod.string(),
+  "readinessScore": zod.number()
+})
+})
+
+
+/**
+ * @summary AI-diff two versions of a package
+ */
+export const ComparePackageVersionsParams = zod.object({
+  "id": zod.coerce.number(),
+  "versionA": zod.coerce.number(),
+  "versionB": zod.coerce.number()
+})
+
+export const ComparePackageVersionsResponse = zod.object({
+  "packageId": zod.number(),
+  "summary": zod.string(),
+  "versionA": zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional(),
+  "versionB": zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}).optional(),
+  "changes": zod.array(zod.object({
+  "changeType": zod.string().describe('added | removed | changed | unchanged'),
+  "category": zod.string().describe('claim | warning | ingredient | regulatory | copy | other'),
+  "field": zod.string().nullish(),
+  "before": zod.string().nullish(),
+  "after": zod.string().nullish(),
+  "note": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Create an annotation/comment on artwork
+ */
+export const CreateAnnotationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateAnnotationBody = zod.object({
+  "versionId": zod.number().optional(),
+  "type": zod.string(),
+  "page": zod.number().optional(),
+  "x": zod.number().optional(),
+  "y": zod.number().optional(),
+  "w": zod.number().optional(),
+  "h": zod.number().optional(),
+  "color": zod.string().optional(),
+  "text": zod.string().optional(),
+  "priority": zod.string().optional(),
+  "mentions": zod.array(zod.string()).optional()
+})
+
+export const CreateAnnotationResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Update an annotation (edit text, resolve, move, reprioritize)
+ */
+export const UpdateAnnotationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAnnotationBody = zod.object({
+  "text": zod.string().optional(),
+  "priority": zod.string().optional(),
+  "status": zod.string().optional(),
+  "color": zod.string().optional(),
+  "x": zod.number().optional(),
+  "y": zod.number().optional(),
+  "w": zod.number().optional(),
+  "h": zod.number().optional()
+})
+
+export const UpdateAnnotationResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Delete an annotation
+ */
+export const DeleteAnnotationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteAnnotationResponse = zod.void()
+
+
+/**
+ * @summary Add a threaded reply to an annotation
+ */
+export const AddCommentReplyParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddCommentReplyBody = zod.object({
+  "text": zod.string(),
+  "mentions": zod.array(zod.string()).optional()
+})
+
+export const AddCommentReplyResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create a review task
+ */
+export const CreateReviewTaskParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateReviewTaskBody = zod.object({
+  "title": zod.string(),
+  "description": zod.string().optional(),
+  "assignedRole": zod.string().optional(),
+  "assignee": zod.string().optional(),
+  "dueDate": zod.string().optional(),
+  "priority": zod.string().optional(),
+  "versionId": zod.number().optional()
+})
+
+export const CreateReviewTaskResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "assignedRole": zod.string().nullish(),
+  "assignee": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string(),
+  "violationId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a review task
+ */
+export const UpdateReviewTaskParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateReviewTaskBody = zod.object({
+  "title": zod.string().optional(),
+  "description": zod.string().optional(),
+  "assignedRole": zod.string().optional(),
+  "assignee": zod.string().optional(),
+  "dueDate": zod.string().optional(),
+  "priority": zod.string().optional(),
+  "status": zod.string().optional()
+})
+
+export const UpdateReviewTaskResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "assignedRole": zod.string().nullish(),
+  "assignee": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string(),
+  "violationId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Record an approval-workflow decision
+ */
+export const CreateApprovalDecisionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateApprovalDecisionBody = zod.object({
+  "decision": zod.string().describe('approve | approve_with_comments | needs_revision | reject | escalate'),
+  "note": zod.string().optional(),
+  "versionId": zod.number().optional()
+})
+
+export const CreateApprovalDecisionResponse = zod.object({
+  "id": zod.number(),
+  "sku": zod.string(),
+  "upc": zod.string().nullish(),
+  "name": zod.string(),
+  "brand": zod.string(),
+  "vendor": zod.string(),
+  "category": zod.string(),
+  "country": zod.string().nullish(),
+  "netWeight": zod.string().nullish(),
+  "dimensions": zod.string().nullish(),
+  "packageType": zod.string().nullish(),
+  "productType": zod.string().nullish(),
+  "manufacturingRegion": zod.string().nullish(),
+  "status": zod.string(),
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "complianceStatus": zod.string(),
+  "reviewer": zod.string().nullish(),
+  "artworkUrl": zod.string().nullish(),
+  "summary": zod.string().nullish(),
+  "extractedText": zod.string().nullish(),
+  "extractionStatus": zod.string().nullish(),
+  "extractionConfidence": zod.number().nullish(),
+  "extractionEngine": zod.string().nullish(),
+  "extractedAt": zod.coerce.date().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "analyzedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date(),
+  "ocr": zod.union([zod.object({
+  "productName": zod.string().nullish(),
+  "ingredients": zod.string().nullish(),
+  "directions": zod.string().nullish(),
+  "warnings": zod.string().nullish(),
+  "claims": zod.array(zod.string()).optional(),
+  "marketingCopy": zod.string().nullish(),
+  "nutritionFacts": zod.string().nullish(),
+  "allergenStatements": zod.string().nullish(),
+  "netWeight": zod.string().nullish(),
+  "countryOfOrigin": zod.string().nullish(),
+  "manufacturerInfo": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "epaRegistrationNumbers": zod.string().nullish(),
+  "hazardStatements": zod.string().nullish()
+}),zod.null()]).optional(),
+  "recommendations": zod.array(zod.string()),
+  "violations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "severity": zod.string(),
+  "engine": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "regulationRef": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "detectedText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "page": zod.number().optional(),
+  "confidence": zod.number().nullish(),
+  "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
+  "claimFlags": zod.array(zod.string()).optional(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date()
+})),
+  "regulations": zod.array(zod.object({
+  "id": zod.number(),
+  "agency": zod.string(),
+  "category": zod.string(),
+  "ruleCode": zod.string(),
+  "title": zod.string(),
+  "summary": zod.string(),
+  "regulationText": zod.string().nullish(),
+  "section": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "publicationDate": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "approvalStatus": zod.string(),
+  "currentVersionId": zod.number().nullish(),
+  "versions": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionNumber": zod.number(),
+  "label": zod.string().nullish(),
+  "fileUrl": zod.string().nullish(),
+  "fileName": zod.string().nullish(),
+  "fileType": zod.string().nullish(),
+  "previewUrl": zod.string().nullish(),
+  "pageCount": zod.number(),
+  "extractedText": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "isCurrent": zod.boolean(),
+  "createdBy": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "annotations": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "type": zod.string().describe('pin | highlight | rectangle | circle | arrow | strikethrough | text'),
+  "page": zod.number(),
+  "x": zod.number().nullish(),
+  "y": zod.number().nullish(),
+  "w": zod.number().nullish(),
+  "h": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string().describe('human | ai'),
+  "confidence": zod.number().nullish(),
+  "severity": zod.string().nullish(),
+  "regulationRef": zod.string().nullish(),
+  "suggestedFix": zod.string().nullish(),
+  "violationId": zod.number().nullish(),
+  "mentions": zod.array(zod.string()),
+  "resolvedBy": zod.string().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "replies": zod.array(zod.object({
+  "id": zod.number(),
+  "annotationId": zod.number(),
+  "author": zod.string(),
+  "authorRole": zod.string().nullish(),
+  "text": zod.string(),
+  "source": zod.string(),
+  "mentions": zod.array(zod.string()),
+  "createdAt": zod.coerce.date()
+}))
+})),
+  "tasks": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "title": zod.string(),
+  "description": zod.string().nullish(),
+  "assignedRole": zod.string().nullish(),
+  "assignee": zod.string().nullish(),
+  "dueDate": zod.string().nullish(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "source": zod.string(),
+  "violationId": zod.number().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})),
+  "approvals": zod.array(zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "versionId": zod.number().nullish(),
+  "decision": zod.string(),
+  "reviewer": zod.string(),
+  "reviewerRole": zod.string().nullish(),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "scorecard": zod.object({
+  "grade": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "criticalCount": zod.number(),
+  "majorCount": zod.number(),
+  "minorCount": zod.number(),
+  "passedCount": zod.number(),
+  "recommendationCount": zod.number(),
+  "openComments": zod.number(),
+  "openTasks": zod.number(),
+  "aiFindings": zod.number(),
+  "recommendation": zod.string(),
+  "readiness": zod.string(),
+  "readinessScore": zod.number()
+})
+})
+
+
+/**
+ * @summary Generate an annotated proof PDF and store it
+ */
+export const ExportProofParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ExportProofResponse = zod.object({
+  "url": zod.string(),
+  "filename": zod.string()
+})
+
+
+/**
+ * @summary Apply an action to multiple packages at once
+ */
+export const BulkPackageActionBody = zod.object({
+  "ids": zod.array(zod.number()),
+  "action": zod.string().describe('approve | reject | assign | rescan | export'),
+  "assignee": zod.string().optional().describe('Target reviewer for the \"assign\" action. The acting user is always taken from the authenticated session, never the request body.')
+})
+
+export const BulkPackageActionResponse = zod.object({
+  "updated": zod.number(),
+  "action": zod.string()
+})
+
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+}).optional()
+})
+
+
+/**
+ * @summary Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+ */
+export const GetPublicObjectParams = zod.object({
+  "filePath": zod.coerce.string()
+})
+
+export const GetPublicObjectResponse = zod.unknown()
+
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
+})
+
+export const GetStorageObjectResponse = zod.unknown()
 
 
 /**

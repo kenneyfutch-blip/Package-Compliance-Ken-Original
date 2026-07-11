@@ -4,37 +4,23 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useCreatePackage, useExtractArtworkText } from "@workspace/api-client-react"
+import { useUpload } from "@workspace/object-storage-web"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { UploadCloud, Wand2, Loader2, Info, ScanText, X, ImageIcon } from "lucide-react"
+import { UploadCloud, Wand2, Loader2, Info, FileText, X, CheckCircle2, ScanText } from "lucide-react"
+import { fileTypeFromName } from "@/lib/proof-utils"
 
-const uploadSchema = z.object({
-  sku: z.string().min(1, "SKU is required"),
-  upc: z.string().optional(),
-  name: z.string().min(1, "Product name is required"),
-  brand: z.string().min(1, "Brand is required"),
-  vendor: z.string().min(1, "Vendor is required"),
-  category: z.string().optional(),
-  country: z.string().optional(),
-  netWeight: z.string().optional(),
-  dimensions: z.string().optional(),
-  packageType: z.string().optional(),
-  productType: z.string().optional(),
-  manufacturingRegion: z.string().optional(),
-  extractedText: z.string().optional(),
-})
-
-type UploadFormValues = z.infer<typeof uploadSchema>
+const ACCEPT = ".png,.jpg,.jpeg,.pdf,.ai,.indd"
+const RENDERABLE = ["png", "jpg", "pdf"]
 
 const MAX_DIMENSION = 1600
-const MAX_FILE_BYTES = 25 * 1024 * 1024
 
 // Load an image file, downscale it (longest edge <= MAX_DIMENSION), and return a
-// JPEG data URL. Keeps the OCR payload and stored artwork small.
+// JPEG data URL. Keeps the OCR payload small.
 function fileToDownscaledDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -63,68 +49,77 @@ function fileToDownscaledDataUrl(file: File): Promise<string> {
   })
 }
 
+const uploadSchema = z.object({
+  sku: z.string().min(1, "SKU is required"),
+  upc: z.string().optional(),
+  name: z.string().min(1, "Product name is required"),
+  brand: z.string().min(1, "Brand is required"),
+  vendor: z.string().min(1, "Vendor is required"),
+  category: z.string().optional(),
+  country: z.string().optional(),
+  netWeight: z.string().optional(),
+  dimensions: z.string().optional(),
+  packageType: z.string().optional(),
+  productType: z.string().optional(),
+  manufacturingRegion: z.string().optional(),
+  extractedText: z.string().optional(),
+})
+
+type UploadFormValues = z.infer<typeof uploadSchema>
+
 export default function UploadPage() {
   const [, setLocation] = useLocation()
   const createPackage = useCreatePackage()
+  const { uploadFile, isUploading } = useUpload()
   const extractText = useExtractArtworkText()
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
   const [dragActive, setDragActive] = useState(false)
   const [demoLoaded, setDemoLoaded] = useState(false)
-  const [artworkPreview, setArtworkPreview] = useState<string | null>(null)
-  const [artworkName, setArtworkName] = useState<string | null>(null)
   const [ocrError, setOcrError] = useState<string | null>(null)
+  const [artwork, setArtwork] = useState<{ name: string; type: string; url: string; preview: string | null } | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
-    defaultValues: { sku: "", name: "", brand: "", vendor: "", extractedText: "" },
+    defaultValues: {
+      sku: "",
+      name: "",
+      brand: "",
+      vendor: "",
+      extractedText: ""
+    }
   })
 
-  const extractedText = watch("extractedText")
-
   const onSubmit = (data: UploadFormValues) => {
-    createPackage.mutate(
-      { data: { ...data, artworkUrl: artworkPreview ?? undefined } },
-      { onSuccess: (res) => setLocation(`/reviews/${res.id}`) },
-    )
-  }
-
-  const processFile = async (file: File) => {
-    setOcrError(null)
-    if (!file.type.startsWith("image/")) {
-      setOcrError("Please upload an image file (PNG or JPG). PDF/AI/PSD OCR is not supported yet.")
-      return
-    }
-    if (file.size > MAX_FILE_BYTES) {
-      setOcrError("Image is too large. Please use a file under 25MB.")
-      return
-    }
-    try {
-      const dataUrl = await fileToDownscaledDataUrl(file)
-      setArtworkPreview(dataUrl)
-      setArtworkName(file.name)
-      const result = await extractText.mutateAsync({ data: { imageDataUrl: dataUrl } })
-      const text = result.text?.trim() ?? ""
-      if (text) {
-        setValue("extractedText", text, { shouldValidate: true })
-      } else {
-        setOcrError("No readable text was found in that image. You can type or paste the copy manually.")
+    const payload = artwork ? { ...data, artworkUrl: artwork.url } : data
+    createPackage.mutate({ data: payload }, {
+      onSuccess: (res) => {
+        setLocation(`/reviews/${res.id}`)
       }
-    } catch (err) {
-      setOcrError(err instanceof Error ? err.message : "Failed to read text from the image.")
-    }
+    })
   }
 
-  const onFilePicked = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) void processFile(file)
-    e.target.value = ""
-  }
-
-  const clearArtwork = () => {
-    setArtworkPreview(null)
-    setArtworkName(null)
+  const handleFiles = async (files: FileList | null) => {
+    const file = files?.[0]
+    if (!file) return
     setOcrError(null)
+    const type = fileTypeFromName(file.name)
+    const preview = RENDERABLE.includes(type) && type !== "pdf" ? URL.createObjectURL(file) : null
+    const res = await uploadFile(file)
+    if (!res) return
+    // objectPath like /objects/uploads/uuid -> stored as-is; served via /api/storage
+    setArtwork({ name: file.name, type, url: res.objectPath, preview })
+    // For renderable images, auto-extract copy via OCR to pre-fill the analysis input.
+    if (type === "png" || type === "jpg") {
+      try {
+        const dataUrl = await fileToDownscaledDataUrl(file)
+        const result = await extractText.mutateAsync({ data: { imageDataUrl: dataUrl } })
+        const text = result.text?.trim() ?? ""
+        if (text) setValue("extractedText", text, { shouldValidate: true })
+        else setOcrError("No readable text was found in that image. You can type or paste the copy manually.")
+      } catch (err) {
+        setOcrError(err instanceof Error ? err.message : "Failed to read text from the image.")
+      }
+    }
   }
 
   const loadDemo = () => {
@@ -144,20 +139,21 @@ export default function UploadPage() {
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true)
-    else if (e.type === "dragleave") setDragActive(false)
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true)
+    } else if (e.type === "dragleave") {
+      setDragActive(false)
+    }
   }
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
-    const file = e.dataTransfer.files?.[0]
-    if (file) void processFile(file)
+    handleFiles(e.dataTransfer.files)
   }
 
   const isPending = createPackage.isPending
-  const isOcrRunning = extractText.isPending
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
@@ -173,65 +169,38 @@ export default function UploadPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          className="hidden"
-          onChange={onFilePicked}
-        />
-
-        {/* Dropzone / artwork preview */}
-        {artworkPreview ? (
-          <div className="rounded-xl border border-border bg-card p-4">
-            <div className="flex gap-4">
-              <div className="relative w-40 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                <img src={artworkPreview} alt="Artwork preview" className="h-40 w-full object-contain" />
-              </div>
-              <div className="flex flex-1 flex-col justify-between">
-                <div>
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <ImageIcon className="h-4 w-4 text-primary" />
-                    {artworkName ?? "Artwork"}
-                  </div>
-                  <div className="mt-2 text-sm">
-                    {isOcrRunning ? (
-                      <span className="inline-flex items-center gap-2 text-primary">
-                        <Loader2 className="h-4 w-4 animate-spin" /> Extracting text with OCR...
-                      </span>
-                    ) : ocrError ? (
-                      <span className="text-destructive">{ocrError}</span>
-                    ) : extractedText ? (
-                      <span className="inline-flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-                        <ScanText className="h-4 w-4" /> Text extracted — review it below before analyzing.
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">Ready.</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isOcrRunning}
-                  >
-                    Replace image
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" className="gap-1 text-muted-foreground" onClick={clearArtwork}>
-                    <X className="h-4 w-4" /> Remove
-                  </Button>
-                </div>
-              </div>
+        {/* Dropzone */}
+        <input ref={fileInputRef} type="file" accept={ACCEPT} className="hidden" onChange={(e) => handleFiles(e.target.files)} />
+        {artwork ? (
+          <div className="border border-border rounded-xl p-4 bg-card flex items-center gap-4">
+            <div className="w-20 h-20 rounded-lg border border-border bg-accent/40 flex items-center justify-center overflow-hidden shrink-0">
+              {artwork.preview ? <img src={artwork.preview} alt="preview" className="w-full h-full object-contain" /> : <FileText className="w-8 h-8 text-muted-foreground" />}
             </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+                <span className="font-medium truncate">{artwork.name}</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {artwork.type.toUpperCase()} uploaded{!RENDERABLE.includes(artwork.type) ? " — tracked only (no visual proof rendering)" : " — ready for visual proofing"}
+              </p>
+              {(artwork.type === "png" || artwork.type === "jpg") && (
+                <div className="mt-1 text-xs">
+                  {extractText.isPending ? (
+                    <span className="inline-flex items-center gap-1 text-primary"><Loader2 className="w-3 h-3 animate-spin" /> Extracting text with OCR…</span>
+                  ) : ocrError ? (
+                    <span className="text-destructive">{ocrError}</span>
+                  ) : watch("extractedText") ? (
+                    <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><ScanText className="w-3 h-3" /> Text extracted — review it below.</span>
+                  ) : null}
+                </div>
+              )}
+            </div>
+            <Button type="button" variant="ghost" size="icon" onClick={() => { setArtwork(null); setOcrError(null) }}><X className="w-4 h-4" /></Button>
           </div>
         ) : (
           <div
-            className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors cursor-pointer ${
-              dragActive ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/50"
-            }`}
+            className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors cursor-pointer ${dragActive ? "border-primary bg-primary/5" : "border-border bg-card"}`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -239,16 +208,13 @@ export default function UploadPage() {
             onClick={() => fileInputRef.current?.click()}
           >
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <UploadCloud className="w-8 h-8 text-primary" />
+              {isUploading ? <Loader2 className="w-8 h-8 text-primary animate-spin" /> : <UploadCloud className="w-8 h-8 text-primary" />}
             </div>
-            <h3 className="text-lg font-semibold mb-1">Drag and drop artwork here</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Upload a packaging image (PNG, JPG, WEBP up to 25MB) — we'll OCR the text automatically.
-            </p>
-            <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}>
-              Browse Files
-            </Button>
-            {ocrError && <p className="mt-4 text-sm text-destructive">{ocrError}</p>}
+            <h3 className="text-lg font-semibold mb-1">{isUploading ? "Uploading…" : "Drag and drop artwork here"}</h3>
+            <p className="text-sm text-muted-foreground mb-4">PNG, JPG, PDF render as proofs · AI, INDD tracked only · up to 50MB</p>
+            <div className="flex items-center gap-4 justify-center">
+              <Button type="button" variant="outline" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}>Browse Files</Button>
+            </div>
           </div>
         )}
 
@@ -302,15 +268,15 @@ export default function UploadPage() {
                 Artwork Text
                 <Badge variant="outline" className="font-normal text-muted-foreground gap-1"><Info className="w-3 h-3"/> AI Analysis Input</Badge>
               </CardTitle>
-              <CardDescription>Auto-filled by OCR from the uploaded image. Edit before analyzing if needed.</CardDescription>
+              <CardDescription>Paste extracted OCR text or copy deck here.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2 h-full">
-                <Textarea
-                  id="extractedText"
-                  {...register("extractedText")}
+                <Textarea 
+                  id="extractedText" 
+                  {...register("extractedText")} 
                   className="min-h-[280px] font-mono text-sm leading-relaxed"
-                  placeholder="Upload an image to auto-extract text, or paste ingredients, warnings, marketing copy..."
+                  placeholder="Paste ingredients, warnings, marketing copy..."
                 />
               </div>
             </CardContent>
@@ -319,7 +285,7 @@ export default function UploadPage() {
 
         <div className="flex justify-end gap-4">
           <Button type="button" variant="outline" onClick={() => window.history.back()}>Cancel</Button>
-          <Button type="submit" disabled={isPending || isOcrRunning} className="min-w-[150px]">
+          <Button type="submit" disabled={isPending} className="min-w-[150px]">
             {isPending ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing...</>
             ) : (

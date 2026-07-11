@@ -22,7 +22,6 @@ import Landing from "@/pages/landing"
 import UploadPage from "@/pages/upload"
 import BulkQueuePage from "@/pages/bulk"
 import ReviewWorkspace from "@/pages/review-workspace"
-import Proofing, { ProofingIndex } from "@/pages/proofing"
 import AdminPage from "@/pages/admin"
 import ReportsPage from "@/pages/reports"
 import RegulationsPage from "@/pages/regulations"
@@ -214,8 +213,6 @@ function AppRoutes() {
           <PackagesView title="My Reviews" subtitle="Packages assigned to you for compliance review." emptyText="No reviews assigned right now." />
         </Route>
         <Route path="/reviews/:id" component={ReviewWorkspace} />
-        <Route path="/proofing" component={ProofingIndex} />
-        <Route path="/proofing/:packageId" component={Proofing} />
         <Route path="/queue/high-risk">
           <PackagesView title="High Risk Queue" subtitle="Packages with the highest compliance risk scores." riskFilter="high" emptyText="No high-risk packages. Nicely done." />
         </Route>

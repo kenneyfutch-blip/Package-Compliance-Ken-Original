@@ -45,7 +45,7 @@ An AI-powered packaging compliance operating system: reviewers upload retail pro
 
 ## Product
 
-Dashboard command center, single + bulk upload, bulk processing queue, split-screen review workspace (artwork hotspot viewer + compliance intelligence panel + AI copilot), reviews list, regulatory knowledge base, suppliers, reports, audit history, Settings (AI integrations + detection capabilities + users), notifications. Dark + light mode.
+Dashboard command center, single + bulk upload, bulk processing queue, split-screen review workspace (artwork proofing viewer with markup + threaded comments + AI color-coded markers + version A/B compare + approval workflow + scorecard), reviews list, regulatory knowledge base, suppliers, reports, audit history, Settings (AI integrations + detection capabilities + users), notifications. Dark + light mode.
 
 ## User preferences
 
@@ -55,7 +55,6 @@ Dashboard command center, single + bulk upload, bulk processing queue, split-scr
 
 - After editing `lib/api-spec/openapi.yaml`, always run codegen. After editing `lib/db/src/schema/`, run `push`. Rebuild referenced libs (`npx tsc --build lib/db lib/integrations-openai-ai-server`) if the api-server typecheck reports missing `@workspace/db` exports.
 - OpenAPI body schemas must be entity-shaped and `$ref`'d (never inline) to avoid TS2308; keep `info.title: Api` and the `/healthz` endpoint.
-- Several routes in `App.tsx` are still "coming soon" placeholders even though real page files exist (reports/regulations/suppliers/audit/notifications); wire the real page import when building each. `notifications.tsx` and `upload.tsx` have pre-existing type errors.
 - Provider API keys are encrypted with `SESSION_SECRET`; rotating it makes stored keys undecryptable (they gracefully fall back to the managed provider).
 
 ## Pointers

@@ -282,6 +282,12 @@ export interface Violation {
   /** @nullable */
   suggestedText?: string | null;
   bbox?: Bbox | null;
+  page?: number;
+  /** @nullable */
+  confidence?: number | null;
+  /** issue (red) | warning (yellow) | passed (green) | recommendation (purple) */
+  findingClass?: string;
+  claimFlags?: string[];
   status: string;
   createdAt: string;
 }
@@ -402,6 +408,7 @@ export interface Package {
   analyzedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+  approvalStatus: string;
 }
 
 export interface DocumentAiStatus {
@@ -503,6 +510,144 @@ export interface Regulation {
   createdAt: string;
 }
 
+export interface PackageVersion {
+  id: number;
+  packageId: number;
+  versionNumber: number;
+  /** @nullable */
+  label?: string | null;
+  /** @nullable */
+  fileUrl?: string | null;
+  /** @nullable */
+  fileName?: string | null;
+  /** @nullable */
+  fileType?: string | null;
+  /** @nullable */
+  previewUrl?: string | null;
+  pageCount: number;
+  /** @nullable */
+  extractedText?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  isCurrent: boolean;
+  /** @nullable */
+  createdBy?: string | null;
+  createdAt: string;
+}
+
+export interface CommentReply {
+  id: number;
+  annotationId: number;
+  author: string;
+  /** @nullable */
+  authorRole?: string | null;
+  text: string;
+  source: string;
+  mentions: string[];
+  createdAt: string;
+}
+
+export interface Annotation {
+  id: number;
+  packageId: number;
+  /** @nullable */
+  versionId?: number | null;
+  /** pin | highlight | rectangle | circle | arrow | strikethrough | text */
+  type: string;
+  page: number;
+  /** @nullable */
+  x?: number | null;
+  /** @nullable */
+  y?: number | null;
+  /** @nullable */
+  w?: number | null;
+  /** @nullable */
+  h?: number | null;
+  /** @nullable */
+  color?: string | null;
+  author: string;
+  /** @nullable */
+  authorRole?: string | null;
+  /** @nullable */
+  text?: string | null;
+  priority: string;
+  status: string;
+  /** human | ai */
+  source: string;
+  /** @nullable */
+  confidence?: number | null;
+  /** @nullable */
+  severity?: string | null;
+  /** @nullable */
+  regulationRef?: string | null;
+  /** @nullable */
+  suggestedFix?: string | null;
+  /** @nullable */
+  violationId?: number | null;
+  mentions: string[];
+  /** @nullable */
+  resolvedBy?: string | null;
+  /** @nullable */
+  resolvedAt?: string | null;
+  createdAt: string;
+  replies: CommentReply[];
+}
+
+export interface ReviewTask {
+  id: number;
+  packageId: number;
+  /** @nullable */
+  versionId?: number | null;
+  title: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  assignedRole?: string | null;
+  /** @nullable */
+  assignee?: string | null;
+  /** @nullable */
+  dueDate?: string | null;
+  priority: string;
+  status: string;
+  source: string;
+  /** @nullable */
+  violationId?: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApprovalDecision {
+  id: number;
+  packageId: number;
+  /** @nullable */
+  versionId?: number | null;
+  decision: string;
+  reviewer: string;
+  /** @nullable */
+  reviewerRole?: string | null;
+  /** @nullable */
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface Scorecard {
+  /** @nullable */
+  grade?: string | null;
+  /** @nullable */
+  riskScore?: number | null;
+  criticalCount: number;
+  majorCount: number;
+  minorCount: number;
+  passedCount: number;
+  recommendationCount: number;
+  openComments: number;
+  openTasks: number;
+  aiFindings: number;
+  recommendation: string;
+  readiness: string;
+  readinessScore: number;
+}
+
 export interface PackageDetail {
   id: number;
   sku: string;
@@ -557,6 +702,14 @@ export interface PackageDetail {
   recommendations: string[];
   violations: Violation[];
   regulations: Regulation[];
+  approvalStatus: string;
+  /** @nullable */
+  currentVersionId?: number | null;
+  versions: PackageVersion[];
+  annotations: Annotation[];
+  tasks: ReviewTask[];
+  approvals: ApprovalDecision[];
+  scorecard: Scorecard;
 }
 
 export interface ReprocessResult {
@@ -1101,6 +1254,121 @@ export interface Me {
   supplierId?: number | null;
   /** @nullable */
   supplierName?: string | null;
+}
+
+export interface PackageVersionInput {
+  label?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileType?: string;
+  previewUrl?: string;
+  pageCount?: number;
+  extractedText?: string;
+  notes?: string;
+  /** When true, re-run AI analysis against this version's copy. */
+  analyze?: boolean;
+}
+
+export interface CommentReplyInput {
+  text: string;
+  mentions?: string[];
+}
+
+export interface AnnotationInput {
+  versionId?: number;
+  type: string;
+  page?: number;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  color?: string;
+  text?: string;
+  priority?: string;
+  mentions?: string[];
+}
+
+export interface AnnotationUpdate {
+  text?: string;
+  priority?: string;
+  status?: string;
+  color?: string;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+}
+
+export interface ReviewTaskInput {
+  title: string;
+  description?: string;
+  assignedRole?: string;
+  assignee?: string;
+  dueDate?: string;
+  priority?: string;
+  versionId?: number;
+}
+
+export interface ReviewTaskUpdate {
+  title?: string;
+  description?: string;
+  assignedRole?: string;
+  assignee?: string;
+  dueDate?: string;
+  priority?: string;
+  status?: string;
+}
+
+export interface ApprovalDecisionInput {
+  /** approve | approve_with_comments | needs_revision | reject | escalate */
+  decision: string;
+  note?: string;
+  versionId?: number;
+}
+
+export interface VersionChange {
+  /** added | removed | changed | unchanged */
+  changeType: string;
+  /** claim | warning | ingredient | regulatory | copy | other */
+  category: string;
+  /** @nullable */
+  field?: string | null;
+  /** @nullable */
+  before?: string | null;
+  /** @nullable */
+  after?: string | null;
+  /** @nullable */
+  note?: string | null;
+}
+
+export interface VersionComparison {
+  packageId: number;
+  summary: string;
+  versionA?: PackageVersion;
+  versionB?: PackageVersion;
+  changes: VersionChange[];
+}
+
+export interface ProofExport {
+  url: string;
+  filename: string;
+}
+
+export interface BulkActionInput {
+  ids: number[];
+  /** approve | reject | assign | rescan | export */
+  action: string;
+  /** Target reviewer for the "assign" action. The acting user is always taken from the authenticated session, never the request body. */
+  assignee?: string;
+}
+
+export interface BulkActionResult {
+  updated: number;
+  action: string;
+}
+
+export interface ErrorEnvelope {
+  error: string;
 }
 
 export type ReviewAssignInputPriority = typeof ReviewAssignInputPriority[keyof typeof ReviewAssignInputPriority];

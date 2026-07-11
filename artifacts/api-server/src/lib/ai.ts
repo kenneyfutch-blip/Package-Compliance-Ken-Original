@@ -1,6 +1,8 @@
 import type { OcrData, Regulation, PackageRow } from "@workspace/db";
 import { resolveAiClient } from "./ai-client";
 
+export type FindingClass = "issue" | "warning" | "passed" | "recommendation";
+
 export type AnalyzedViolation = {
   severity: "critical" | "major" | "minor" | "informational";
   engine: string;
@@ -11,6 +13,10 @@ export type AnalyzedViolation = {
   detectedText: string | null;
   suggestedText: string | null;
   bbox: { x: number; y: number; w: number; h: number } | null;
+  findingClass: FindingClass;
+  confidence: number | null;
+  claimFlags: string[];
+  page: number;
 };
 
 export type AnalysisResult = {
@@ -52,6 +58,38 @@ const VALID_SEVERITY = new Set([
   "minor",
   "informational",
 ]);
+
+const VALID_CLASS = new Set(["issue", "warning", "passed", "recommendation"]);
+const VALID_FLAGS = new Set(["EPA", "FDA", "FTC", "Legal"]);
+
+/** Proof marker color for a finding class. */
+export function findingClassColor(cls: FindingClass): string {
+  switch (cls) {
+    case "passed":
+      return "#22c55e"; // green
+    case "warning":
+      return "#f59e0b"; // yellow
+    case "recommendation":
+      return "#8b5cf6"; // purple
+    case "issue":
+    default:
+      return "#ef4444"; // red
+  }
+}
+
+/** Map a severity to an annotation/task priority. */
+export function priorityFromSeverity(severity: string): string {
+  switch (severity) {
+    case "critical":
+      return "critical";
+    case "major":
+      return "high";
+    case "minor":
+      return "medium";
+    default:
+      return "low";
+  }
+}
 
 export async function analyzePackaging(
   pkg: PackageRow,
@@ -107,15 +145,26 @@ ${
 }
 Perform:
 1. OCR field extraction: pull structured fields from the artwork text.
-2. Compliance engines: FDA/EPA/CPSC/FTC/USDA regulatory checks, spelling, grammar, contextual language, and marketing claims substantiation. Flag missing mandatory elements (net contents, ingredients, warnings, country of origin, allergen statements, nutrition facts, hazard/precautionary statements, EPA registration where applicable).
-3. For each issue produce a violation with severity (critical|major|minor|informational), the engine name, a concise title, a description, the offending detectedText (or null if it is a missing element), a suggestedText fix (or null), a recommendation, and a regulationRef citing the agency + rule code/section when possible.
-4. For each violation, provide an approximate normalized bounding box {x,y,w,h} with values between 0 and 1 indicating where on the artwork the issue likely appears (top area for branding/claims, middle for ingredients, bottom for net weight/manufacturer). Spread boxes out; do not overlap them all.
-5. Assign an overall letter grade (A-F), a riskScore 0-100 (higher = riskier), and a complianceStatus of "Passed", "Failed", or "Needs Review". Critical violations must push toward Failed and high risk.
-6. Detect the best-fit product category.
-7. Provide 3-6 prioritized recommendations and a 1-2 sentence executive summary.
+2. Compliance engines: run ALL detection engines described above and flag missing mandatory elements (net contents, ingredients, warnings, country of origin, allergen statements, nutrition facts, hazard/precautionary statements, EPA registration where applicable).
+3. Produce findings. Each finding has:
+   - findingClass: one of "issue" (a real violation / red), "warning" (risky but not a hard violation / yellow), "passed" (a mandatory element that IS present and correct / green), or "recommendation" (an optional improvement / purple).
+   - severity: critical|major|minor|informational (use informational for passed/recommendation).
+   - engine: the detection engine name from the list above.
+   - title, description.
+   - detectedText (the offending or relevant copy, or null if it is a missing element).
+   - suggestedText (a corrected version, or null).
+   - recommendation, regulationRef (agency + rule code/section when possible).
+   - confidence: integer 0-100 for how certain you are.
+   - claimFlags: array; for marketing/regulatory claims list which review authorities must sign off, any of ["EPA","FDA","FTC","Legal"]; otherwise [].
+   - page: 0 (single-page artwork).
+4. Include at least 2 "passed" findings for mandatory elements that are correctly present, and 1-2 "recommendation" findings, in addition to the issues/warnings.
+5. For each finding, provide an approximate normalized bounding box {x,y,w,h} with values 0..1 for where on the artwork it appears (top for branding/claims, middle for ingredients, bottom for net weight/manufacturer). Spread boxes out; do not overlap them all.
+6. Assign an overall letter grade (A-F), a riskScore 0-100 (higher = riskier), and complianceStatus of "Passed", "Failed", or "Needs Review". Critical issues push toward Failed and high risk.
+7. Detect the best-fit product category.
+8. Provide 3-6 prioritized recommendations and a 1-2 sentence executive summary.
 
 Respond with JSON of shape:
-{"category":string,"grade":string,"riskScore":number,"complianceStatus":string,"summary":string,"ocr":{"productName":string|null,"ingredients":string|null,"directions":string|null,"warnings":string|null,"claims":string[],"marketingCopy":string|null,"nutritionFacts":string|null,"allergenStatements":string|null,"netWeight":string|null,"countryOfOrigin":string|null,"manufacturerInfo":string|null,"expirationDate":string|null,"epaRegistrationNumbers":string|null,"hazardStatements":string|null},"recommendations":string[],"violations":[{"severity":string,"engine":string,"title":string,"description":string,"regulationRef":string|null,"recommendation":string|null,"detectedText":string|null,"suggestedText":string|null,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
+{"category":string,"grade":string,"riskScore":number,"complianceStatus":string,"summary":string,"ocr":{"productName":string|null,"ingredients":string|null,"directions":string|null,"warnings":string|null,"claims":string[],"marketingCopy":string|null,"nutritionFacts":string|null,"allergenStatements":string|null,"netWeight":string|null,"countryOfOrigin":string|null,"manufacturerInfo":string|null,"expirationDate":string|null,"epaRegistrationNumbers":string|null,"hazardStatements":string|null},"recommendations":string[],"violations":[{"severity":string,"findingClass":string,"engine":string,"title":string,"description":string,"regulationRef":string|null,"recommendation":string|null,"detectedText":string|null,"suggestedText":string|null,"confidence":number,"claimFlags":string[],"page":number,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
 
   const { client, model } = await resolveAiClient();
   const response = await client.chat.completions.create({
@@ -132,9 +181,14 @@ Respond with JSON of shape:
 
   const violations: AnalyzedViolation[] = Array.isArray(parsed.violations)
     ? parsed.violations.map((v: any) => {
+        const findingClass: FindingClass = VALID_CLASS.has(v?.findingClass)
+          ? v.findingClass
+          : "issue";
         const severity = VALID_SEVERITY.has(v?.severity)
           ? v.severity
-          : "minor";
+          : findingClass === "passed" || findingClass === "recommendation"
+            ? "informational"
+            : "minor";
         let bbox = null;
         if (
           v?.bbox &&
@@ -148,6 +202,15 @@ Respond with JSON of shape:
             h: Math.max(0.02, Math.min(1, v.bbox.h ?? 0.1)),
           };
         }
+        const claimFlags: string[] = Array.isArray(v?.claimFlags)
+          ? v.claimFlags
+              .map((f: any) => String(f))
+              .filter((f: string) => VALID_FLAGS.has(f))
+          : [];
+        const confidence =
+          typeof v?.confidence === "number"
+            ? Math.max(0, Math.min(100, Math.round(v.confidence)))
+            : null;
         return {
           severity,
           engine: String(v?.engine ?? "Internal"),
@@ -158,6 +221,10 @@ Respond with JSON of shape:
           detectedText: v?.detectedText ?? null,
           suggestedText: v?.suggestedText ?? null,
           bbox,
+          findingClass,
+          confidence,
+          claimFlags,
+          page: Number.isInteger(v?.page) ? v.page : 0,
         };
       })
     : [];
@@ -237,7 +304,13 @@ export type CopilotCitation = {
 
 export async function askCompliancePilot(
   pkg: PackageRow,
-  violations: { severity: string; engine: string; title: string; description: string; regulationRef: string | null }[],
+  violations: {
+    severity: string;
+    engine: string;
+    title: string;
+    description: string;
+    regulationRef: string | null;
+  }[],
   regulations: Regulation[],
   question: string,
 ): Promise<{ answer: string; citations: CopilotCitation[] }> {
@@ -291,5 +364,92 @@ Answer the question using the context above. Cite the specific regulations you r
           text: c?.text ?? null,
         }))
       : [],
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Version comparison
+// ---------------------------------------------------------------------------
+
+export type ComparedChange = {
+  changeType: "added" | "removed" | "changed" | "unchanged";
+  category: "claim" | "warning" | "ingredient" | "regulatory" | "copy" | "other";
+  field: string | null;
+  before: string | null;
+  after: string | null;
+  note: string | null;
+};
+
+const VALID_CHANGE_TYPE = new Set(["added", "removed", "changed", "unchanged"]);
+const VALID_CATEGORY = new Set([
+  "claim",
+  "warning",
+  "ingredient",
+  "regulatory",
+  "copy",
+  "other",
+]);
+
+export async function compareVersions(
+  packageName: string,
+  labelA: string,
+  textA: string,
+  labelB: string,
+  textB: string,
+): Promise<{ summary: string; changes: ComparedChange[] }> {
+  const system = `You are a packaging copy diff analyst. You compare two revisions of packaging artwork copy and produce a precise, structured change list a compliance reviewer can act on. Respond ONLY with valid minified JSON. Do not use emojis.`;
+
+  const user = `Compare two versions of the packaging copy for "${packageName}".
+
+VERSION A (${labelA}):
+"""
+${textA || "(empty)"}
+"""
+
+VERSION B (${labelB}):
+"""
+${textB || "(empty)"}
+"""
+
+Identify what changed from A to B. For each meaningful item output:
+- changeType: added|removed|changed|unchanged
+- category: claim|warning|ingredient|regulatory|copy|other
+- field: a short label for the element (e.g. "Net weight", "Marketing claim", "Allergen statement") or null
+- before: the A text (or null)
+- after: the B text (or null)
+- note: a one-line compliance-relevant note about the change (or null)
+
+Focus on compliance-significant changes (claims, warnings, ingredients, regulatory elements). Include a few "unchanged" key elements for context. Also give a 1-2 sentence summary.
+
+Respond with JSON: {"summary":string,"changes":[{"changeType":string,"category":string,"field":string|null,"before":string|null,"after":string|null,"note":string|null}]}`;
+
+  const { client, model } = await resolveAiClient();
+  const response = await client.chat.completions.create({
+    model,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+    response_format: { type: "json_object" },
+    max_completion_tokens: 3072,
+  });
+
+  const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
+  const changes: ComparedChange[] = Array.isArray(parsed?.changes)
+    ? parsed.changes.map((c: any) => ({
+        changeType: VALID_CHANGE_TYPE.has(c?.changeType)
+          ? c.changeType
+          : "changed",
+        category: VALID_CATEGORY.has(c?.category) ? c.category : "other",
+        field: c?.field ?? null,
+        before: c?.before ?? null,
+        after: c?.after ?? null,
+        note: c?.note ?? null,
+      }))
+    : [];
+
+  return {
+    summary: String(parsed?.summary ?? "No summary available."),
+    changes,
   };
 }

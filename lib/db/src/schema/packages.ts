@@ -45,6 +45,8 @@ export const packagesTable = pgTable("packages", {
   grade: text("grade"),
   riskScore: integer("risk_score"),
   complianceStatus: text("compliance_status").notNull().default("Pending"),
+  // Approval-workflow state: Pending | Approved | Approved with Comments | Needs Revision | Rejected | Escalated
+  approvalStatus: text("approval_status").notNull().default("Pending"),
   reviewer: text("reviewer"),
   artworkUrl: text("artwork_url"),
   summary: text("summary"),

@@ -23,6 +23,12 @@ export interface Violation {
   /** @nullable */
   suggestedText?: string | null;
   bbox?: Bbox | null;
+  page?: number;
+  /** @nullable */
+  confidence?: number | null;
+  /** issue (red) | warning (yellow) | passed (green) | recommendation (purple) */
+  findingClass?: string;
+  claimFlags?: string[];
   status: string;
   createdAt: Date;
 }

@@ -1,355 +1,829 @@
-import { useState } from "react"
+import * as React from "react"
 import { useParams, Link } from "wouter"
-import { useGetPackage, useAnalyzePackage, useUpdatePackage, getGetPackageQueryKey, useGetLanguageReview, useRunLanguageReview, getGetLanguageReviewQueryKey, useGetPackageExtraction, getGetPackageExtractionQueryKey } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
-import { LanguageReviewTab } from "@/components/language-review-tab"
-import { DocumentAiTab } from "@/components/document-ai-tab"
+import {
+  useGetPackage, getGetPackageQueryKey, useAnalyzePackage,
+  useCreateAnnotation, useUpdateAnnotation, useDeleteAnnotation, useAddCommentReply,
+  useCreateReviewTask, useUpdateReviewTask, useCreateApprovalDecision,
+  useAskCopilot, useExportProof, useComparePackageVersions, getComparePackageVersionsQueryKey,
+  useGetLanguageReview, useRunLanguageReview, getGetLanguageReviewQueryKey,
+  useCreatePackageVersion, useExtractArtworkText,
+  type PackageDetail, type Annotation as ApiAnnotation, type Violation as ApiViolation,
+  type ReviewTask as ApiReviewTask, type Citation,
+} from "@workspace/api-client-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Progress } from "@/components/ui/progress"
-import { 
-  ArrowLeft, BrainCircuit, CheckCircle, ShieldAlert, AlertTriangle, 
-  FileText, Activity, Loader2, PlayCircle, Settings2, Info,
-  ArrowRight, PenLine, Languages, ScanText
-} from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  ArrowLeft, BrainCircuit, CheckCircle, Loader2, Send, ShieldCheck, ShieldAlert,
+  MessageSquarePlus, Trash2, CheckCheck, CornerDownRight, ClipboardList, Plus,
+  FileDown, GitCompareArrows, Sparkles, ChevronDown, XCircle, AlertOctagon, ScrollText,
+  Gavel, Bot, User as UserIcon, FilePlus,
+} from "lucide-react"
+import { useUpload } from "@workspace/object-storage-web"
+import { ProofViewer, type ViewerAnnotation, type AnnotationDraft } from "@/components/proof-viewer"
 import { FdaIntelligenceTab } from "@/components/fda-intelligence-tab"
+import {
+  type MarkupTool, findingClassMeta, priorityMeta, REVIEWERS,
+  extractMentions, relativeTime, HUMAN_MARKUP_COLOR, fileTypeFromName,
+} from "@/lib/proof-utils"
+import { cn } from "@/lib/utils"
+import { LanguageReviewTab } from "@/components/language-review-tab"
+import { DocumentAiTab } from "@/components/document-ai-tab"
+
+const OCR_MAX_DIM = 1600
+
+// Downscale an image file to a JPEG data URL for OCR (keeps payload small).
+function fileToDownscaledDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error("Could not read file"))
+    reader.onload = () => {
+      const img = new Image()
+      img.onerror = () => reject(new Error("Could not load image"))
+      img.onload = () => {
+        const scale = Math.min(1, OCR_MAX_DIM / Math.max(img.width, img.height))
+        const canvas = document.createElement("canvas")
+        canvas.width = Math.round(img.width * scale)
+        canvas.height = Math.round(img.height * scale)
+        const ctx = canvas.getContext("2d")
+        if (!ctx) { reject(new Error("Canvas not supported")); return }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL("image/jpeg", 0.85))
+      }
+      img.src = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+type Pkg = PackageDetail
+type Annotation = ApiAnnotation
+type Violation = ApiViolation
+type Task = ApiReviewTask
 
 export default function ReviewWorkspace() {
   const { id } = useParams()
   const packageId = Number(id)
-  const queryClient = useQueryClient()
-  
-  const { data: pkg, isLoading } = useGetPackage(packageId, { 
-    query: { enabled: !!packageId, queryKey: getGetPackageQueryKey(packageId) } 
+  const qc = useQueryClient()
+  const invalidate = () => qc.invalidateQueries({ queryKey: getGetPackageQueryKey(packageId) })
+
+  const { data: pkg, isLoading } = useGetPackage(packageId, {
+    query: { enabled: !!packageId, queryKey: getGetPackageQueryKey(packageId) },
   })
-  
+
   const analyze = useAnalyzePackage()
-  const updateStatus = useUpdatePackage()
+  const createAnnotation = useCreateAnnotation()
+  const exportProof = useExportProof()
   const runLanguage = useRunLanguageReview()
   const { data: languageReview } = useGetLanguageReview(packageId, {
     query: { enabled: !!packageId, queryKey: getGetLanguageReviewQueryKey(packageId) },
   })
-  const { data: extraction } = useGetPackageExtraction(packageId, {
-    query: { enabled: !!packageId, queryKey: getGetPackageExtractionQueryKey(packageId) },
-  })
-  const [tab, setTab] = useState("violations")
-
   const handleRunLanguage = () => {
     runLanguage.mutate({ id: packageId }, {
       onSuccess: (data) => {
-        queryClient.setQueryData(getGetLanguageReviewQueryKey(packageId), data)
-        queryClient.invalidateQueries({ queryKey: getGetPackageQueryKey(packageId) })
+        qc.setQueryData(getGetLanguageReviewQueryKey(packageId), data)
+        invalidate()
       },
     })
   }
 
+  const [tool, setTool] = React.useState<MarkupTool>("hand")
+  const [selectedId, setSelectedId] = React.useState<number | null>(null)
+  const [showAi, setShowAi] = React.useState(true)
+  const [showHuman, setShowHuman] = React.useState(true)
+  const [activeVersionId, setActiveVersionId] = React.useState<number | null>(null)
+  const [pendingPin, setPendingPin] = React.useState<AnnotationDraft | null>(null)
+  const [pinText, setPinText] = React.useState("")
+  const [pinPriority, setPinPriority] = React.useState("medium")
+
+  React.useEffect(() => {
+    if (pkg && activeVersionId == null) {
+      setActiveVersionId(pkg.currentVersionId ?? pkg.versions[0]?.id ?? null)
+    }
+  }, [pkg, activeVersionId])
+
   if (isLoading) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+      <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     )
   }
+  if (!pkg) return <div className="p-8">Package not found.</div>
 
-  if (!pkg) return <div>Not found</div>
+  const activeVersion = pkg.versions.find((v) => v.id === activeVersionId) ?? pkg.versions[0]
 
-  const handleReAnalyze = () => {
-    analyze.mutate({ id: packageId }, {
-      onSuccess: (data) => {
-        queryClient.setQueryData(getGetPackageQueryKey(packageId), data)
-      }
-    })
+  // Number all annotations for stable marker labels.
+  const numbered = new Map<number, number>()
+  pkg.annotations.forEach((a, i) => numbered.set(a.id, i + 1))
+
+  const viewerAnnotations: ViewerAnnotation[] = pkg.annotations
+    .filter((a) => a.versionId == null || a.versionId === activeVersion?.id)
+    .map((a) => ({
+      id: a.id, type: a.type, page: a.page, x: a.x, y: a.y, w: a.w, h: a.h,
+      color: a.color, source: a.source, status: a.status, text: a.text,
+      findingClass: findingClassForAnnotation(a, pkg.violations),
+      index: numbered.get(a.id) ?? 0,
+    }))
+
+  const handleCreate = (draft: AnnotationDraft) => {
+    if (draft.type === "pin" || draft.type === "text") {
+      setPendingPin(draft)
+      setPinText("")
+      setPinPriority("medium")
+      return
+    }
+    createAnnotation.mutate(
+      {
+        id: packageId,
+        data: {
+          type: draft.type, versionId: activeVersion?.id, page: draft.page,
+          x: draft.x, y: draft.y, w: draft.w ?? undefined, h: draft.h ?? undefined,
+          color: HUMAN_MARKUP_COLOR,
+          priority: "medium",
+        },
+      },
+      { onSuccess: () => { invalidate(); setTool("hand") } },
+    )
   }
 
-  const handleStatusChange = (status: string) => {
-    updateStatus.mutate({ id: packageId, data: { status } }, {
-      onSuccess: (data) => {
-        queryClient.setQueryData(getGetPackageQueryKey(packageId), data)
-      }
-    })
+  const savePin = () => {
+    if (!pendingPin) return
+    createAnnotation.mutate(
+      {
+        id: packageId,
+        data: {
+          type: pendingPin.type, versionId: activeVersion?.id, page: pendingPin.page,
+          x: pendingPin.x, y: pendingPin.y,
+          color: HUMAN_MARKUP_COLOR,
+          text: pinText, priority: pinPriority, mentions: extractMentions(pinText),
+        },
+      },
+      { onSuccess: () => { invalidate(); setPendingPin(null); setPinText(""); setTool("hand") } },
+    )
   }
 
-  const criticalViolations = pkg.violations?.filter(v => v.severity === 'critical') || []
-  const majorViolations = pkg.violations?.filter(v => v.severity === 'major') || []
-  const otherViolations = pkg.violations?.filter(v => v.severity !== 'critical' && v.severity !== 'major') || []
+  const sc = pkg.scorecard
+  const readinessTone = sc.readinessScore >= 85 ? "text-success" : sc.readinessScore >= 50 ? "text-warning" : "text-destructive"
 
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col animate-in fade-in duration-300">
-      {/* Workspace Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-border shrink-0">
-        <div className="flex items-center gap-4">
-          <Link href="/reviews">
-            <Button variant="ghost" size="icon"><ArrowLeft className="w-4 h-4" /></Button>
-          </Link>
-          <div>
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-border shrink-0 gap-4 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link href="/reviews"><Button variant="ghost" size="icon"><ArrowLeft className="w-4 h-4" /></Button></Link>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">{pkg.name}</h1>
-              <Badge variant={pkg.status === 'Approved' ? 'success' : 'outline'}>{pkg.status}</Badge>
+              <h1 className="text-lg font-bold truncate">{pkg.name}</h1>
+              <ApprovalBadge status={pkg.approvalStatus} />
             </div>
-            <p className="text-sm text-muted-foreground font-mono">{pkg.sku} • {pkg.vendor}</p>
+            <p className="text-xs text-muted-foreground font-mono truncate">{pkg.sku} • {pkg.vendor}</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Link href={`/proofing/${packageId}`}>
-            <Button variant="outline" className="gap-2">
-              <PenLine className="w-4 h-4" /> Proofing Studio
-            </Button>
-          </Link>
-          {pkg.status === 'Draft' || pkg.status === 'Needs Revision' ? (
-            <Button variant="outline" className="gap-2 bg-success/10 text-success border-success/20 hover:bg-success/20" onClick={() => handleStatusChange('Approved')}>
-              <CheckCircle className="w-4 h-4" /> Approve
-            </Button>
-          ) : null}
-          <Button 
-            variant="default" 
-            onClick={handleReAnalyze} 
-            disabled={analyze.isPending}
-            className="gap-2"
-          >
+        <div className="flex items-center gap-2">
+          {pkg.versions.length > 0 && (
+            <Select value={String(activeVersion?.id ?? "")} onValueChange={(v) => setActiveVersionId(Number(v))}>
+              <SelectTrigger className="w-[190px] h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {pkg.versions.map((v) => (
+                  <SelectItem key={v.id} value={String(v.id)}>
+                    {v.label ?? `Version ${v.versionNumber}`}{v.isCurrent ? " (current)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <AddVersionButton packageId={packageId} onAdded={(vid) => { setActiveVersionId(vid); invalidate() }} />
+          <Button variant="outline" className="gap-2 h-9" disabled={exportProof.isPending}
+            onClick={() => exportProof.mutate({ id: packageId }, {
+              onSuccess: (r) => { if (r?.url) window.open(r.url, "_blank") },
+            })}>
+            {exportProof.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+            Export Proof
+          </Button>
+          <Button variant="default" className="gap-2 h-9" disabled={analyze.isPending}
+            onClick={() => analyze.mutate({ id: packageId }, { onSuccess: invalidate })}>
             {analyze.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-            Run Analysis
+            Re-run AI
           </Button>
         </div>
       </div>
 
-      {/* Split Screen */}
-      <div className="flex flex-1 min-h-0 overflow-hidden mt-4 gap-6">
-        
-        {/* LEFT: Artwork Viewer */}
-        <div className="w-1/2 flex flex-col bg-accent/30 border border-border rounded-xl overflow-hidden relative">
-          <div className="p-3 border-b border-border bg-card flex justify-between items-center shrink-0">
-            <h3 className="font-semibold text-sm flex items-center gap-2">
-              <Settings2 className="w-4 h-4" /> Artwork Viewer
-            </h3>
+      {/* Scorecard strip */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 py-3 shrink-0">
+        <ScoreTile label="Grade" value={pkg.grade ?? "-"} tone={pkg.grade === "A" || pkg.grade === "B" ? "text-success" : pkg.grade === "F" ? "text-destructive" : "text-warning"} />
+        <ScoreTile label="Risk" value={String(pkg.riskScore ?? 0)} />
+        <div className="col-span-2 md:col-span-2 rounded-lg border border-border bg-card px-3 py-2">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Readiness</span>
+            <span className={cn("text-xs font-bold", readinessTone)}>{sc.readiness}</span>
           </div>
-          <div className="flex-1 relative overflow-auto p-4 flex items-center justify-center">
-            {pkg.artworkUrl ? (
-               <div className="relative max-w-full">
-                 <img src={pkg.artworkUrl} alt={pkg.name} className="max-h-[600px] object-contain shadow-xl" />
-                 {/* Render bounding boxes if we had actual pixel dimensions, 
-                     for now we simulate the CSS overlay idea */}
-                 {tab === "documentai"
-                   ? (extraction?.pages ?? []).flatMap((p) =>
-                       p.blocks.map((b, i) => b.bbox && (
-                         <div
-                           key={`block-${p.pageNumber}-${i}`}
-                           className="hotspot-box hotspot-minor"
-                           style={{
-                             left: `${b.bbox.x * 100}%`,
-                             top: `${b.bbox.y * 100}%`,
-                             width: `${b.bbox.w * 100}%`,
-                             height: `${b.bbox.h * 100}%`
-                           }}
-                           title={b.text}
-                         />
-                       )))
-                   : tab === "language"
-                   ? (languageReview?.findings ?? []).map((f, i) => f.bbox && (
-                       <div
-                         key={`lang-${i}`}
-                         className={`hotspot-box hotspot-${f.severity === "informational" ? "minor" : f.severity}`}
-                         style={{
-                           left: `${f.bbox.x * 100}%`,
-                           top: `${f.bbox.y * 100}%`,
-                           width: `${f.bbox.w * 100}%`,
-                           height: `${f.bbox.h * 100}%`
-                         }}
-                         title={`${f.issueType}: ${f.reason ?? ""}`}
-                       />
-                     ))
-                   : pkg.violations.map((v, i) => v.bbox && (
-                       <div 
-                         key={i} 
-                         className={`hotspot-box hotspot-${v.severity}`}
-                         style={{
-                           left: `${v.bbox.x * 100}%`,
-                           top: `${v.bbox.y * 100}%`,
-                           width: `${v.bbox.w * 100}%`,
-                           height: `${v.bbox.h * 100}%`
-                         }}
-                         title={v.title}
-                       />
-                     ))}
-               </div>
-            ) : (
-              <div className="text-center text-muted-foreground p-12">
-                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                 <p>No visual artwork provided.</p>
-                 <p className="text-sm mt-1">Analysis performed on extracted text only.</p>
-              </div>
-            )}
-          </div>
+          <Progress value={sc.readinessScore} className="h-1.5" />
+        </div>
+        <ScoreTile label="Open comments" value={String(sc.openComments)} />
+        <ScoreTile label="Open tasks" value={String(sc.openTasks)} />
+      </div>
+
+      {/* Split */}
+      <div className="flex flex-1 overflow-hidden gap-4 min-h-0">
+        {/* Viewer */}
+        <div className="w-1/2 min-w-0">
+          <ProofViewer
+            fileUrl={activeVersion?.fileUrl ?? pkg.artworkUrl ?? null}
+            fileType={activeVersion?.fileType ?? null}
+            pageCount={activeVersion?.pageCount ?? 1}
+            annotations={viewerAnnotations}
+            selectedId={selectedId}
+            activeTool={tool}
+            onToolChange={setTool}
+            onSelect={setSelectedId}
+            onCreate={handleCreate}
+            showAi={showAi}
+            showHuman={showHuman}
+            onToggleAi={() => setShowAi((v) => !v)}
+            onToggleHuman={() => setShowHuman((v) => !v)}
+          />
         </div>
 
-        {/* RIGHT: Compliance Intelligence */}
-        <div className="w-1/2 flex flex-col bg-card border border-border rounded-xl overflow-hidden">
-          <Tabs value={tab} onValueChange={setTab} className="flex-1 flex flex-col min-h-0">
-            <div className="px-4 pt-3 border-b border-border bg-muted/20 shrink-0">
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex items-center gap-6">
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Grade</p>
-                    <div className={`text-4xl font-black mt-1 ${pkg.grade === 'A' || pkg.grade === 'B' ? 'text-success' : pkg.grade === 'F' ? 'text-destructive' : 'text-warning'}`}>
-                      {pkg.grade || '-'}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Risk Score</p>
-                    <div className="text-3xl font-mono mt-1 font-bold">{pkg.riskScore || 0}</div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <div className="text-center px-3 py-1 bg-destructive/10 rounded-md border border-destructive/20">
-                    <div className="text-lg font-bold text-destructive">{pkg.criticalCount}</div>
-                    <div className="text-[10px] text-destructive uppercase">Critical</div>
-                  </div>
-                  <div className="text-center px-3 py-1 bg-warning/10 rounded-md border border-warning/20">
-                    <div className="text-lg font-bold text-warning">{pkg.majorCount}</div>
-                    <div className="text-[10px] text-warning uppercase">Major</div>
-                  </div>
-                </div>
-              </div>
+        {/* Sidebar */}
+        <div className="w-1/2 min-w-0 flex flex-col bg-card border border-border rounded-xl overflow-hidden">
+          <Tabs defaultValue="findings" className="flex-1 flex flex-col min-h-0">
+            <TabsList className="w-full justify-start rounded-none border-b border-border h-auto p-0 bg-muted/20 gap-4 px-4 overflow-x-auto shrink-0">
+              {[
+                ["findings", "Findings"], ["comments", "Comments"], ["tasks", "Tasks"],
+                ["data", "Data"], ["fda", "FDA Intel"], ["copilot", "Copilot"], ["compare", "Compare"],
+                ["language", "Language"], ["document", "Document AI"],
+              ].map(([v, label]) => (
+                <TabsTrigger key={v} value={v}
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2.5 px-1 text-sm">
+                  {label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-              <TabsList className="w-full justify-start rounded-none border-b-0 h-auto p-0 bg-transparent gap-6">
-                <TabsTrigger value="violations" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">Violations</TabsTrigger>
-                <TabsTrigger value="language" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1 gap-1.5"><Languages className="w-3.5 h-3.5" /> Language Review</TabsTrigger>
-                <TabsTrigger value="fda" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">FDA Intelligence</TabsTrigger>
-                <TabsTrigger value="documentai" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1 gap-1.5"><ScanText className="w-3.5 h-3.5" /> Document AI</TabsTrigger>
-                <TabsTrigger value="ocr" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">Extracted Data</TabsTrigger>
-                <TabsTrigger value="copilot" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2 px-1">AI Copilot</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <div className="flex-1 min-h-0 overflow-y-auto p-0">
-              <TabsContent value="violations" className="m-0 p-4 space-y-6">
-                {pkg.violations?.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <CheckCircle className="w-12 h-12 mx-auto mb-3 text-success opacity-50" />
-                    <p>No violations detected.</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Critical */}
-                    {criticalViolations.length > 0 && (
-                      <div className="space-y-3">
-                        <h4 className="flex items-center gap-2 font-bold text-destructive">
-                          <ShieldAlert className="w-4 h-4" /> Critical Risks
-                        </h4>
-                        {criticalViolations.map(v => (
-                          <div key={v.id} className="p-4 rounded-lg border border-destructive/30 bg-destructive/5 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <h5 className="font-semibold text-sm">{v.title}</h5>
-                              <Badge variant="outline" className="text-[10px]">{v.engine}</Badge>
-                            </div>
-                            <p className="text-sm text-foreground/80">{v.description}</p>
-                            {v.recommendation && (
-                              <div className="mt-2 p-2 bg-background rounded border border-border text-sm">
-                                <span className="font-semibold text-xs uppercase text-muted-foreground block mb-1">Fix:</span>
-                                {v.recommendation}
-                              </div>
-                            )}
-                            {v.regulationRef && <div className="text-xs font-mono text-muted-foreground mt-2">Ref: {v.regulationRef}</div>}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Major */}
-                    {majorViolations.length > 0 && (
-                      <div className="space-y-3">
-                        <h4 className="flex items-center gap-2 font-bold text-warning">
-                          <AlertTriangle className="w-4 h-4" /> Major Issues
-                        </h4>
-                        {majorViolations.map(v => (
-                          <div key={v.id} className="p-4 rounded-lg border border-warning/30 bg-warning/5 space-y-2">
-                            <div className="flex justify-between items-start">
-                              <h5 className="font-semibold text-sm">{v.title}</h5>
-                              <Badge variant="outline" className="text-[10px]">{v.engine}</Badge>
-                            </div>
-                            <p className="text-sm text-foreground/80">{v.description}</p>
-                            {v.suggestedText && (
-                              <div className="mt-2 p-2 bg-background rounded border border-border text-sm font-mono">
-                                <span className="text-destructive line-through mr-2">{v.detectedText}</span>
-                                <span className="text-success">{v.suggestedText}</span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Minor / Info */}
-                    {otherViolations.length > 0 && (
-                      <div className="space-y-3">
-                        <h4 className="flex items-center gap-2 font-bold text-muted-foreground">
-                          <Info className="w-4 h-4" /> Minor & Info
-                        </h4>
-                        {otherViolations.map(v => (
-                          <div key={v.id} className="p-3 rounded-lg border border-border bg-card space-y-1">
-                            <h5 className="font-medium text-sm">{v.title}</h5>
-                            <p className="text-xs text-muted-foreground">{v.description}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-              </TabsContent>
-
-              <TabsContent value="language" className="m-0 p-4">
-                <LanguageReviewTab
-                  detail={languageReview}
-                  onRun={handleRunLanguage}
-                  isRunning={runLanguage.isPending}
-                />
-              </TabsContent>
-
-              <TabsContent value="fda" className="m-0 p-4">
-                <FdaIntelligenceTab packageId={packageId} />
-              </TabsContent>
-
-              <TabsContent value="documentai" className="m-0 p-4">
-                <DocumentAiTab packageId={packageId} />
-              </TabsContent>
-
-              <TabsContent value="ocr" className="m-0 p-4 space-y-4">
-                 <div className="grid grid-cols-2 gap-4">
-                   {pkg.ocr && Object.entries(pkg.ocr).map(([key, val]) => {
-                     if (!val) return null;
-                     return (
-                       <div key={key} className="p-3 bg-accent/50 rounded-lg border border-border">
-                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                         <span className="text-sm break-words">{Array.isArray(val) ? val.join(', ') : String(val)}</span>
-                       </div>
-                     )
-                   })}
-                 </div>
-              </TabsContent>
-
-              <TabsContent value="copilot" className="m-0 p-4 h-full flex flex-col">
-                <div className="flex-1 bg-accent/30 rounded-lg border border-border p-4 mb-4 overflow-y-auto">
-                   <div className="flex items-start gap-3 mb-4">
-                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                       <BrainCircuit className="w-4 h-4 text-primary" />
-                     </div>
-                     <div className="bg-card border border-border p-3 rounded-lg text-sm">
-                       I've analyzed this package. It has a {pkg.grade} grade due to {pkg.criticalCount} critical issues. Ask me how to fix them or about specific regulations.
-                     </div>
-                   </div>
-                </div>
-                <div className="relative shrink-0">
-                  <Input placeholder="Ask compliance copilot..." className="pr-10 bg-card" />
-                  <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-primary">
-                    <ArrowRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </TabsContent>
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <TabsContent value="findings" className="m-0 p-4"><FindingsPanel pkg={pkg} selectedId={selectedId} onSelect={setSelectedId} /></TabsContent>
+              <TabsContent value="comments" className="m-0 p-4"><CommentsPanel pkg={pkg} packageId={packageId} numbered={numbered} selectedId={selectedId} onSelect={setSelectedId} onChange={invalidate} onAddPin={() => setTool("pin")} /></TabsContent>
+              <TabsContent value="tasks" className="m-0 p-4"><TasksPanel pkg={pkg} packageId={packageId} onChange={invalidate} /></TabsContent>
+              <TabsContent value="data" className="m-0 p-4"><DataPanel pkg={pkg} /></TabsContent>
+              <TabsContent value="fda" className="m-0 p-4"><FdaIntelligenceTab packageId={packageId} /></TabsContent>
+              <TabsContent value="copilot" className="m-0 p-4 h-full"><CopilotPanel packageId={packageId} pkg={pkg} /></TabsContent>
+              <TabsContent value="compare" className="m-0 p-4"><ComparePanel pkg={pkg} packageId={packageId} /></TabsContent>
+              <TabsContent value="language" className="m-0 p-4"><LanguageReviewTab detail={languageReview} onRun={handleRunLanguage} isRunning={runLanguage.isPending} /></TabsContent>
+              <TabsContent value="document" className="m-0 p-4"><DocumentAiTab packageId={packageId} /></TabsContent>
             </div>
           </Tabs>
+
+          <ApprovalBar packageId={packageId} onChange={invalidate} />
         </div>
+      </div>
+
+      {/* Pin comment composer */}
+      {pendingPin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPendingPin(null)}>
+          <div className="bg-card border border-border rounded-xl p-5 w-[440px] shadow-2xl space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold flex items-center gap-2"><MessageSquarePlus className="w-4 h-4 text-primary" /> New {pendingPin.type === "text" ? "text note" : "pin comment"}</h3>
+            <Textarea autoFocus value={pinText} onChange={(e) => setPinText(e.target.value)} placeholder="Add your comment… use @Name to mention a reviewer" className="min-h-[100px]" />
+            <div className="flex items-center gap-3">
+              <Select value={pinPriority} onValueChange={setPinPriority}>
+                <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {["critical", "high", "medium", "low"].map((p) => (
+                    <SelectItem key={p} value={p}>{priorityMeta(p).label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {extractMentions(pinText).length > 0 && (
+                <span className="text-xs text-primary">Notifies: {extractMentions(pinText).join(", ")}</span>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setPendingPin(null)}>Cancel</Button>
+              <Button onClick={savePin} disabled={!pinText.trim() || createAnnotation.isPending}>
+                {createAnnotation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add comment"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function findingClassForAnnotation(a: Annotation, violations: Violation[]): string | null {
+  if (a.source !== "ai") return null
+  if (a.violationId) {
+    const v = violations.find((x) => x.id === a.violationId)
+    if (v?.findingClass) return v.findingClass
+  }
+  return "issue"
+}
+
+function ScoreTile({ label, value, tone }: { label: string; value: string; tone?: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-card px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</div>
+      <div className={cn("text-2xl font-black leading-tight", tone)}>{value}</div>
+    </div>
+  )
+}
+
+function ApprovalBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    Approved: "bg-success/10 text-success border-success/20",
+    "Approved with Comments": "bg-success/10 text-success border-success/20",
+    Rejected: "bg-destructive/10 text-destructive border-destructive/20",
+    "Needs Revision": "bg-warning/10 text-warning border-warning/20",
+    Escalated: "bg-primary/10 text-primary border-primary/20",
+    Pending: "bg-muted text-muted-foreground border-border",
+  }
+  return <Badge variant="outline" className={cn("text-[10px]", map[status] ?? map.Pending)}>{status}</Badge>
+}
+
+// ---------------------------------------------------------------------------
+// Findings
+// ---------------------------------------------------------------------------
+function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: number | null; onSelect: (id: number | null) => void }) {
+  const groups: [string, Violation[]][] = [
+    ["Issues", pkg.violations.filter((v) => v.findingClass === "issue")],
+    ["Warnings", pkg.violations.filter((v) => v.findingClass === "warning")],
+    ["Recommendations", pkg.violations.filter((v) => v.findingClass === "recommendation")],
+    ["Passed checks", pkg.violations.filter((v) => v.findingClass === "passed")],
+  ]
+  const annForViolation = (vid: number) => pkg.annotations.find((a) => a.violationId === vid)
+
+  if (pkg.violations.length === 0) {
+    return <div className="text-center py-12 text-muted-foreground"><CheckCircle className="w-12 h-12 mx-auto mb-3 text-success opacity-50" /><p>No findings yet. Run the AI analysis.</p></div>
+  }
+  return (
+    <div className="space-y-5">
+      {groups.map(([label, items]) => items.length > 0 && (
+        <div key={label} className="space-y-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label} ({items.length})</h4>
+          {items.map((v) => {
+            const meta = findingClassMeta(v.findingClass)
+            const ann = annForViolation(v.id)
+            const selected = ann && ann.id === selectedId
+            return (
+              <button key={v.id} type="button" onClick={() => ann && onSelect(ann.id)}
+                className={cn("w-full text-left p-3 rounded-lg border bg-card space-y-1.5 transition-colors", selected ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground/40")}>
+                <div className="flex justify-between items-start gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={cn("w-2 h-2 rounded-full shrink-0", meta.dot)} />
+                    <span className="font-semibold text-sm truncate">{v.title}</span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] shrink-0">{v.engine}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{v.description}</p>
+                <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                  <Badge variant="outline" className={cn("text-[10px]", meta.badge)}>{v.severity}</Badge>
+                  {v.confidence != null && <span className="text-[10px] text-muted-foreground">Confidence {v.confidence}%</span>}
+                  {v.claimFlags?.map((f) => <Badge key={f} variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">{f}</Badge>)}
+                </div>
+                {(v.suggestedText || v.recommendation) && (
+                  <div className="mt-1 p-2 bg-accent/50 rounded border border-border text-xs">
+                    {v.detectedText && v.suggestedText ? (
+                      <span className="font-mono"><span className="text-destructive line-through mr-2">{v.detectedText}</span><span className="text-success">{v.suggestedText}</span></span>
+                    ) : (
+                      <span><span className="font-semibold text-muted-foreground">Fix: </span>{v.suggestedText ?? v.recommendation}</span>
+                    )}
+                  </div>
+                )}
+                {v.regulationRef && <div className="text-[10px] font-mono text-muted-foreground">Ref: {v.regulationRef}</div>}
+              </button>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Comments (threaded)
+// ---------------------------------------------------------------------------
+function CommentsPanel({ pkg, packageId, numbered, selectedId, onSelect, onChange, onAddPin }: {
+  pkg: Pkg; packageId: number; numbered: Map<number, number>; selectedId: number | null;
+  onSelect: (id: number | null) => void; onChange: () => void; onAddPin: () => void
+}) {
+  const [filter, setFilter] = React.useState<"all" | "open" | "ai" | "human">("all")
+  const list = pkg.annotations.filter((a) => {
+    if (filter === "open") return a.status === "open"
+    if (filter === "ai") return a.source === "ai"
+    if (filter === "human") return a.source === "human"
+    return true
+  })
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex gap-1">
+          {(["all", "open", "ai", "human"] as const).map((f) => (
+            <Button key={f} size="sm" variant={filter === f ? "secondary" : "ghost"} className="h-7 text-xs capitalize" onClick={() => setFilter(f)}>{f}</Button>
+          ))}
+        </div>
+        <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={onAddPin}><MessageSquarePlus className="w-3.5 h-3.5" /> Pin</Button>
+      </div>
+      {list.length === 0 ? (
+        <div className="text-center py-10 text-muted-foreground text-sm">No comments in this view.</div>
+      ) : list.map((a) => (
+        <CommentCard key={a.id} a={a} num={numbered.get(a.id) ?? 0} selected={a.id === selectedId} onSelect={onSelect} onChange={onChange} />
+      ))}
+    </div>
+  )
+}
+
+function CommentCard({ a, num, selected, onSelect, onChange }: {
+  a: Annotation; num: number; selected: boolean; onSelect: (id: number | null) => void; onChange: () => void
+}) {
+  const update = useUpdateAnnotation()
+  const del = useDeleteAnnotation()
+  const reply = useAddCommentReply()
+  const [replyText, setReplyText] = React.useState("")
+  const [showReply, setShowReply] = React.useState(false)
+  const meta = priorityMeta(a.priority)
+  const isAi = a.source === "ai"
+
+  return (
+    <div className={cn("rounded-lg border p-3 space-y-2", selected ? "border-primary ring-1 ring-primary" : "border-border", a.status === "resolved" && "opacity-70")}>
+      <div className="flex items-start justify-between gap-2 cursor-pointer" onClick={() => onSelect(a.id)}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="flex items-center justify-center w-6 h-6 rounded-full text-white text-[10px] font-bold shrink-0"
+            style={{ background: a.color ?? (isAi ? findingClassMeta(null).color : HUMAN_MARKUP_COLOR) }}>
+            {isAi ? <Bot className="w-3 h-3" /> : num}
+          </span>
+          <div className="min-w-0">
+            <div className="text-sm font-medium truncate flex items-center gap-1.5">{a.author}
+              {isAi && <Badge variant="outline" className="text-[9px] bg-primary/5 text-primary border-primary/20">AI</Badge>}
+            </div>
+            <div className="text-[10px] text-muted-foreground">{a.authorRole} • {relativeTime(a.createdAt)}</div>
+          </div>
+        </div>
+        <Badge variant="outline" className={cn("text-[10px] shrink-0", meta.badge)}>{meta.label}</Badge>
+      </div>
+
+      {a.text && <p className="text-sm text-foreground/90">{highlightMentions(a.text)}</p>}
+
+      {isAi && a.suggestedFix && (
+        <div className="text-xs p-2 bg-success/5 border border-success/20 rounded"><span className="font-semibold text-success">Suggested fix: </span>{a.suggestedFix}</div>
+      )}
+      {a.regulationRef && <div className="text-[10px] font-mono text-muted-foreground">Ref: {a.regulationRef}{a.confidence != null ? ` • ${a.confidence}% confidence` : ""}</div>}
+
+      {a.replies.length > 0 && (
+        <div className="space-y-2 pl-3 border-l-2 border-border ml-1">
+          {a.replies.map((r) => (
+            <div key={r.id} className="text-xs">
+              <span className="font-medium">{r.author}</span> <span className="text-muted-foreground">{relativeTime(r.createdAt)}</span>
+              <p className="text-foreground/80">{highlightMentions(r.text)}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showReply && (
+        <div className="flex gap-2">
+          <Input value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="Reply… @mention" className="h-8 text-sm"
+            onKeyDown={(e) => { if (e.key === "Enter" && replyText.trim()) submitReply() }} />
+          <Button size="sm" className="h-8" disabled={!replyText.trim() || reply.isPending} onClick={submitReply}>
+            {reply.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+          </Button>
+        </div>
+      )}
+
+      <div className="flex items-center gap-1 pt-0.5">
+        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => setShowReply((v) => !v)}><CornerDownRight className="w-3.5 h-3.5" /> Reply</Button>
+        <Button size="sm" variant="ghost" className="h-7 text-xs gap-1"
+          onClick={() => update.mutate({ id: a.id, data: { status: a.status === "resolved" ? "open" : "resolved" } }, { onSuccess: onChange })}>
+          <CheckCheck className={cn("w-3.5 h-3.5", a.status === "resolved" && "text-success")} /> {a.status === "resolved" ? "Reopen" : "Resolve"}
+        </Button>
+        {!isAi && (
+          <Button size="sm" variant="ghost" className="h-7 text-xs gap-1 text-destructive ml-auto"
+            onClick={() => del.mutate({ id: a.id }, { onSuccess: onChange })}><Trash2 className="w-3.5 h-3.5" /></Button>
+        )}
+      </div>
+    </div>
+  )
+
+  function submitReply() {
+    reply.mutate({ id: a.id, data: { text: replyText, mentions: extractMentions(replyText) } },
+      { onSuccess: () => { setReplyText(""); setShowReply(false); onChange() } })
+  }
+}
+
+function highlightMentions(text: string): React.ReactNode {
+  const parts = text.split(/(@[A-Za-z]+(?:\s[A-Za-z]+)?)/g)
+  return parts.map((p, i) => p.startsWith("@") ? <span key={i} className="text-primary font-medium">{p}</span> : <React.Fragment key={i}>{p}</React.Fragment>)
+}
+
+// ---------------------------------------------------------------------------
+// Tasks
+// ---------------------------------------------------------------------------
+function TasksPanel({ pkg, packageId, onChange }: { pkg: Pkg; packageId: number; onChange: () => void }) {
+  const create = useCreateReviewTask()
+  const update = useUpdateReviewTask()
+  const [title, setTitle] = React.useState("")
+  const [assignee, setAssignee] = React.useState(REVIEWERS[0])
+  const [priority, setPriority] = React.useState("medium")
+
+  const statusMeta: Record<string, { label: string; badge: string }> = {
+    open: { label: "Open", badge: "bg-muted text-muted-foreground border-border" },
+    in_progress: { label: "In progress", badge: "bg-primary/10 text-primary border-primary/20" },
+    done: { label: "Done", badge: "bg-success/10 text-success border-success/20" },
+  }
+  const nextStatus = (s: string) => (s === "open" ? "in_progress" : s === "in_progress" ? "done" : "open")
+
+  return (
+    <div className="space-y-3">
+      <div className="rounded-lg border border-border p-3 space-y-2 bg-accent/20">
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New review task…" className="h-9" />
+        <div className="flex gap-2">
+          <Select value={assignee} onValueChange={setAssignee}><SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
+            <SelectContent>{REVIEWERS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+          <Select value={priority} onValueChange={setPriority}><SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
+            <SelectContent>{["critical", "high", "medium", "low"].map((p) => <SelectItem key={p} value={p}>{priorityMeta(p).label}</SelectItem>)}</SelectContent></Select>
+          <Button size="sm" className="h-8 gap-1" disabled={!title.trim() || create.isPending}
+            onClick={() => create.mutate({ id: packageId, data: { title, assignee, priority } }, { onSuccess: () => { setTitle(""); onChange() } })}>
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+      {pkg.tasks.length === 0 ? (
+        <div className="text-center py-10 text-muted-foreground text-sm"><ClipboardList className="w-10 h-10 mx-auto mb-2 opacity-30" />No tasks yet.</div>
+      ) : pkg.tasks.map((t: Task) => {
+        const sm = statusMeta[t.status] ?? statusMeta.open
+        return (
+          <div key={t.id} className={cn("rounded-lg border border-border p-3 space-y-1", t.status === "done" && "opacity-60")}>
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-sm font-medium">{t.title}</span>
+              <Badge variant="outline" className={cn("text-[10px] shrink-0", priorityMeta(t.priority).badge)}>{priorityMeta(t.priority).label}</Badge>
+            </div>
+            {t.description && <p className="text-xs text-muted-foreground">{t.description}</p>}
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-[10px] text-muted-foreground">{t.assignedRole ?? t.assignee ?? "Unassigned"}{t.source === "ai" ? " • AI" : ""}</span>
+              <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => update.mutate({ id: t.id, data: { status: nextStatus(t.status) } }, { onSuccess: onChange })}>
+                <Badge variant="outline" className={cn("text-[10px]", sm.badge)}>{sm.label}</Badge>
+              </Button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Data (OCR)
+// ---------------------------------------------------------------------------
+function DataPanel({ pkg }: { pkg: Pkg }) {
+  const ocr = pkg.ocr as Record<string, unknown> | null
+  return (
+    <div className="space-y-4">
+      {pkg.summary && <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">{pkg.summary}</div>}
+      <div className="grid grid-cols-1 gap-2">
+        {ocr && Object.entries(ocr).map(([k, val]) => {
+          if (!val || (Array.isArray(val) && val.length === 0)) return null
+          return (
+            <div key={k} className="p-2.5 bg-accent/40 rounded-lg border border-border">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-0.5">{k.replace(/([A-Z])/g, " $1").trim()}</span>
+              <span className="text-sm break-words">{Array.isArray(val) ? val.join(", ") : String(val)}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Copilot
+// ---------------------------------------------------------------------------
+type ChatMsg = { role: "user" | "assistant"; content: string; citations?: Citation[] }
+function CopilotPanel({ packageId, pkg }: { packageId: number; pkg: Pkg }) {
+  const ask = useAskCopilot()
+  const [q, setQ] = React.useState("")
+  const [msgs, setMsgs] = React.useState<ChatMsg[]>([])
+  const endRef = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }) }, [msgs, ask.isPending])
+
+  const prompts = [
+    "How do I fix the critical issues?",
+    "Which regulations apply here?",
+    "Summarize the biggest compliance risks.",
+    "Is this ready for approval?",
+  ]
+
+  const send = (question: string) => {
+    if (!question.trim()) return
+    setMsgs((m) => [...m, { role: "user", content: question }])
+    setQ("")
+    ask.mutate({ id: packageId, data: { question } }, {
+      onSuccess: (r) => setMsgs((m) => [...m, { role: "assistant", content: r.answer, citations: r.citations }]),
+      onError: () => setMsgs((m) => [...m, { role: "assistant", content: "Sorry, I couldn't answer that. Please retry." }]),
+    })
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+        {msgs.length === 0 && (
+          <div className="space-y-3">
+            <div className="flex items-start gap-2">
+              <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center shrink-0"><BrainCircuit className="w-4 h-4 text-primary" /></div>
+              <div className="bg-accent/50 border border-border p-3 rounded-lg text-sm">
+                I've reviewed <span className="font-medium">{pkg.name}</span> — grade {pkg.grade ?? "N/A"}, {pkg.criticalCount} critical and {pkg.majorCount} major findings. Ask me anything.
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {prompts.map((p) => <Button key={p} variant="outline" size="sm" className="text-xs h-7" onClick={() => send(p)}>{p}</Button>)}
+            </div>
+          </div>
+        )}
+        {msgs.map((m, i) => (
+          <div key={i} className={cn("flex items-start gap-2", m.role === "user" && "flex-row-reverse")}>
+            <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0", m.role === "user" ? "bg-muted" : "bg-primary/15")}>
+              {m.role === "user" ? <UserIcon className="w-4 h-4" /> : <BrainCircuit className="w-4 h-4 text-primary" />}
+            </div>
+            <div className={cn("p-3 rounded-lg text-sm max-w-[85%]", m.role === "user" ? "bg-primary text-primary-foreground" : "bg-accent/50 border border-border")}>
+              <p className="whitespace-pre-wrap">{m.content}</p>
+              {m.citations && m.citations.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-border/50 space-y-1">
+                  {m.citations.map((c, j) => <div key={j} className="text-[10px] font-mono opacity-80">{c.source}{c.section ? ` §${c.section}` : ""}</div>)}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        {ask.isPending && <div className="flex items-center gap-2 text-muted-foreground text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Thinking…</div>}
+        <div ref={endRef} />
+      </div>
+      <div className="relative shrink-0 pt-3">
+        <Input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send(q)} placeholder="Ask compliance copilot…" className="pr-10" />
+        <Button size="icon" variant="ghost" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-primary" disabled={ask.isPending} onClick={() => send(q)}><Send className="w-4 h-4" /></Button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Add version
+// ---------------------------------------------------------------------------
+function AddVersionButton({ packageId, onAdded }: { packageId: number; onAdded: (versionId: number) => void }) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const { uploadFile, isUploading } = useUpload()
+  const extractText = useExtractArtworkText()
+  const createVersion = useCreatePackageVersion()
+  const [error, setError] = React.useState<string | null>(null)
+  const busy = isUploading || extractText.isPending || createVersion.isPending
+
+  const handleFile = async (files: FileList | null) => {
+    const file = files?.[0]
+    if (!file) return
+    setError(null)
+    try {
+      const type = fileTypeFromName(file.name)
+      const res = await uploadFile(file)
+      if (!res) { setError("Upload failed."); return }
+      let extractedText: string | undefined
+      if (type === "png" || type === "jpg") {
+        try {
+          const dataUrl = await fileToDownscaledDataUrl(file)
+          const r = await extractText.mutateAsync({ data: { imageDataUrl: dataUrl } })
+          extractedText = r.text?.trim() || undefined
+        } catch { /* OCR is best-effort */ }
+      }
+      const detail = await createVersion.mutateAsync({
+        id: packageId,
+        data: {
+          fileUrl: res.objectPath,
+          fileName: file.name,
+          fileType: type,
+          extractedText,
+          analyze: !!extractedText,
+        },
+      })
+      if (detail.currentVersionId != null) onAdded(detail.currentVersionId)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not add version.")
+    } finally {
+      if (inputRef.current) inputRef.current.value = ""
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-end">
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".png,.jpg,.jpeg,.pdf,.ai,.indd"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files)}
+      />
+      <Button variant="outline" className="gap-2 h-9" disabled={busy} onClick={() => inputRef.current?.click()}>
+        {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <FilePlus className="w-4 h-4" />}
+        Add Version
+      </Button>
+      {error && <span className="text-[10px] text-destructive mt-0.5 max-w-[190px] text-right">{error}</span>}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Compare
+// ---------------------------------------------------------------------------
+function ComparePanel({ pkg, packageId }: { pkg: Pkg; packageId: number }) {
+  const versions = pkg.versions
+  const [a, setA] = React.useState<number | null>(versions[0]?.id ?? null)
+  const [b, setB] = React.useState<number | null>(versions[1]?.id ?? versions[0]?.id ?? null)
+  const [run, setRun] = React.useState(false)
+
+  const enabled = run && a != null && b != null && a !== b
+  const compare = useComparePackageVersions(packageId, a ?? 0, b ?? 0, {
+    query: { enabled, queryKey: getComparePackageVersionsQueryKey(packageId, a ?? 0, b ?? 0) },
+  })
+
+  const catColor: Record<string, string> = {
+    claim: "text-primary", warning: "text-warning", ingredient: "text-success",
+    regulatory: "text-destructive", copy: "text-muted-foreground", other: "text-muted-foreground",
+  }
+  const typeIcon: Record<string, string> = { added: "+", removed: "−", changed: "~", unchanged: "=" }
+
+  if (versions.length < 2) {
+    return <div className="text-center py-10 text-muted-foreground text-sm"><GitCompareArrows className="w-10 h-10 mx-auto mb-2 opacity-30" />Add a second version to compare revisions.</div>
+  }
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Select value={String(a ?? "")} onValueChange={(v) => { setA(Number(v)); setRun(false) }}><SelectTrigger className="h-9 flex-1"><SelectValue /></SelectTrigger>
+          <SelectContent>{versions.map((v) => <SelectItem key={v.id} value={String(v.id)}>{v.label ?? `V${v.versionNumber}`}</SelectItem>)}</SelectContent></Select>
+        <GitCompareArrows className="w-4 h-4 text-muted-foreground shrink-0" />
+        <Select value={String(b ?? "")} onValueChange={(v) => { setB(Number(v)); setRun(false) }}><SelectTrigger className="h-9 flex-1"><SelectValue /></SelectTrigger>
+          <SelectContent>{versions.map((v) => <SelectItem key={v.id} value={String(v.id)}>{v.label ?? `V${v.versionNumber}`}</SelectItem>)}</SelectContent></Select>
+      </div>
+      <Button className="w-full gap-2" disabled={a === b || compare.isFetching} onClick={() => setRun(true)}>
+        {compare.isFetching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} Compare with AI
+      </Button>
+      {a === b && <p className="text-xs text-warning text-center">Select two different versions.</p>}
+
+      {compare.data && (
+        <div className="space-y-3">
+          <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">{compare.data.summary}</div>
+          <div className="space-y-2">
+            {compare.data.changes.map((c, i) => (
+              <div key={i} className="p-2.5 rounded-lg border border-border text-xs space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold w-4 text-center">{typeIcon[c.changeType] ?? "~"}</span>
+                  <span className={cn("font-semibold uppercase text-[10px]", catColor[c.category] ?? "text-muted-foreground")}>{c.category}</span>
+                  {c.field && <span className="font-medium">{c.field}</span>}
+                </div>
+                {c.before && <div className="pl-6 text-destructive line-through">{c.before}</div>}
+                {c.after && <div className="pl-6 text-success">{c.after}</div>}
+                {c.note && <div className="pl-6 text-muted-foreground italic">{c.note}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Approval bar
+// ---------------------------------------------------------------------------
+function ApprovalBar({ packageId, onChange }: { packageId: number; onChange: () => void }) {
+  const decide = useCreateApprovalDecision()
+  const [note, setNote] = React.useState("")
+  const act = (decision: string) => decide.mutate(
+    { id: packageId, data: { decision, note: note || undefined } },
+    { onSuccess: () => { setNote(""); onChange() } },
+  )
+  return (
+    <div className="border-t border-border p-3 bg-muted/20 shrink-0 space-y-2">
+      <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Decision note (optional)…" className="h-8 text-sm" />
+      <div className="flex items-center gap-2">
+        <Button size="sm" className="flex-1 gap-1.5 bg-success text-success-foreground hover:bg-success/90" disabled={decide.isPending} onClick={() => act("approve")}>
+          <ShieldCheck className="w-4 h-4" /> Approve
+        </Button>
+        <Button size="sm" variant="outline" className="gap-1.5 border-warning/30 text-warning hover:bg-warning/10" disabled={decide.isPending} onClick={() => act("needs_revision")}>
+          <ShieldAlert className="w-4 h-4" /> Revise
+        </Button>
+        <Button size="sm" variant="outline" className="gap-1.5 border-destructive/30 text-destructive hover:bg-destructive/10" disabled={decide.isPending} onClick={() => act("reject")}>
+          <XCircle className="w-4 h-4" /> Reject
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button size="sm" variant="ghost" className="px-2" disabled={decide.isPending}><ChevronDown className="w-4 h-4" /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => act("approve_with_comments")}><CheckCircle className="w-4 h-4 mr-2" /> Approve with comments</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => act("escalate")}><Gavel className="w-4 h-4 mr-2" /> Escalate</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )

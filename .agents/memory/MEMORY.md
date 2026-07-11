@@ -5,6 +5,8 @@
 - [Tenancy, RBAC & Teams](tenancy-rbac.md) — code is source of truth for roles/perms; Clerk provisioning + org scoping; requiredPermFor gates nav+routes; global regulations/ai_providers; append-only audit.
 - [AI Language Review Engine](language-review.md) — 6-layer copy review + quality score; sync, latest-only in a txn, reused perms, bounded historical-usage query, SQL-joined findings list.
 - [Google Document AI extraction](document-ai.md) — enterprise OCR layer; strict 3-trigger contract, content-hash cache, extraction/reasoning/validation separation, SSRF boundary, unconfigured no-op.
+- [orval codegen + tsc build cache](codegen-build-cache.md) — after openapi codegen, consumers can typecheck against stale api-zod dist .d.ts; nuke dist + tsbuildinfo and rebuild libs.
+- [Root tsconfig composite refs](root-tsconfig-composite-refs.md) — every composite lib an artifact references must be in root tsconfig refs or `tsc -p` fails TS6305; clean single run to see the real error.
 - [Review Assignment & Workload Engine](review-assignment-engine.md) — durable Postgres job queue; category→team routing; atomic monotonic escalation; SLA/metrics; recurring reschedule dedupe.
 - [Operations Console](operations-console.md) — admin UI; jobs table is org-scoped (filter every read); self-lockout guards; invalidateAuthCache on role change; invite = unlinked user row.
 - [Supplier Architecture & Access Control](supplier-architecture.md) — supplier_user isolation via *Conds helpers (org + own supplierId ?? -1); anti-spoof forced supplierId; submissions:review gate; status lifecycle + external linkage.

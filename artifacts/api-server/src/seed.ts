@@ -12,6 +12,11 @@ import {
   violationsTable,
   auditEventsTable,
   reportsTable,
+  packageVersionsTable,
+  annotationsTable,
+  commentRepliesTable,
+  reviewTasksTable,
+  approvalDecisionsTable,
   aiProvidersTable,
   organizationsTable,
   rolesTable,
@@ -21,8 +26,9 @@ import {
   teamsTable,
   teamMembersTable,
 } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { analyzePackaging, type AnalysisResult } from "./lib/ai";
+import { eq, and } from "drizzle-orm";
+import { analyzePackaging } from "./lib/ai";
+import { applyAnalysis, ensureInitialVersion } from "./lib/packageService";
 import { logger } from "./lib/logger";
 import {
   PERMISSIONS,
@@ -140,6 +146,11 @@ async function clearAll() {
   await db.delete(teamsTable);
   await db.delete(userPermissionsTable);
   await db.delete(rolePermissionsTable);
+  await db.delete(commentRepliesTable);
+  await db.delete(annotationsTable);
+  await db.delete(reviewTasksTable);
+  await db.delete(approvalDecisionsTable);
+  await db.delete(packageVersionsTable);
   await db.delete(violationsTable);
   await db.delete(reportsTable);
   await db.delete(auditEventsTable);
@@ -152,6 +163,205 @@ async function clearAll() {
   await db.delete(permissionsTable);
   await db.delete(aiProvidersTable);
   await db.delete(organizationsTable);
+}
+
+async function currentVersionId(packageId: number): Promise<number | null> {
+  const [v] = await db
+    .select()
+    .from(packageVersionsTable)
+    .where(
+      and(
+        eq(packageVersionsTable.packageId, packageId),
+        eq(packageVersionsTable.isCurrent, true),
+      ),
+    );
+  return v?.id ?? null;
+}
+
+/**
+ * Seed human collaboration data: reviewer comments with threads and mentions,
+ * manual review tasks, approval decisions, and a second artwork version so the
+ * A/B compare feature has something to diff.
+ */
+async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
+  const bySku = new Map<string, number>();
+  for (const p of await db.select().from(packagesTable)) {
+    bySku.set(p.sku, p.id);
+  }
+
+  // --- Disinfectant: reviewer thread + task + needs-revision decision -------
+  const cleanId = bySku.get("DT-CLN-4471");
+  if (cleanId) {
+    const vId = await currentVersionId(cleanId);
+    const [ann] = await db
+      .insert(annotationsTable)
+      .values({
+        packageId: cleanId,
+        versionId: vId,
+        type: "pin",
+        page: 0,
+        x: 0.5,
+        y: 0.42,
+        color: "#3b82f6",
+        author: "Marcus Lee",
+        authorRole: "Compliance Manager",
+        text: "The 'all natural and completely safe for kids and pets' claim conflicts with EPA antimicrobial labeling. @Priya Nair please confirm precautionary statements are added.",
+        priority: "high",
+        status: "open",
+        source: "human",
+        mentions: ["Priya Nair"],
+      })
+      .returning();
+    if (ann) {
+      await db.insert(commentRepliesTable).values({
+        annotationId: ann.id,
+        author: "Priya Nair",
+        authorRole: "Compliance Reviewer",
+        text: "Agreed — we need the EPA registration number and signal word before this can move forward.",
+        source: "human",
+        mentions: [],
+      });
+    }
+    await db.insert(reviewTasksTable).values({
+      packageId: cleanId,
+      versionId: vId,
+      title: "Add EPA registration number and precautionary statements",
+      description:
+        "Antimicrobial spray must display EPA reg number, signal word, and precautionary statements per 40 CFR 156.10.",
+      assignedRole: "EPA Specialist",
+      assignee: "Marcus Lee",
+      priority: "high",
+      status: "open",
+      source: "manual",
+    });
+    await db.insert(approvalDecisionsTable).values({
+      packageId: cleanId,
+      versionId: vId,
+      decision: "needs_revision",
+      reviewer: "Marcus Lee",
+      reviewerRole: "Compliance Manager",
+      note: "Blocking EPA labeling issues must be resolved before approval.",
+    });
+    await db
+      .update(packagesTable)
+      .set({ approvalStatus: "Needs Revision" })
+      .where(eq(packagesTable.id, cleanId));
+    await db.insert(auditEventsTable).values({
+      packageId: cleanId,
+      actor: "Marcus Lee",
+      action: "Decision: Needs revision",
+      detail: "Blocking EPA labeling issues must be resolved before approval.",
+    });
+  }
+
+  // --- Face cream: critical claim comment + rejection ----------------------
+  const cosId = bySku.get("DT-COS-3312");
+  if (cosId) {
+    const vId = await currentVersionId(cosId);
+    const [ann] = await db
+      .insert(annotationsTable)
+      .values({
+        packageId: cosId,
+        versionId: vId,
+        type: "highlight",
+        page: 0,
+        x: 0.5,
+        y: 0.28,
+        w: 0.6,
+        h: 0.08,
+        color: "#3b82f6",
+        author: "Priya Nair",
+        authorRole: "Compliance Reviewer",
+        text: "'Clinically proven to reverse aging in 7 days' and 'Reduces wrinkles 100%' are unsubstantiated drug claims. @Marcus Lee flagging for Legal review.",
+        priority: "critical",
+        status: "open",
+        source: "human",
+        mentions: ["Marcus Lee"],
+      })
+      .returning();
+    if (ann) {
+      await db.insert(commentRepliesTable).values({
+        annotationId: ann.id,
+        author: "Marcus Lee",
+        authorRole: "Compliance Manager",
+        text: "Confirmed. These claims cross into drug territory (FDA). Rejecting until Marketing revises.",
+        source: "human",
+        mentions: [],
+      });
+    }
+    await db.insert(approvalDecisionsTable).values({
+      packageId: cosId,
+      versionId: vId,
+      decision: "reject",
+      reviewer: "Marcus Lee",
+      reviewerRole: "Compliance Manager",
+      note: "Unsubstantiated anti-aging drug claims.",
+    });
+    await db
+      .update(packagesTable)
+      .set({ approvalStatus: "Rejected", status: "Rejected" })
+      .where(eq(packagesTable.id, cosId));
+    await db.insert(auditEventsTable).values({
+      packageId: cosId,
+      actor: "Marcus Lee",
+      action: "Decision: Rejected",
+      detail: "Unsubstantiated anti-aging drug claims.",
+    });
+  }
+
+  // --- Crackers: add a revised version 2 for A/B compare -------------------
+  const snackId = bySku.get("DT-SNK-2201");
+  if (snackId) {
+    const [pkg] = await db
+      .select()
+      .from(packagesTable)
+      .where(eq(packagesTable.id, snackId));
+    if (pkg) {
+      const revisedText = `SNACK TIME CHEDDAR CHEESE CRACKERS\nMADE WITH REAL CHEESE\nNet Wt 6 oz (170g)\nINGREDIENTS: Enriched flour (wheat), vegetable oil, cheddar cheese (milk), salt, whey (milk), spices, natural flavor.\nCONTAINS: Wheat, Milk.\nNutrition Facts: Serving size 16 crackers (30g), Servings per container about 5, Calories 150.\nManufactured for Snack Time Brands, distributed by Golden Harvest Foods, Springfield, IL.\nBEST BY date printed on back panel.\nProduct of China`;
+      await db
+        .update(packageVersionsTable)
+        .set({ isCurrent: false })
+        .where(eq(packageVersionsTable.packageId, snackId));
+      const [v2] = await db
+        .insert(packageVersionsTable)
+        .values({
+          packageId: snackId,
+          versionNumber: 2,
+          label: "Version 2 (revised copy)",
+          fileUrl: pkg.artworkUrl,
+          fileName: pkg.artworkUrl ? pkg.artworkUrl.split("/").pop() : null,
+          fileType: "png",
+          pageCount: 1,
+          extractedText: revisedText,
+          notes: "Added allergen Contains statement, Nutrition Facts, corrected origin wording.",
+          isCurrent: true,
+          createdBy: "Tom Becker",
+        })
+        .returning();
+      await db
+        .update(packagesTable)
+        .set({ extractedText: revisedText, approvalStatus: "Pending" })
+        .where(eq(packagesTable.id, snackId));
+      await db.insert(auditEventsTable).values({
+        packageId: snackId,
+        actor: "Tom Becker",
+        action: "Version added",
+        detail: "Version 2 (revised copy) uploaded with allergen and nutrition corrections.",
+      });
+      if (v2) {
+        try {
+          const [refreshed] = await db
+            .select()
+            .from(packagesTable)
+            .where(eq(packagesTable.id, snackId));
+          const result = await analyzePackaging(refreshed!, regs);
+          await applyAnalysis(refreshed!, result, v2.id);
+        } catch (err) {
+          logger.error({ err }, "Seed v2 analysis failed");
+        }
+      }
+    }
+  }
 }
 
 async function main() {
@@ -330,95 +540,22 @@ async function main() {
       detail: `${pkg.name} (${pkg.sku}) uploaded for review.`,
     });
 
-    let result: AnalysisResult;
+    const version = await ensureInitialVersion(pkg);
+
     try {
-      result = await analyzePackaging(pkg, insertedRegs);
+      const result = await analyzePackaging(pkg, insertedRegs);
+      await applyAnalysis(pkg, result, version.id, orgId);
+      logger.info(
+        { sku: sp.sku, grade: result.grade, status: result.complianceStatus },
+        "Analyzed seed package",
+      );
     } catch (err) {
       logger.error({ err, sku: sp.sku }, "Seed analysis failed; skipping");
       continue;
     }
-
-    const counts = result.violations.reduce(
-      (acc, v) => {
-        if (v.severity === "critical") acc.critical += 1;
-        else if (v.severity === "major") acc.major += 1;
-        else if (v.severity === "minor") acc.minor += 1;
-        return acc;
-      },
-      { critical: 0, major: 0, minor: 0 },
-    );
-
-    const status =
-      result.complianceStatus === "Passed"
-        ? "Approved"
-        : result.complianceStatus === "Failed"
-          ? "Needs Revision"
-          : "AI Review";
-
-    await db
-      .update(packagesTable)
-      .set({
-        category: result.category,
-        grade: result.grade,
-        riskScore: result.riskScore,
-        complianceStatus: result.complianceStatus,
-        status,
-        summary: result.summary,
-        ocr: result.ocr,
-        recommendations: result.recommendations,
-        criticalCount: counts.critical,
-        majorCount: counts.major,
-        minorCount: counts.minor,
-        analyzedAt: new Date(),
-      })
-      .where(eq(packagesTable.id, pkg.id));
-
-    if (result.violations.length > 0) {
-      await db.insert(violationsTable).values(
-        result.violations.map((v) => ({
-          organizationId: orgId,
-          packageId: pkg.id,
-          severity: v.severity,
-          engine: v.engine,
-          title: v.title,
-          description: v.description,
-          regulationRef: v.regulationRef,
-          recommendation: v.recommendation,
-          detectedText: v.detectedText,
-          suggestedText: v.suggestedText,
-          bboxX: v.bbox?.x ?? null,
-          bboxY: v.bbox?.y ?? null,
-          bboxW: v.bbox?.w ?? null,
-          bboxH: v.bbox?.h ?? null,
-          status: "Open",
-        })),
-      );
-    }
-
-    const regulationRefs = Array.from(
-      new Set(
-        result.violations
-          .map((v) => v.regulationRef)
-          .filter((r): r is string => Boolean(r)),
-      ),
-    );
-
-    await db.insert(auditEventsTable).values({
-      organizationId: orgId,
-      packageId: pkg.id,
-      entityType: "package",
-      entityId: pkg.id,
-      actor: "AI Compliance Engine",
-      action: "Analysis completed",
-      detail: `Grade ${result.grade}, risk ${result.riskScore}, ${result.violations.length} issue(s). Status: ${result.complianceStatus}.`,
-      regulationRefs,
-    });
-
-    logger.info(
-      { sku: sp.sku, grade: result.grade, status: result.complianceStatus },
-      "Analyzed seed package",
-    );
   }
+
+  await seedCollaboration(insertedRegs);
 
   // A couple of generated reports for the reports page
   const analyzed = await db.select().from(packagesTable);

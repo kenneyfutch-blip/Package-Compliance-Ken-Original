@@ -7,8 +7,9 @@ description: Object-storage uploads, proof/annotation/comment/decision model, an
 
 ## Uploads & object serving
 - Uploads use presigned direct-to-GCS URLs (object storage), minted by the storage router behind Clerk `requireAuth`. Bypasses the JSON body-size limit → supports large/bulk files.
-- **No per-object ACL.** Private objects are served through the authenticated `/api/storage/objects/*` GET route; any signed-in associate can read any proof.
-  - **Why:** internal tool — every user is gated to `@dollartree.com` and compliance specialists collaborate across all packages. A code review flagged this as "over-permissive"; it is an intentional product decision, not a bug. Revisit only if the product gains external/partner users.
+- **Private object downloads are record-authorized, not just auth'd.** `GET /api/storage/objects/*` reverse-maps the requested `/objects/...` path to the record that references it (package_versions.fileUrl/previewUrl, packages.artworkUrl, proofs.objectPath, reports.objectPath → owning package; supplier_submissions.artworkUrl → owning supplier) and applies the same org + supplier scope (`canAccessObjectOwner`) before streaming. Unknown/out-of-scope paths → 404 (deny-by-default, never leak existence). Route is gated by `requireAnyPermission('proofs:read','packages:read')`.
+  - **Why:** global auth alone let any signed-in user pull another tenant's/supplier's proof artifact by guessing an object path (code review REJECT). Object-serving routes must enforce the same tenancy predicates as the record routes, or they become an IDOR bypass.
+  - **How to apply:** any new object kind served through this route must be persisted with its `/objects/...` path on an owning record and added to `resolveObjectOwner`, else it will 404. Exported proof PDFs needed a new `reports.object_path` column precisely for this.
 
 ## Identity (audit integrity)
 - Author/reviewer identity is derived **strictly server-side** from the Clerk session (`req.userId`, `req.userEmail` local-part), never from the request body. The API contract has **no `authorName` input** on annotation/comment/decision create.

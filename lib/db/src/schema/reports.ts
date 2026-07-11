@@ -8,6 +8,9 @@ export const reportsTable = pgTable("reports", {
   type: text("type").notNull().default("Compliance"),
   format: text("format").notNull().default("PDF"),
   summary: text("summary"),
+  // Object-storage path (/objects/...) of a generated artifact (e.g. an exported
+  // annotated proof PDF), used to authorize downloads back to the owning package.
+  objectPath: text("object_path"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

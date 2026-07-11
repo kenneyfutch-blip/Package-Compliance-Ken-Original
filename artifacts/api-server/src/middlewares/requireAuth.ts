@@ -13,7 +13,7 @@ const ALLOWED_DOMAINS = (process.env.ALLOWED_EMAIL_DOMAINS ?? "dollartree.com")
 
 type CacheEntry = {
   email: string | null;
-  name: string | null;
+  name: string;
   allowed: boolean;
   expires: number;
 };
@@ -49,13 +49,14 @@ export async function requireAuth(
         user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId) ??
         user.emailAddresses[0];
       const email = primary?.emailAddress ?? null;
-      const name =
+      const displayName =
         [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
         user.username ||
-        null;
+        (email ? email.split("@")[0] : null) ||
+        "Reviewer";
       entry = {
         email,
-        name,
+        name: displayName,
         allowed: isEmailAllowed(email),
         expires: now + CACHE_TTL_MS,
       };
@@ -74,10 +75,14 @@ export async function requireAuth(
     return;
   }
 
-  (req as Request & { userId?: string; userEmail?: string | null }).userId =
-    userId;
-  (req as Request & { userId?: string; userEmail?: string | null }).userEmail =
-    entry.email;
+  const authed = req as Request & {
+    userId?: string;
+    userEmail?: string | null;
+    userName?: string;
+  };
+  authed.userId = userId;
+  authed.userEmail = entry.email;
+  authed.userName = entry.name;
 
   // Provision the caller into the database and resolve their organization, role,
   // and effective permissions for downstream authorization + tenant scoping.

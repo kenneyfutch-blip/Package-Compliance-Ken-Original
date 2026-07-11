@@ -5,8 +5,13 @@
  * Packaging Compliance AI API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { Annotation } from './annotation';
+import type { ApprovalDecision } from './approvalDecision';
 import type { OcrData } from './ocrData';
+import type { PackageVersion } from './packageVersion';
 import type { Regulation } from './regulation';
+import type { ReviewTask } from './reviewTask';
+import type { Scorecard } from './scorecard';
 import type { Violation } from './violation';
 
 export interface PackageDetail {
@@ -63,4 +68,12 @@ export interface PackageDetail {
   recommendations: string[];
   violations: Violation[];
   regulations: Regulation[];
+  approvalStatus: string;
+  /** @nullable */
+  currentVersionId?: number | null;
+  versions: PackageVersion[];
+  annotations: Annotation[];
+  tasks: ReviewTask[];
+  approvals: ApprovalDecision[];
+  scorecard: Scorecard;
 }

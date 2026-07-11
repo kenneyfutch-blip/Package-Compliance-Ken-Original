@@ -274,225 +274,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
-  /storage/uploads/request-url:
-    post:
-      tags: [storage]
-      operationId: requestUploadUrl
-      summary: Request a presigned URL for direct file upload
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UploadUrlRequest"
-      responses:
-        "200":
-          description: Presigned upload URL
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/UploadUrlResponse"
-        "400":
-          description: Invalid request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-
-  /packages/{id}/proofs:
-    get:
-      operationId: listProofs
-      tags: [proofs]
-      summary: List proof versions for a package
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Proofs
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Proof"
-    post:
-      operationId: createProof
-      tags: [proofs]
-      summary: Register an uploaded proof file for a package
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateProofInput"
-      responses:
-        "201":
-          description: Created proof
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProofDetail"
-
-  /proofs/{proofId}:
-    get:
-      operationId: getProof
-      tags: [proofs]
-      summary: Get a proof with annotations, comments, and decisions
-      parameters:
-        - name: proofId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "200":
-          description: Proof detail
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProofDetail"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-
-  /proofs/{proofId}/annotations:
-    post:
-      operationId: createAnnotation
-      tags: [proofs]
-      summary: Add a markup annotation to a proof
-      parameters:
-        - name: proofId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateAnnotationInput"
-      responses:
-        "201":
-          description: Created annotation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProofAnnotation"
-
-  /annotations/{annotationId}:
-    patch:
-      operationId: updateAnnotation
-      tags: [proofs]
-      summary: Update an annotation (e.g. resolve)
-      parameters:
-        - name: annotationId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateAnnotationInput"
-      responses:
-        "200":
-          description: Updated annotation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProofAnnotation"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-    delete:
-      operationId: deleteAnnotation
-      tags: [proofs]
-      summary: Delete an annotation
-      parameters:
-        - name: annotationId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Deleted
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiError"
-
-  /proofs/{proofId}/comments:
-    post:
-      operationId: createComment
-      tags: [proofs]
-      summary: Add a comment to a proof or annotation thread
-      parameters:
-        - name: proofId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateCommentInput"
-      responses:
-        "201":
-          description: Created comment
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProofComment"
-
-  /proofs/{proofId}/decision:
-    post:
-      operationId: recordProofDecision
-      tags: [proofs]
-      summary: Record an approval decision on a proof
-      parameters:
-        - name: proofId
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ProofDecisionInput"
-      responses:
-        "200":
-          description: Updated proof detail
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ProofDetail"
-
   /packages/{id}:
     get:
       operationId: getPackage
@@ -1837,6 +1618,373 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /packages/{id}/versions:
+    get:
+      operationId: listPackageVersions
+      tags: [packages]
+      summary: List versions of a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Package versions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PackageVersion"
+    post:
+      operationId: createPackageVersion
+      tags: [packages]
+      summary: Add a new artwork version to a package (optionally re-analyze)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageVersionInput"
+      responses:
+        "200":
+          description: Updated package detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageDetail"
+
+  /packages/{id}/compare/{versionA}/{versionB}:
+    get:
+      operationId: comparePackageVersions
+      tags: [packages]
+      summary: AI-diff two versions of a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: versionA
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: versionB
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Version comparison
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionComparison"
+
+  /packages/{id}/annotations:
+    post:
+      operationId: createAnnotation
+      tags: [proofing]
+      summary: Create an annotation/comment on artwork
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnnotationInput"
+      responses:
+        "200":
+          description: Created annotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Annotation"
+
+  /annotations/{id}:
+    patch:
+      operationId: updateAnnotation
+      tags: [proofing]
+      summary: Update an annotation (edit text, resolve, move, reprioritize)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnnotationUpdate"
+      responses:
+        "200":
+          description: Updated annotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Annotation"
+    delete:
+      operationId: deleteAnnotation
+      tags: [proofing]
+      summary: Delete an annotation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /annotations/{id}/replies:
+    post:
+      operationId: addCommentReply
+      tags: [proofing]
+      summary: Add a threaded reply to an annotation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentReplyInput"
+      responses:
+        "200":
+          description: Updated annotation with replies
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Annotation"
+
+  /packages/{id}/tasks:
+    post:
+      operationId: createReviewTask
+      tags: [proofing]
+      summary: Create a review task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewTaskInput"
+      responses:
+        "200":
+          description: Created review task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewTask"
+
+  /tasks/{id}:
+    patch:
+      operationId: updateReviewTask
+      tags: [proofing]
+      summary: Update a review task
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewTaskUpdate"
+      responses:
+        "200":
+          description: Updated review task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewTask"
+
+  /packages/{id}/approvals:
+    post:
+      operationId: createApprovalDecision
+      tags: [proofing]
+      summary: Record an approval-workflow decision
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalDecisionInput"
+      responses:
+        "200":
+          description: Updated package detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PackageDetail"
+
+  /packages/{id}/proof-export:
+    post:
+      operationId: exportProof
+      tags: [proofing]
+      summary: Generate an annotated proof PDF and store it
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Proof export result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProofExport"
+
+  /packages/bulk-action:
+    post:
+      operationId: bulkPackageAction
+      tags: [packages]
+      summary: Apply an action to multiple packages at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkActionInput"
+      responses:
+        "200":
+          description: Bulk action result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkActionResult"
+
+  /storage/uploads/request-url:
+    post:
+      tags: [Storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Failed to generate upload URL.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [Storage]
+      operationId: getPublicObject
+      summary: Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content streamed with correct Content-Type.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Failed to serve public object.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /storage/objects/{objectPath}:
+    get:
+      tags: [Storage]
+      operationId: getStorageObject
+      summary: Serve an object entity from PRIVATE_OBJECT_DIR
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content streamed with correct Content-Type.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Failed to serve object.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
   /reviews/workload:
     get:
       operationId: getReviewWorkload
@@ -2582,6 +2730,17 @@ components:
           oneOf:
             - $ref: "#/components/schemas/Bbox"
             - type: "null"
+        page:
+          type: integer
+        confidence:
+          type: ["number", "null"]
+        findingClass:
+          type: string
+          description: issue (red) | warning (yellow) | passed (green) | recommendation (purple)
+        claimFlags:
+          type: array
+          items:
+            type: string
         status:
           type: string
         createdAt:
@@ -2653,6 +2812,12 @@ components:
         - packageSku
         - packageName
         - packageStatus
+
+        - page
+        - findingClass
+        - claimFlags
+        - status
+        - createdAt
 
     OcrData:
       type: object
@@ -2764,6 +2929,8 @@ components:
         updatedAt:
           type: string
           format: date-time
+        approvalStatus:
+          type: string
       required:
         - id
         - sku
@@ -2773,6 +2940,7 @@ components:
         - category
         - status
         - complianceStatus
+        - approvalStatus
         - criticalCount
         - majorCount
         - minorCount
@@ -3022,6 +3190,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Regulation"
+        approvalStatus:
+          type: string
+        currentVersionId:
+          type: ["integer", "null"]
+        versions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PackageVersion"
+        annotations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Annotation"
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewTask"
+        approvals:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApprovalDecision"
+        scorecard:
+          $ref: "#/components/schemas/Scorecard"
       required:
         - id
         - sku
@@ -3031,6 +3221,7 @@ components:
         - category
         - status
         - complianceStatus
+        - approvalStatus
         - criticalCount
         - majorCount
         - minorCount
@@ -3039,6 +3230,11 @@ components:
         - recommendations
         - violations
         - regulations
+        - versions
+        - annotations
+        - tasks
+        - approvals
+        - scorecard
 
     UploadUrlRequest:
       type: object
@@ -4097,6 +4293,488 @@ components:
         - role
         - roleKey
         - permissions
+
+    PackageVersion:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        versionNumber:
+          type: integer
+        label:
+          type: ["string", "null"]
+        fileUrl:
+          type: ["string", "null"]
+        fileName:
+          type: ["string", "null"]
+        fileType:
+          type: ["string", "null"]
+        previewUrl:
+          type: ["string", "null"]
+        pageCount:
+          type: integer
+        extractedText:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        isCurrent:
+          type: boolean
+        createdBy:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - packageId
+        - versionNumber
+        - pageCount
+        - isCurrent
+        - createdAt
+
+    PackageVersionInput:
+      type: object
+      properties:
+        label:
+          type: string
+        fileUrl:
+          type: string
+        fileName:
+          type: string
+        fileType:
+          type: string
+        previewUrl:
+          type: string
+        pageCount:
+          type: integer
+        extractedText:
+          type: string
+        notes:
+          type: string
+        analyze:
+          type: boolean
+          description: When true, re-run AI analysis against this version's copy.
+
+    CommentReply:
+      type: object
+      properties:
+        id:
+          type: integer
+        annotationId:
+          type: integer
+        author:
+          type: string
+        authorRole:
+          type: ["string", "null"]
+        text:
+          type: string
+        source:
+          type: string
+        mentions:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - annotationId
+        - author
+        - text
+        - source
+        - mentions
+        - createdAt
+
+    CommentReplyInput:
+      type: object
+      properties:
+        text:
+          type: string
+        mentions:
+          type: array
+          items:
+            type: string
+      required:
+        - text
+
+    Annotation:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        versionId:
+          type: ["integer", "null"]
+        type:
+          type: string
+          description: pin | highlight | rectangle | circle | arrow | strikethrough | text
+        page:
+          type: integer
+        x:
+          type: ["number", "null"]
+        y:
+          type: ["number", "null"]
+        w:
+          type: ["number", "null"]
+        h:
+          type: ["number", "null"]
+        color:
+          type: ["string", "null"]
+        author:
+          type: string
+        authorRole:
+          type: ["string", "null"]
+        text:
+          type: ["string", "null"]
+        priority:
+          type: string
+        status:
+          type: string
+        source:
+          type: string
+          description: human | ai
+        confidence:
+          type: ["number", "null"]
+        severity:
+          type: ["string", "null"]
+        regulationRef:
+          type: ["string", "null"]
+        suggestedFix:
+          type: ["string", "null"]
+        violationId:
+          type: ["integer", "null"]
+        mentions:
+          type: array
+          items:
+            type: string
+        resolvedBy:
+          type: ["string", "null"]
+        resolvedAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        replies:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommentReply"
+      required:
+        - id
+        - packageId
+        - type
+        - page
+        - author
+        - priority
+        - status
+        - source
+        - mentions
+        - replies
+        - createdAt
+
+    AnnotationInput:
+      type: object
+      properties:
+        versionId:
+          type: integer
+        type:
+          type: string
+        page:
+          type: integer
+        x:
+          type: number
+        y:
+          type: number
+        w:
+          type: number
+        h:
+          type: number
+        color:
+          type: string
+        text:
+          type: string
+        priority:
+          type: string
+        mentions:
+          type: array
+          items:
+            type: string
+      required:
+        - type
+
+    AnnotationUpdate:
+      type: object
+      properties:
+        text:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+        color:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+        w:
+          type: number
+        h:
+          type: number
+
+    ReviewTask:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        versionId:
+          type: ["integer", "null"]
+        title:
+          type: string
+        description:
+          type: ["string", "null"]
+        assignedRole:
+          type: ["string", "null"]
+        assignee:
+          type: ["string", "null"]
+        dueDate:
+          type: ["string", "null"]
+        priority:
+          type: string
+        status:
+          type: string
+        source:
+          type: string
+        violationId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - packageId
+        - title
+        - priority
+        - status
+        - source
+        - createdAt
+        - updatedAt
+
+    ReviewTaskInput:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        assignedRole:
+          type: string
+        assignee:
+          type: string
+        dueDate:
+          type: string
+        priority:
+          type: string
+        versionId:
+          type: integer
+      required:
+        - title
+
+    ReviewTaskUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        assignedRole:
+          type: string
+        assignee:
+          type: string
+        dueDate:
+          type: string
+        priority:
+          type: string
+        status:
+          type: string
+
+    ApprovalDecision:
+      type: object
+      properties:
+        id:
+          type: integer
+        packageId:
+          type: integer
+        versionId:
+          type: ["integer", "null"]
+        decision:
+          type: string
+        reviewer:
+          type: string
+        reviewerRole:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - packageId
+        - decision
+        - reviewer
+        - createdAt
+
+    ApprovalDecisionInput:
+      type: object
+      properties:
+        decision:
+          type: string
+          description: approve | approve_with_comments | needs_revision | reject | escalate
+        note:
+          type: string
+        versionId:
+          type: integer
+      required:
+        - decision
+
+    Scorecard:
+      type: object
+      properties:
+        grade:
+          type: ["string", "null"]
+        riskScore:
+          type: ["integer", "null"]
+        criticalCount:
+          type: integer
+        majorCount:
+          type: integer
+        minorCount:
+          type: integer
+        passedCount:
+          type: integer
+        recommendationCount:
+          type: integer
+        openComments:
+          type: integer
+        openTasks:
+          type: integer
+        aiFindings:
+          type: integer
+        recommendation:
+          type: string
+        readiness:
+          type: string
+        readinessScore:
+          type: integer
+      required:
+        - criticalCount
+        - majorCount
+        - minorCount
+        - passedCount
+        - recommendationCount
+        - openComments
+        - openTasks
+        - aiFindings
+        - recommendation
+        - readiness
+        - readinessScore
+
+    VersionChange:
+      type: object
+      properties:
+        changeType:
+          type: string
+          description: added | removed | changed | unchanged
+        category:
+          type: string
+          description: claim | warning | ingredient | regulatory | copy | other
+        field:
+          type: ["string", "null"]
+        before:
+          type: ["string", "null"]
+        after:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+      required:
+        - changeType
+        - category
+
+    VersionComparison:
+      type: object
+      properties:
+        packageId:
+          type: integer
+        summary:
+          type: string
+        versionA:
+          $ref: "#/components/schemas/PackageVersion"
+        versionB:
+          $ref: "#/components/schemas/PackageVersion"
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/VersionChange"
+      required:
+        - packageId
+        - summary
+        - changes
+
+    ProofExport:
+      type: object
+      properties:
+        url:
+          type: string
+        filename:
+          type: string
+      required:
+        - url
+        - filename
+
+    BulkActionInput:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+        action:
+          type: string
+          description: approve | reject | assign | rescan | export
+        assignee:
+          type: string
+          description: Target reviewer for the "assign" action. The acting user is always taken from the authenticated session, never the request body.
+      required:
+        - ids
+        - action
+
+    BulkActionResult:
+      type: object
+      properties:
+        updated:
+          type: integer
+        action:
+          type: string
+      required:
+        - updated
+        - action
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
 
     ReviewAssignInput:
       type: object

@@ -60,4 +60,5 @@ export interface Package {
   analyzedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  approvalStatus: string;
 }
