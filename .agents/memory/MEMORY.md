@@ -1,3 +1,4 @@
 - [Compliance AI build](compliance-ai.md) — Packaging Compliance AI product: stack, AI engine, seed, and non-obvious decisions.
 - [AI provider integrations](ai-providers.md) — configurable AI models: encrypted keys, single-active invariant, SSRF-validated baseUrl, 8-engine taxonomy.
 - [Proofing & Review Suite](proofing-suite.md) — presigned uploads (no per-object ACL, by design), server-only identity, version uniqueness, image-only markup.
+- [openFDA integration](openfda.md) — server-only key proxy; 404=empty results, YYYYMMDD dates, per-category enforcement endpoints, 503-vs-502.

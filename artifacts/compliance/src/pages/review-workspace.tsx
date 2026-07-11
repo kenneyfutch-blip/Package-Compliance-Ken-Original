@@ -95,7 +95,7 @@ export default function ReviewWorkspace() {
       </div>
 
       {/* Split Screen */}
-      <div className="flex flex-1 overflow-hidden mt-4 gap-6">
+      <div className="flex flex-1 min-h-0 overflow-hidden mt-4 gap-6">
         
         {/* LEFT: Artwork Viewer */}
         <div className="w-1/2 flex flex-col bg-accent/30 border border-border rounded-xl overflow-hidden relative">
@@ -136,7 +136,7 @@ export default function ReviewWorkspace() {
 
         {/* RIGHT: Compliance Intelligence */}
         <div className="w-1/2 flex flex-col bg-card border border-border rounded-xl overflow-hidden">
-          <Tabs defaultValue="violations" className="flex-1 flex flex-col">
+          <Tabs defaultValue="violations" className="flex-1 flex flex-col min-h-0">
             <div className="px-4 pt-3 border-b border-border bg-muted/20 shrink-0">
               <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-6">
@@ -170,7 +170,7 @@ export default function ReviewWorkspace() {
               </TabsList>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-0">
+            <div className="flex-1 min-h-0 overflow-y-auto p-0">
               <TabsContent value="violations" className="m-0 p-4 space-y-6">
                 {pkg.violations?.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground">
