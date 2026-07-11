@@ -913,6 +913,11 @@ export interface ReportInput {
   format?: string;
 }
 
+export interface TeamRef {
+  id: number;
+  name: string;
+}
+
 export interface UserAccount {
   id: number;
   name: string;
@@ -923,6 +928,7 @@ export interface UserAccount {
   /** @nullable */
   status?: string | null;
   active: boolean;
+  teams?: TeamRef[];
   createdAt: string;
 }
 
@@ -1097,6 +1103,108 @@ export interface ReviewMetricsSummary {
   recent: ReviewMetricsRecent[];
 }
 
+export interface TeamMember {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  roleKey: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  memberCount: number;
+  members: TeamMember[];
+  createdAt: string;
+}
+
+export interface TeamInput {
+  name: string;
+  /** @nullable */
+  description?: string | null;
+}
+
+export interface TeamMemberInput {
+  userId: number;
+}
+
+export interface UserInviteInput {
+  name: string;
+  email: string;
+  roleKey: string;
+}
+
+export interface UserUpdateInput {
+  roleKey?: string;
+  active?: boolean;
+}
+
+export interface RoleInfo {
+  key: string;
+  name: string;
+  rank: number;
+  description: string;
+  permissions: string[];
+}
+
+export interface Job {
+  id: number;
+  type: string;
+  status: string;
+  priority: number;
+  attempts: number;
+  maxAttempts: number;
+  /** @nullable */
+  runAt?: string | null;
+  /** @nullable */
+  lockedAt?: string | null;
+  /** @nullable */
+  lockedBy?: string | null;
+  /** @nullable */
+  lastError?: string | null;
+  /** @nullable */
+  dedupeKey?: string | null;
+  createdAt: string;
+  /** @nullable */
+  updatedAt?: string | null;
+}
+
+export interface QueueTypeStat {
+  type: string;
+  pending: number;
+  running: number;
+  completed: number;
+  failed: number;
+}
+
+export type QueueMetricsByStatus = {[key: string]: number};
+
+export interface QueueMetrics {
+  byStatus: QueueMetricsByStatus;
+  backlog: number;
+  completed24h: number;
+  failed24h: number;
+  byType: QueueTypeStat[];
+  recentFailures: Job[];
+}
+
+export interface ServiceHealth {
+  name: string;
+  status: string;
+  detail: string;
+}
+
+export interface SystemHealth {
+  overall: string;
+  checkedAt: string;
+  services: ServiceHealth[];
+  pendingJobs: number;
+  stalledJobs: number;
+}
+
 export type ListViolationsParams = {
 search?: string;
 engine?: string;
@@ -1150,6 +1258,16 @@ export type ListRegulationsParams = {
 search?: string;
 agency?: string;
 category?: string;
+};
+
+export type ListAuditEventsParams = {
+action?: string;
+actor?: string;
+entityType?: string;
+q?: string;
+from?: string;
+to?: string;
+limit?: number;
 };
 
 export type ListReviewAssignmentsParams = {

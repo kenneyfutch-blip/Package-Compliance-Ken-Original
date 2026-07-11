@@ -15,6 +15,9 @@ import storageRouter from "./storage";
 import fdaRouter from "./fda";
 import meRouter from "./me";
 import reviewsRouter from "./reviews";
+import usersRouter from "./users";
+import teamsRouter from "./teams";
+import opsRouter from "./ops";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -37,5 +40,8 @@ router.use(proofsRouter);
 router.use(storageRouter);
 router.use(fdaRouter);
 router.use(reviewsRouter);
+router.use(usersRouter);
+router.use(teamsRouter);
+router.use(opsRouter);
 
 export default router;

@@ -5,18 +5,14 @@
  * Packaging Compliance AI API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { TeamRef } from './teamRef';
+import type { TeamMember } from './teamMember';
 
-export interface UserAccount {
+export interface Team {
   id: number;
   name: string;
-  email: string;
-  role: string;
   /** @nullable */
-  roleKey?: string | null;
-  /** @nullable */
-  status?: string | null;
-  active: boolean;
-  teams?: TeamRef[];
+  description?: string | null;
+  memberCount: number;
+  members: TeamMember[];
   createdAt: Date;
 }

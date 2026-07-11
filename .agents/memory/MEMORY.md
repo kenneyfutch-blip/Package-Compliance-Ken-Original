@@ -6,3 +6,4 @@
 - [AI Language Review Engine](language-review.md) — 6-layer copy review + quality score; sync, latest-only in a txn, reused perms, bounded historical-usage query, SQL-joined findings list.
 - [Google Document AI extraction](document-ai.md) — enterprise OCR layer; strict 3-trigger contract, content-hash cache, extraction/reasoning/validation separation, SSRF boundary, unconfigured no-op.
 - [Review Assignment & Workload Engine](review-assignment-engine.md) — durable Postgres job queue; category→team routing; atomic monotonic escalation; SLA/metrics; recurring reschedule dedupe.
+- [Operations Console](operations-console.md) — admin UI; jobs table is org-scoped (filter every read); self-lockout guards; invalidateAuthCache on role change; invite = unlinked user row.

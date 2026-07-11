@@ -10,6 +10,8 @@ import type {
   DocumentExtractionRow,
   ReviewAssignmentRow,
   ReviewHistoryRow,
+  TeamRow,
+  JobRow,
 } from "@workspace/db";
 import { slaStatusFor } from "./reviews/engine";
 
@@ -245,5 +247,37 @@ export function mapUser(u: UserRow) {
     status: u.status,
     active: u.active,
     createdAt: iso(u.createdAt)!,
+  };
+}
+
+export function mapTeam(
+  t: TeamRow,
+  members: { id: number; name: string; email: string; role: string; roleKey: string }[] = [],
+) {
+  return {
+    id: t.id,
+    name: t.name,
+    description: t.description ?? null,
+    memberCount: members.length,
+    members,
+    createdAt: iso(t.createdAt)!,
+  };
+}
+
+export function mapJob(j: JobRow) {
+  return {
+    id: j.id,
+    type: j.type,
+    status: j.status,
+    priority: j.priority,
+    attempts: j.attempts,
+    maxAttempts: j.maxAttempts,
+    runAt: iso(j.runAt),
+    lockedAt: iso(j.lockedAt),
+    lockedBy: j.lockedBy ?? null,
+    lastError: j.lastError ?? null,
+    dedupeKey: j.dedupeKey ?? null,
+    createdAt: iso(j.createdAt)!,
+    updatedAt: iso(j.updatedAt),
   };
 }

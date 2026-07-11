@@ -36,6 +36,8 @@ tags:
     description: Google Document AI extraction — OCR text, page coordinates, and packaging component detection
   - name: reviews
     description: Review assignment, load balancing, SLA/workload reporting, and escalation
+  - name: operations
+    description: Operations console — teams, roles, queue performance, and system health
 paths:
   /healthz:
     get:
@@ -1158,6 +1160,44 @@ paths:
       operationId: listAuditEvents
       tags: [audit]
       summary: Global audit history feed
+      parameters:
+        - name: action
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: actor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: entityType
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           description: Audit events
@@ -1250,6 +1290,247 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/UserAccount"
+    post:
+      operationId: inviteUser
+      tags: [admin]
+      summary: Invite a user by pre-creating their account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInviteInput"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccount"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /users/{id}:
+    patch:
+      operationId: updateUser
+      tags: [admin]
+      summary: Change a user's role or active status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdateInput"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAccount"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [admin]
+      summary: List roles and the permissions each grants
+      responses:
+        "200":
+          description: Roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoleInfo"
+
+  /teams:
+    get:
+      operationId: listTeams
+      tags: [operations]
+      summary: List teams with their members
+      responses:
+        "200":
+          description: Teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+    post:
+      operationId: createTeam
+      tags: [operations]
+      summary: Create a team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInput"
+      responses:
+        "201":
+          description: Created team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /teams/{id}:
+    patch:
+      operationId: updateTeam
+      tags: [operations]
+      summary: Rename or re-describe a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamInput"
+      responses:
+        "200":
+          description: Updated team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /teams/{id}/members:
+    post:
+      operationId: addTeamMember
+      tags: [operations]
+      summary: Add a user to a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TeamMemberInput"
+      responses:
+        "201":
+          description: Updated team list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /teams/{id}/members/{userId}:
+    delete:
+      operationId: removeTeamMember
+      tags: [operations]
+      summary: Remove a user from a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated team list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /ops/queue/metrics:
+    get:
+      operationId: getQueueMetrics
+      tags: [operations]
+      summary: Background job queue performance and recent failures
+      responses:
+        "200":
+          description: Queue metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueueMetrics"
+
+  /ops/system/health:
+    get:
+      operationId: getSystemHealth
+      tags: [operations]
+      summary: Lightweight service health snapshot
+      responses:
+        "200":
+          description: System health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemHealth"
 
   /ai-providers:
     get:
@@ -3316,6 +3597,10 @@ components:
           type: ["string", "null"]
         active:
           type: boolean
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamRef"
         createdAt:
           type: string
           format: date-time
@@ -3717,3 +4002,249 @@ components:
         - escalatedReviews
         - byTeam
         - recent
+
+    TeamRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+        - id
+        - name
+
+    TeamMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        roleKey:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - role
+        - roleKey
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        memberCount:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamMember"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - memberCount
+        - members
+        - createdAt
+
+    TeamInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+      required:
+        - name
+
+    TeamMemberInput:
+      type: object
+      properties:
+        userId:
+          type: integer
+      required:
+        - userId
+
+    UserInviteInput:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        roleKey:
+          type: string
+      required:
+        - name
+        - email
+        - roleKey
+
+    UserUpdateInput:
+      type: object
+      properties:
+        roleKey:
+          type: string
+        active:
+          type: boolean
+
+    RoleInfo:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        rank:
+          type: integer
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            type: string
+      required:
+        - key
+        - name
+        - rank
+        - description
+        - permissions
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        status:
+          type: string
+        priority:
+          type: integer
+        attempts:
+          type: integer
+        maxAttempts:
+          type: integer
+        runAt:
+          type: ["string", "null"]
+          format: date-time
+        lockedAt:
+          type: ["string", "null"]
+          format: date-time
+        lockedBy:
+          type: ["string", "null"]
+        lastError:
+          type: ["string", "null"]
+        dedupeKey:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+      required:
+        - id
+        - type
+        - status
+        - priority
+        - attempts
+        - maxAttempts
+        - createdAt
+
+    QueueTypeStat:
+      type: object
+      properties:
+        type:
+          type: string
+        pending:
+          type: integer
+        running:
+          type: integer
+        completed:
+          type: integer
+        failed:
+          type: integer
+      required:
+        - type
+        - pending
+        - running
+        - completed
+        - failed
+
+    QueueMetrics:
+      type: object
+      properties:
+        byStatus:
+          type: object
+          additionalProperties:
+            type: integer
+        backlog:
+          type: integer
+        completed24h:
+          type: integer
+        failed24h:
+          type: integer
+        byType:
+          type: array
+          items:
+            $ref: "#/components/schemas/QueueTypeStat"
+        recentFailures:
+          type: array
+          items:
+            $ref: "#/components/schemas/Job"
+      required:
+        - byStatus
+        - backlog
+        - completed24h
+        - failed24h
+        - byType
+        - recentFailures
+
+    ServiceHealth:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+        detail:
+          type: string
+      required:
+        - name
+        - status
+        - detail
+
+    SystemHealth:
+      type: object
+      properties:
+        overall:
+          type: string
+        checkedAt:
+          type: string
+          format: date-time
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceHealth"
+        pendingJobs:
+          type: integer
+        stalledJobs:
+          type: integer
+      required:
+        - overall
+        - checkedAt
+        - services
+        - pendingJobs
+        - stalledJobs

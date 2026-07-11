@@ -37,6 +37,11 @@ import {
   BookOpen,
   PenLine,
   Languages,
+  Cog,
+  Users,
+  UsersRound,
+  Gauge,
+  Activity,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -123,7 +128,19 @@ const NAV: NavEntry[] = [
       { name: "Trend Analysis", href: "/reports/trends", icon: LineChart },
     ],
   },
-  { type: "link", name: "Audit History", href: "/audit", icon: History },
+  {
+    type: "group",
+    name: "Operations",
+    icon: Cog,
+    items: [
+      { name: "User Management", href: "/operations/users", icon: Users },
+      { name: "Team Management", href: "/operations/teams", icon: UsersRound },
+      { name: "Roles & Permissions", href: "/operations/roles", icon: ShieldCheck },
+      { name: "Workload & SLA", href: "/operations/workload", icon: Gauge },
+      { name: "Audit Center", href: "/operations/audit", icon: History },
+      { name: "Queue & Health", href: "/operations/system", icon: Activity },
+    ],
+  },
   { type: "link", name: "Admin", href: "/admin", icon: Settings },
 ]
 

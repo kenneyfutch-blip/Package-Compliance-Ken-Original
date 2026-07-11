@@ -1906,6 +1906,16 @@ export const GetSupplierResponse = zod.object({
 /**
  * @summary Global audit history feed
  */
+export const ListAuditEventsQueryParams = zod.object({
+  "action": zod.coerce.string().optional(),
+  "actor": zod.coerce.string().optional(),
+  "entityType": zod.coerce.string().optional(),
+  "q": zod.coerce.string().optional(),
+  "from": zod.date().optional(),
+  "to": zod.date().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
 export const ListAuditEventsResponseItem = zod.object({
   "id": zod.number(),
   "packageId": zod.number().nullish(),
@@ -1996,9 +2006,253 @@ export const ListUsersResponseItem = zod.object({
   "roleKey": zod.string().nullish(),
   "status": zod.string().nullish(),
   "active": zod.boolean(),
+  "teams": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})).optional(),
   "createdAt": zod.coerce.date()
 })
 export const ListUsersResponse = zod.array(ListUsersResponseItem)
+
+
+/**
+ * @summary Invite a user by pre-creating their account
+ */
+export const InviteUserBody = zod.object({
+  "name": zod.string(),
+  "email": zod.string(),
+  "roleKey": zod.string()
+})
+
+export const InviteUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "roleKey": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "active": zod.boolean(),
+  "teams": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})).optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Change a user's role or active status
+ */
+export const UpdateUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateUserBody = zod.object({
+  "roleKey": zod.string().optional(),
+  "active": zod.boolean().optional()
+})
+
+export const UpdateUserResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "roleKey": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "active": zod.boolean(),
+  "teams": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+})).optional(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List roles and the permissions each grants
+ */
+export const ListRolesResponseItem = zod.object({
+  "key": zod.string(),
+  "name": zod.string(),
+  "rank": zod.number(),
+  "description": zod.string(),
+  "permissions": zod.array(zod.string())
+})
+export const ListRolesResponse = zod.array(ListRolesResponseItem)
+
+
+/**
+ * @summary List teams with their members
+ */
+export const ListTeamsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "memberCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "roleKey": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const ListTeamsResponse = zod.array(ListTeamsResponseItem)
+
+
+/**
+ * @summary Create a team
+ */
+export const CreateTeamBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish()
+})
+
+export const CreateTeamResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "memberCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "roleKey": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Rename or re-describe a team
+ */
+export const UpdateTeamParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateTeamBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish()
+})
+
+export const UpdateTeamResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "memberCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "roleKey": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Add a user to a team
+ */
+export const AddTeamMemberParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddTeamMemberBody = zod.object({
+  "userId": zod.number()
+})
+
+export const AddTeamMemberResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "memberCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "roleKey": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const AddTeamMemberResponse = zod.array(AddTeamMemberResponseItem)
+
+
+/**
+ * @summary Remove a user from a team
+ */
+export const RemoveTeamMemberParams = zod.object({
+  "id": zod.coerce.number(),
+  "userId": zod.coerce.number()
+})
+
+export const RemoveTeamMemberResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "memberCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string(),
+  "role": zod.string(),
+  "roleKey": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const RemoveTeamMemberResponse = zod.array(RemoveTeamMemberResponseItem)
+
+
+/**
+ * @summary Background job queue performance and recent failures
+ */
+export const GetQueueMetricsResponse = zod.object({
+  "byStatus": zod.record(zod.string(), zod.number()),
+  "backlog": zod.number(),
+  "completed24h": zod.number(),
+  "failed24h": zod.number(),
+  "byType": zod.array(zod.object({
+  "type": zod.string(),
+  "pending": zod.number(),
+  "running": zod.number(),
+  "completed": zod.number(),
+  "failed": zod.number()
+})),
+  "recentFailures": zod.array(zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "status": zod.string(),
+  "priority": zod.number(),
+  "attempts": zod.number(),
+  "maxAttempts": zod.number(),
+  "runAt": zod.coerce.date().nullish(),
+  "lockedAt": zod.coerce.date().nullish(),
+  "lockedBy": zod.string().nullish(),
+  "lastError": zod.string().nullish(),
+  "dedupeKey": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date().nullish()
+}))
+})
+
+
+/**
+ * @summary Lightweight service health snapshot
+ */
+export const GetSystemHealthResponse = zod.object({
+  "overall": zod.string(),
+  "checkedAt": zod.coerce.date(),
+  "services": zod.array(zod.object({
+  "name": zod.string(),
+  "status": zod.string(),
+  "detail": zod.string()
+})),
+  "pendingJobs": zod.number(),
+  "stalledJobs": zod.number()
+})
 
 
 /**

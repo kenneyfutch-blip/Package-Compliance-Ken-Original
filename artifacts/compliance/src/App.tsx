@@ -27,8 +27,13 @@ import AdminPage from "@/pages/admin"
 import ReportsPage from "@/pages/reports"
 import RegulationsPage from "@/pages/regulations"
 import SuppliersPage from "@/pages/suppliers"
-import AuditPage from "@/pages/audit"
 import NotificationsPage from "@/pages/notifications"
+import UserManagement from "@/pages/operations/users"
+import TeamManagement from "@/pages/operations/teams"
+import RoleManagement from "@/pages/operations/roles"
+import WorkloadDashboard from "@/pages/operations/workload"
+import AuditCenter from "@/pages/operations/audit-center"
+import SystemHealthPage from "@/pages/operations/system"
 import PackagesView from "@/pages/packages"
 import FastReview from "@/pages/fast-review"
 import ViolationsView from "@/pages/violations-center"
@@ -270,7 +275,14 @@ function AppRoutes() {
         <Route path="/reports/executive" component={ExecutiveReports} />
         <Route path="/reports/trends" component={TrendAnalysis} />
 
-        <Route path="/audit" component={AuditPage} />
+        {/* Operations */}
+        <Route path="/operations/users" component={UserManagement} />
+        <Route path="/operations/teams" component={TeamManagement} />
+        <Route path="/operations/roles" component={RoleManagement} />
+        <Route path="/operations/workload" component={WorkloadDashboard} />
+        <Route path="/operations/audit" component={AuditCenter} />
+        <Route path="/operations/system" component={SystemHealthPage} />
+
         <Route path="/admin" component={AdminPage} />
         <Route path="/notifications" component={NotificationsPage} />
         <Route component={NotFound} />

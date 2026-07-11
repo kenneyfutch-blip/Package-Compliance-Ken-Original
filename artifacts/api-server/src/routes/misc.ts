@@ -4,14 +4,12 @@ import {
   auditEventsTable,
   notificationsTable,
   reportsTable,
-  usersTable,
 } from "@workspace/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, lte, type SQL } from "drizzle-orm";
 import {
   mapAuditEvent,
   mapNotification,
   mapReport,
-  mapUser,
 } from "../lib/mappers";
 import { requirePermission, orgId } from "../lib/rbac/context";
 
@@ -21,16 +19,47 @@ function parseId(raw: string | string[] | undefined): number {
   return Number(Array.isArray(raw) ? raw[0] : raw);
 }
 
+function str(raw: string | string[] | undefined): string | undefined {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  const t = v?.trim();
+  return t ? t : undefined;
+}
+
 router.get(
   "/audit",
   requirePermission("audit:read"),
   async (req: Request, res: Response): Promise<void> => {
+    const q = req.query as Record<string, string | string[] | undefined>;
+    const conds: SQL[] = [eq(auditEventsTable.organizationId, orgId(req))];
+
+    const action = str(q["action"]);
+    if (action) conds.push(ilike(auditEventsTable.action, `%${action}%`));
+    const actor = str(q["actor"]);
+    if (actor) conds.push(ilike(auditEventsTable.actor, `%${actor}%`));
+    const entityType = str(q["entityType"]);
+    if (entityType) conds.push(eq(auditEventsTable.entityType, entityType));
+    const search = str(q["q"]);
+    if (search) conds.push(ilike(auditEventsTable.detail, `%${search}%`));
+    const from = str(q["from"]);
+    if (from) {
+      const d = new Date(from);
+      if (!Number.isNaN(d.getTime())) conds.push(gte(auditEventsTable.createdAt, d));
+    }
+    const to = str(q["to"]);
+    if (to) {
+      const d = new Date(to);
+      if (!Number.isNaN(d.getTime())) conds.push(lte(auditEventsTable.createdAt, d));
+    }
+
+    const limitRaw = Number(str(q["limit"]));
+    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 500) : 200;
+
     const rows = await db
       .select()
       .from(auditEventsTable)
-      .where(eq(auditEventsTable.organizationId, orgId(req)))
+      .where(and(...conds))
       .orderBy(desc(auditEventsTable.createdAt))
-      .limit(200);
+      .limit(limit);
     res.json(rows.map(mapAuditEvent));
   },
 );
@@ -88,19 +117,6 @@ router.get(
       .where(eq(reportsTable.organizationId, orgId(req)))
       .orderBy(desc(reportsTable.createdAt));
     res.json(rows.map(mapReport));
-  },
-);
-
-router.get(
-  "/users",
-  requirePermission("users:read"),
-  async (req: Request, res: Response): Promise<void> => {
-    const rows = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.organizationId, orgId(req)))
-      .orderBy(desc(usersTable.createdAt));
-    res.json(rows.map(mapUser));
   },
 );
 
