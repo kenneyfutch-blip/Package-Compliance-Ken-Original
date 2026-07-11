@@ -4219,3 +4219,52 @@ export const ReprocessPolicyResponse = zod.object({
 })
 
 
+/**
+ * @summary Aggregate counts for every reference resource type in the Resource Center
+ */
+export const GetResourceOverviewResponse = zod.object({
+  "groups": zod.array(zod.object({
+  "type": zod.string().describe('Stable resource-type key (regulation, internal_sop, policy, glossary, sop_document, guide).'),
+  "label": zod.string(),
+  "description": zod.string().nullish(),
+  "count": zod.number(),
+  "href": zod.string(),
+  "available": zod.boolean().describe('False for reserved sections (glossary, SOP documents) whose data model does not exist yet.')
+})),
+  "agencies": zod.array(zod.object({
+  "agency": zod.string(),
+  "label": zod.string(),
+  "count": zod.number(),
+  "href": zod.string()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary Unified search across every compliance reference resource
+ */
+export const SearchResourcesQueryParams = zod.object({
+  "q": zod.coerce.string(),
+  "types": zod.coerce.string().optional().describe('Comma-separated list of resource types to include.'),
+  "limit": zod.coerce.number().optional()
+})
+
+export const SearchResourcesResponse = zod.object({
+  "query": zod.string(),
+  "results": zod.array(zod.object({
+  "type": zod.string().describe('Resource-type key (regulation, internal_sop, policy, glossary, sop_document).'),
+  "typeLabel": zod.string(),
+  "refId": zod.string().describe('Identifier of the underlying record, as a string.'),
+  "title": zod.string(),
+  "subtitle": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "source": zod.string().nullish(),
+  "badge": zod.string().nullish(),
+  "href": zod.string(),
+  "similarity": zod.number().nullish()
+}))
+})
+
+

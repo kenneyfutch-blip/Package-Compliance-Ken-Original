@@ -43,6 +43,7 @@ import {
   Activity,
   Plug,
   ScrollText,
+  Library,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
@@ -134,7 +135,10 @@ const NAV: NavEntry[] = [
     name: "Resources",
     icon: BookOpen,
     items: [
+      { name: "Resource Center", href: "/resources", icon: Library },
       { name: "Policy Repository", href: "/resources/policies", icon: ScrollText },
+      { name: "SOP Documents", href: "/resources/sop", icon: FileText },
+      { name: "Approved Language & Glossary", href: "/resources/glossary", icon: Languages },
     ],
   },
   {

@@ -2392,6 +2392,49 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /resources/overview:
+    get:
+      operationId: getResourceOverview
+      tags: [resources]
+      summary: Aggregate counts for every reference resource type in the Resource Center
+      responses:
+        "200":
+          description: Resource Center overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceOverview"
+
+  /resources/search:
+    get:
+      operationId: searchResources
+      tags: [resources]
+      summary: Unified search across every compliance reference resource
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: types
+          in: query
+          required: false
+          description: Comma-separated list of resource types to include.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ranked matching resources across all types
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceSearchResponse"
+
 components:
   schemas:
     Policy:
@@ -2638,6 +2681,100 @@ components:
           nullable: true
         createdAt:
           type: string
+
+    ResourceGroupSummary:
+      type: object
+      required: [type, label, count, href, available]
+      properties:
+        type:
+          type: string
+          description: Stable resource-type key (regulation, internal_sop, policy, glossary, sop_document, guide).
+        label:
+          type: string
+        description:
+          type: string
+          nullable: true
+        count:
+          type: integer
+        href:
+          type: string
+        available:
+          type: boolean
+          description: False for reserved sections (glossary, SOP documents) whose data model does not exist yet.
+
+    ResourceAgencySummary:
+      type: object
+      required: [agency, label, count, href]
+      properties:
+        agency:
+          type: string
+        label:
+          type: string
+        count:
+          type: integer
+        href:
+          type: string
+
+    ResourceOverview:
+      type: object
+      required: [groups, agencies, total]
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceGroupSummary"
+        agencies:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceAgencySummary"
+        total:
+          type: integer
+
+    ResourceSearchResult:
+      type: object
+      required: [type, typeLabel, refId, title, href]
+      properties:
+        type:
+          type: string
+          description: Resource-type key (regulation, internal_sop, policy, glossary, sop_document).
+        typeLabel:
+          type: string
+        refId:
+          type: string
+          description: Identifier of the underlying record, as a string.
+        title:
+          type: string
+        subtitle:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        badge:
+          type: string
+          nullable: true
+        href:
+          type: string
+        similarity:
+          type: number
+          nullable: true
+
+    ResourceSearchResponse:
+      type: object
+      required: [query, results]
+      properties:
+        query:
+          type: string
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResourceSearchResult"
 
     FdaRecall:
       type: object

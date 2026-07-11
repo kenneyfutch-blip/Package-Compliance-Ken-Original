@@ -99,6 +99,51 @@ export interface PolicyVersion {
   createdAt: string;
 }
 
+export interface ResourceGroupSummary {
+  /** Stable resource-type key (regulation, internal_sop, policy, glossary, sop_document, guide). */
+  type: string;
+  label: string;
+  description?: string | null;
+  count: number;
+  href: string;
+  /** False for reserved sections (glossary, SOP documents) whose data model does not exist yet. */
+  available: boolean;
+}
+
+export interface ResourceAgencySummary {
+  agency: string;
+  label: string;
+  count: number;
+  href: string;
+}
+
+export interface ResourceOverview {
+  groups: ResourceGroupSummary[];
+  agencies: ResourceAgencySummary[];
+  total: number;
+}
+
+export interface ResourceSearchResult {
+  /** Resource-type key (regulation, internal_sop, policy, glossary, sop_document). */
+  type: string;
+  typeLabel: string;
+  /** Identifier of the underlying record, as a string. */
+  refId: string;
+  title: string;
+  subtitle?: string | null;
+  description?: string | null;
+  category?: string | null;
+  source?: string | null;
+  badge?: string | null;
+  href: string;
+  similarity?: number | null;
+}
+
+export interface ResourceSearchResponse {
+  query: string;
+  results: ResourceSearchResult[];
+}
+
 export interface FdaRecall {
   recallNumber: string;
   category: string;
@@ -1830,6 +1875,15 @@ status?: string;
 
 export type SearchPoliciesParams = {
 q: string;
+limit?: number;
+};
+
+export type SearchResourcesParams = {
+q: string;
+/**
+ * Comma-separated list of resource types to include.
+ */
+types?: string;
 limit?: number;
 };
 

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
-import { useSearch } from "wouter"
+import { Link, useSearch } from "wouter"
 import { useListRegulations } from "@workspace/api-client-react"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,7 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-import { Search, Loader2, Scale, BookOpen, ExternalLink } from "lucide-react"
+import { Search, Loader2, Scale, BookOpen, ExternalLink, ArrowLeft } from "lucide-react"
 
 interface Props {
   agency: string // "FDA" | "EPA" | "CPSC" | "FTC" | "USDA" | "Internal"
@@ -49,6 +49,9 @@ export default function RegulatoryLibrary({ agency, title, subtitle }: Props) {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      <Link href="/resources" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+        <ArrowLeft className="h-4 w-4" /> Resource Center
+      </Link>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">

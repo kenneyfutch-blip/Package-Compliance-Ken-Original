@@ -55,6 +55,9 @@ import UsageAnalytics from "@/pages/admin/usage-analytics"
 import IntegrationsPage from "@/pages/admin/integrations"
 import PolicyManagement from "@/pages/admin/policy-management"
 import PolicyRepository from "@/pages/resources/policy-repository"
+import ResourceCenter from "@/pages/resources/resource-center"
+import SopDocuments from "@/pages/resources/sop-documents"
+import Glossary from "@/pages/resources/glossary"
 
 const queryClient = new QueryClient()
 
@@ -299,7 +302,10 @@ function AppRoutes() {
         <Route path="/admin/policies" component={PolicyManagement} />
 
         {/* Resources */}
+        <Route path="/resources" component={ResourceCenter} />
         <Route path="/resources/policies" component={PolicyRepository} />
+        <Route path="/resources/sop" component={SopDocuments} />
+        <Route path="/resources/glossary" component={Glossary} />
         <Route path="/admin" component={AdminPage} />
         <Route path="/notifications" component={NotificationsPage} />
         <Route component={NotFound} />

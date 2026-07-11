@@ -21,6 +21,7 @@ import opsRouter from "./ops";
 import complianceMemoryRouter from "./compliance-memory";
 import proofingRouter from "./proofing";
 import policiesRouter from "./policies";
+import resourcesRouter from "./resources";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -49,5 +50,6 @@ router.use(teamsRouter);
 router.use(opsRouter);
 router.use(complianceMemoryRouter);
 router.use(policiesRouter);
+router.use(resourcesRouter);
 
 export default router;

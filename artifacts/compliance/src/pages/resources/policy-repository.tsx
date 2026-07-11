@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { Link, useSearch } from "wouter"
 import {
   useListPolicies,
   useSearchPolicies,
@@ -10,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Search, BookOpen, ShieldCheck, CalendarClock, Sparkles } from "lucide-react"
+import { Search, BookOpen, ShieldCheck, CalendarClock, Sparkles, ArrowLeft } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 function severityTone(sev: string): string {
   if (sev === "critical") return "bg-destructive/10 text-destructive"
@@ -32,9 +34,15 @@ type Row = {
   similarity?: number
 }
 
-function PolicyCard({ p }: { p: Row }) {
+function PolicyCard({ p, highlight }: { p: Row; highlight?: boolean }) {
   return (
-    <Card className="hover-elevate transition-all">
+    <Card
+      id={`policy-${p.id}`}
+      className={cn(
+        "hover-elevate transition-all",
+        highlight && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+      )}
+    >
       <CardHeader className="py-4">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1.5">
@@ -69,6 +77,11 @@ function PolicyCard({ p }: { p: Row }) {
 export default function PolicyRepository() {
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState<string>("all")
+
+  // Deep link support: /resources/policies?policy=<id> scrolls to and highlights
+  // a policy (used by the Resource Center so a search result opens its detail).
+  const queryString = useSearch()
+  const policyId = new URLSearchParams(queryString).get("policy")
 
   const trimmed = query.trim()
   const isSearching = trimmed.length >= 3
@@ -108,8 +121,18 @@ export default function PolicyRepository() {
 
   const loading = isSearching ? searchLoading : listLoading
 
+  // Scroll to the deep-linked policy once its card is in the DOM.
+  useEffect(() => {
+    if (!policyId || loading) return
+    const el = document.getElementById(`policy-${policyId}`)
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" })
+  }, [policyId, loading, rows])
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
+      <Link href="/resources" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
+        <ArrowLeft className="h-4 w-4" /> Resource Center
+      </Link>
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <BookOpen className="w-7 h-7 text-primary" />
@@ -160,7 +183,9 @@ export default function PolicyRepository() {
             {isSearching ? "No policies matched your search." : "No active policies to display."}
           </div>
         ) : (
-          rows.map((p) => <PolicyCard key={p.id} p={p} />)
+          rows.map((p) => (
+            <PolicyCard key={p.id} p={p} highlight={policyId === String(p.id)} />
+          ))
         )}
       </div>
     </div>

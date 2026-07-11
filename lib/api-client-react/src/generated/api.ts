@@ -91,6 +91,8 @@ import type {
   Report,
   ReportInput,
   ReprocessResult,
+  ResourceOverview,
+  ResourceSearchResponse,
   ReviewAssignInput,
   ReviewAssignmentDetail,
   ReviewMetricsSummary,
@@ -99,6 +101,7 @@ import type {
   ReviewTaskUpdate,
   RoleInfo,
   SearchPoliciesParams,
+  SearchResourcesParams,
   SubmissionInput,
   SubmissionReviewInput,
   Supplier,
@@ -7520,4 +7523,165 @@ export const useReprocessPolicy = <TError = ErrorType<ApiError>,
       > => {
       return useMutation(getReprocessPolicyMutationOptions(options));
     }
+
+export const getGetResourceOverviewUrl = () => {
+
+
+
+
+  return `/api/resources/overview`
+}
+
+/**
+ * @summary Aggregate counts for every reference resource type in the Resource Center
+ */
+export const getResourceOverview = async ( options?: RequestInit): Promise<ResourceOverview> => {
+
+  return customFetch<ResourceOverview>(getGetResourceOverviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetResourceOverviewQueryKey = () => {
+    return [
+    `/api/resources/overview`
+    ] as const;
+    }
+
+
+export const getGetResourceOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getResourceOverview>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResourceOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetResourceOverviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getResourceOverview>>> = ({ signal }) => getResourceOverview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getResourceOverview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetResourceOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getResourceOverview>>>
+export type GetResourceOverviewQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Aggregate counts for every reference resource type in the Resource Center
+ */
+
+export function useGetResourceOverview<TData = Awaited<ReturnType<typeof getResourceOverview>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getResourceOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetResourceOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSearchResourcesUrl = (params: SearchResourcesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/resources/search?${stringifiedParams}` : `/api/resources/search`
+}
+
+/**
+ * @summary Unified search across every compliance reference resource
+ */
+export const searchResources = async (params: SearchResourcesParams, options?: RequestInit): Promise<ResourceSearchResponse> => {
+
+  return customFetch<ResourceSearchResponse>(getSearchResourcesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchResourcesQueryKey = (params?: SearchResourcesParams,) => {
+    return [
+    `/api/resources/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchResourcesQueryOptions = <TData = Awaited<ReturnType<typeof searchResources>>, TError = ErrorType<unknown>>(params: SearchResourcesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchResources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchResourcesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchResources>>> = ({ signal }) => searchResources(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchResources>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchResourcesQueryResult = NonNullable<Awaited<ReturnType<typeof searchResources>>>
+export type SearchResourcesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Unified search across every compliance reference resource
+ */
+
+export function useSearchResources<TData = Awaited<ReturnType<typeof searchResources>>, TError = ErrorType<unknown>>(
+ params: SearchResourcesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchResources>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchResourcesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

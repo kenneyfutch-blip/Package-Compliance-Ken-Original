@@ -22,6 +22,8 @@ export function requiredPermFor(path: string): string | null {
   if (p === "/regulations") return "regulations:read"
   if (p === "/admin/policies") return "policies:write"
   if (p === "/resources/policies") return "policies:read"
+  if (p === "/resources/sop" || p === "/resources/glossary") return "policies:read"
+  if (p === "/resources") return "regulations:read"
   if (p.startsWith("/ai/")) return "violations:read"
   if (p === "/suppliers/portal") return "packages:read"
   if (p === "/suppliers" || p.startsWith("/suppliers/")) return "suppliers:read"
