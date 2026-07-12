@@ -44,7 +44,11 @@ import {
   ScrollText,
   Library,
   Star,
+  LogOut,
+  UserCog,
 } from "lucide-react"
+import { useUser, useClerk } from "@clerk/react"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import {
@@ -431,21 +435,76 @@ function Brand() {
   )
 }
 
+// Base path prefix for this artifact (e.g. "/compliance"); used as the safe
+// post-logout redirect target so sign-out returns to the app's landing page.
+const APP_BASE_PATH = import.meta.env.BASE_URL.replace(/\/$/, "")
+
+function initialsFrom(value: string): string {
+  return value
+    .split(/\s+/)
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase()
+}
+
 function UserBlock() {
   const { me } = usePermissions()
+  const { user } = useUser()
+  const { signOut, openUserProfile } = useClerk()
   const displayName = me?.name || me?.email || "Signed in"
   const roleName = me?.role || "Member"
+  const email = me?.email ?? user?.primaryEmailAddress?.emailAddress ?? null
+  const initials = initialsFrom(me?.name || me?.email || "")
+
   return (
-    <div className="p-4 border-t border-border">
-      <div className="flex items-center gap-3 px-3 py-2">
-        <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-foreground">
-          <User className="w-4 h-4" />
-        </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-medium truncate">{displayName}</span>
-          <span className="text-xs text-muted-foreground truncate">{roleName}</span>
-        </div>
-      </div>
+    <div className="p-3 border-t border-border">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label="Open profile menu"
+            className="w-full flex items-center gap-3 px-2 py-2 rounded-md text-left hover:bg-accent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <Avatar className="w-9 h-9">
+              {user?.imageUrl && <AvatarImage src={user.imageUrl} alt={displayName} />}
+              <AvatarFallback className="text-xs font-semibold text-foreground">
+                {initials || <User className="w-4 h-4" />}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-sm font-medium truncate text-foreground">{displayName}</span>
+              <span className="text-xs text-muted-foreground truncate">{roleName}</span>
+            </div>
+            <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" aria-hidden />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" side="top" className="w-60">
+          <DropdownMenuLabel className="flex flex-col gap-0.5">
+            <span className="truncate">{displayName}</span>
+            {email && (
+              <span className="text-xs font-normal text-muted-foreground truncate">{email}</span>
+            )}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="gap-2 cursor-pointer"
+            onSelect={() => openUserProfile()}
+          >
+            <UserCog className="w-4 h-4 shrink-0 text-muted-foreground" />
+            <span>Manage account &amp; photo</span>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="gap-2 cursor-pointer text-destructive focus:text-destructive"
+            onSelect={() => signOut({ redirectUrl: APP_BASE_PATH || "/" })}
+          >
+            <LogOut className="w-4 h-4 shrink-0" />
+            <span>Log out</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }
