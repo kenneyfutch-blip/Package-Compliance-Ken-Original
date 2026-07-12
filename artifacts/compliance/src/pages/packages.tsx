@@ -1,12 +1,47 @@
 import { useState, useEffect } from "react"
-import { useListPackages } from "@workspace/api-client-react"
+import {
+  useListPackages,
+  useUpdatePackage,
+  useDeletePackage,
+  getListPackagesQueryKey,
+} from "@workspace/api-client-react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Link, useSearch } from "wouter"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, Loader2, ArrowRight, Clock, PackageX } from "lucide-react"
+import {
+  Search,
+  Loader2,
+  ArrowRight,
+  Clock,
+  PackageX,
+  MoreVertical,
+  Archive,
+  ArchiveRestore,
+  Trash2,
+  Loader2 as Spinner,
+} from "lucide-react"
 import { gradeColor, riskBand } from "@/lib/compliance"
+import { usePermissions } from "@/lib/access"
+import { useToast } from "@/hooks/use-toast"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface Props {
   title: string
@@ -14,6 +49,143 @@ interface Props {
   statusFilter?: string
   riskFilter?: string
   emptyText?: string
+}
+
+function PackageCardMenu({
+  pkg,
+  archived,
+}: {
+  pkg: { id: number; name: string; status: string }
+  archived: boolean
+}) {
+  const { has } = usePermissions()
+  const { toast } = useToast()
+  const queryClient = useQueryClient()
+  const update = useUpdatePackage()
+  const remove = useDeletePackage()
+  const [confirmOpen, setConfirmOpen] = useState(false)
+
+  const canArchive = has("packages:write")
+  const canDelete = has("packages:delete")
+  // Nothing to show if the user can neither archive/restore nor delete.
+  if (!canArchive && !canDelete) return null
+
+  const busy = update.isPending || remove.isPending
+
+  const refetchLists = () =>
+    queryClient.invalidateQueries({ queryKey: getListPackagesQueryKey() })
+
+  const setStatus = (status: string, verb: string) =>
+    update.mutate(
+      { id: pkg.id, data: { status } },
+      {
+        onSuccess: () => {
+          refetchLists()
+          toast({ title: `Package ${verb}`, description: `"${pkg.name}" was ${verb}.` })
+        },
+        onError: () =>
+          toast({
+            variant: "destructive",
+            title: `Could not ${verb === "archived" ? "archive" : "restore"} package`,
+            description: "Something went wrong. Please try again.",
+          }),
+      },
+    )
+
+  const doDelete = () =>
+    remove.mutate(
+      { id: pkg.id },
+      {
+        onSuccess: () => {
+          setConfirmOpen(false)
+          refetchLists()
+          toast({ title: "Package deleted", description: `"${pkg.name}" was permanently deleted.` })
+        },
+        onError: () =>
+          toast({
+            variant: "destructive",
+            title: "Could not delete package",
+            description: "Something went wrong. Please try again.",
+          }),
+      },
+    )
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            aria-label="Package actions"
+            disabled={busy}
+          >
+            {busy ? (
+              <Spinner className="w-4 h-4 animate-spin" />
+            ) : (
+              <MoreVertical className="w-4 h-4" />
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {canArchive &&
+            (archived ? (
+              <DropdownMenuItem onSelect={() => setStatus("Uploaded", "restored")}>
+                <ArchiveRestore className="w-4 h-4 mr-2" /> Restore
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onSelect={() => setStatus("Archived", "archived")}>
+                <Archive className="w-4 h-4 mr-2" /> Archive
+              </DropdownMenuItem>
+            ))}
+          {canDelete && (
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onSelect={(e) => {
+                e.preventDefault()
+                setConfirmOpen(true)
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Delete
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this package?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes <span className="font-medium">"{pkg.name}"</span> and its
+              violations. This cannot be undone. To keep the record but remove it from active views,
+              archive it instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                doDelete()
+              }}
+              disabled={remove.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {remove.isPending ? (
+                <>
+                  <Spinner className="w-4 h-4 mr-2 animate-spin" /> Deleting…
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
 }
 
 export default function PackagesView({
@@ -118,11 +290,17 @@ export default function PackagesView({
                   <div className="text-xs text-muted-foreground flex items-center gap-1">
                     <Clock className="w-3 h-3" /> {new Date(pkg.updatedAt).toLocaleDateString()}
                   </div>
-                  <Link href={`/reviews/${pkg.id}`}>
-                    <Button variant="ghost" size="sm" className="gap-1">
-                      Open <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-1">
+                    <PackageCardMenu
+                      pkg={{ id: pkg.id, name: pkg.name, status: pkg.status }}
+                      archived={(statusFilter ?? pkg.status) === "Archived"}
+                    />
+                    <Link href={`/reviews/${pkg.id}`}>
+                      <Button variant="ghost" size="sm" className="gap-1">
+                        Open <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                  </div>
                 </CardFooter>
               </Card>
             )
