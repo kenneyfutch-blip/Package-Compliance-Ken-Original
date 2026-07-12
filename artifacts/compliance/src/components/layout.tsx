@@ -65,13 +65,25 @@ import { useFavorites } from "@/lib/favorites"
 import { requiredPermFor } from "@/lib/permissions"
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> }
+/** A labeled, collapsible cluster of items rendered inside a section. */
+type NavGroup = { group: string; items: NavItem[] }
+/** A section entry is either a direct item or a sub-group of items. */
+type NavEntry = NavItem | NavGroup
 type NavSection = {
   id: string
   label: string
   /** Sensible default when the user has never toggled this section. Defaults to true. */
   defaultOpen?: boolean
-  items: NavItem[]
+  items: NavEntry[]
 }
+
+const isGroup = (entry: NavEntry): entry is NavGroup =>
+  (entry as NavGroup).group !== undefined
+
+// Flatten a section's entries (direct items + grouped items) into a flat item
+// list — used for favorites lookup, permission counts, and active detection.
+const flattenEntries = (entries: NavEntry[]): NavItem[] =>
+  entries.flatMap((e) => (isGroup(e) ? e.items : [e]))
 
 // Declarative navigation model. Sections are labeled, scannable groupings; new
 // modules are added by editing this data, never the layout below. Every href
@@ -122,22 +134,37 @@ const SECTIONS: NavSection[] = [
     id: "compliance",
     label: "Compliance",
     defaultOpen: false,
+    // Grouped into scannable sub-clusters so the section stays compact. The five
+    // per-agency libraries collapse into one "Regulatory Library" (the combined
+    // knowledge base at /regulations, which already filters by agency).
     items: [
-      { name: "Violations Center", href: "/ai/violations", icon: AlertTriangle },
-      { name: "Language Review", href: "/ai/language", icon: Languages },
-      { name: "Recommended Fixes", href: "/ai/fixes", icon: Wrench },
-      { name: "Claim Reviews", href: "/ai/claims", icon: Megaphone },
-      { name: "Compliance Memory", href: "/ai/memory", icon: Brain },
-      { name: "Compliance Heatmaps", href: "/ai/heatmaps", icon: Grid3x3 },
-      { name: "FDA Library", href: "/regulatory/fda", icon: Scale },
-      { name: "EPA Library", href: "/regulatory/epa", icon: Scale },
-      { name: "CPSC Library", href: "/regulatory/cpsc", icon: Scale },
-      { name: "FTC Library", href: "/regulatory/ftc", icon: Scale },
-      { name: "USDA Library", href: "/regulatory/usda", icon: Scale },
+      { name: "Compliance Dashboard", href: "/", icon: LayoutDashboard },
+      {
+        group: "Reviews & Findings",
+        items: [
+          { name: "Violations Center", href: "/ai/violations", icon: AlertTriangle },
+          { name: "Claim Reviews", href: "/ai/claims", icon: Megaphone },
+          { name: "Language Review", href: "/ai/language", icon: Languages },
+          { name: "Recommended Fixes", href: "/ai/fixes", icon: Wrench },
+        ],
+      },
+      {
+        group: "Intelligence",
+        items: [
+          { name: "Compliance Heatmaps", href: "/ai/heatmaps", icon: Grid3x3 },
+          { name: "Compliance Memory", href: "/ai/memory", icon: Brain },
+        ],
+      },
+      {
+        group: "Regulatory Hub",
+        items: [
+          { name: "Regulatory Library", href: "/regulations", icon: Scale },
+          { name: "Regulatory Sources", href: "/regulatory/sources", icon: ShieldCheck },
+          { name: "Regulatory Updates", href: "/regulatory-updates", icon: Radio },
+          { name: "FDA Recalls", href: "/regulatory/recalls", icon: ShieldAlert },
+        ],
+      },
       { name: "Internal SOP", href: "/regulatory/sop", icon: BookOpen },
-      { name: "FDA Recalls", href: "/regulatory/recalls", icon: ShieldAlert },
-      { name: "Regulatory Sources", href: "/regulatory/sources", icon: ShieldCheck },
-      { name: "Regulatory Updates", href: "/regulatory-updates", icon: Radio },
     ],
   },
   {
@@ -204,9 +231,16 @@ const SECTIONS: NavSection[] = [
 ]
 
 // Flat lookup of every nav item by href, so starred favorites (stored as bare
-// hrefs) can be rendered with their proper label and icon anywhere.
-const ALL_ITEMS: Record<string, NavItem> = Object.fromEntries(
-  SECTIONS.flatMap((s) => s.items.map((i) => [i.href, i] as const)),
+// hrefs) can be rendered with their proper label and icon anywhere. First
+// occurrence wins: an href reused as a shortcut in a later section (e.g. "/"
+// surfaced as "Compliance Dashboard") still resolves to its canonical label
+// and icon from the earliest section ("Dashboard" under Home).
+const ALL_ITEMS: Record<string, NavItem> = SECTIONS.reduce<Record<string, NavItem>>(
+  (acc, s) => {
+    for (const i of flattenEntries(s.items)) if (!(i.href in acc)) acc[i.href] = i
+    return acc
+  },
+  {},
 )
 
 // Resolve the user's starred hrefs to nav items — preserving star order and
@@ -309,6 +343,68 @@ function NavRow({
   )
 }
 
+// A collapsible sub-group inside a section (e.g. "Reviews & Findings" under
+// Compliance). Defaults open; force-opens when it contains the active page so
+// the current location is never hidden. Open/closed state is persisted by the
+// parent via the shared overrides map, keyed "<sectionId>:<groupLabel>".
+function NavGroupBlock({
+  group,
+  location,
+  open,
+  onToggle,
+  onNavigate,
+}: {
+  group: NavGroup
+  location: string
+  open: boolean | undefined
+  onToggle: () => void
+  onNavigate?: () => void
+}) {
+  const groupActive = group.items.some((i) => isItemActive(location, i.href))
+  const isOpen = groupActive || (open ?? true)
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className="w-full flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-md text-left hover:bg-accent/40 transition-colors"
+      >
+        <span
+          className={cn(
+            "flex-1 text-[10px] font-semibold uppercase tracking-wider",
+            groupActive ? "text-foreground/90" : "text-muted-foreground",
+          )}
+        >
+          {group.group}
+        </span>
+        {groupActive && !isOpen && (
+          <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-hidden />
+        )}
+        <ChevronDown
+          className={cn(
+            "w-3 h-3 text-muted-foreground/60 transition-transform",
+            !isOpen && "-rotate-90",
+          )}
+          aria-hidden
+        />
+      </button>
+      {isOpen && (
+        <div className="mt-0.5 ml-3 space-y-1 border-l border-border/50 pl-1">
+          {group.items.map((item) => (
+            <NavRow
+              key={item.href}
+              item={item}
+              active={isItemActive(location, item.href)}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const [location] = useLocation()
   const { has } = usePermissions()
@@ -332,8 +428,13 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const visibleSections = React.useMemo(() => {
     return SECTIONS.map((section) => ({
       ...section,
-      items: section.items.filter((i) => canSee(i.href)),
-    })).filter((section) => section.items.length > 0)
+      items: section.items
+        // Filter items within sub-groups, dropping any group left empty.
+        .map((e) =>
+          isGroup(e) ? { ...e, items: e.items.filter((i) => canSee(i.href)) } : e,
+        )
+        .filter((e) => (isGroup(e) ? e.items.length > 0 : canSee(e.href))),
+    })).filter((section) => flattenEntries(section.items).length > 0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [has])
 
@@ -366,7 +467,15 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         </div>
       )}
       {visibleSections.map((section, idx) => {
-        const sectionActive = section.items.some((i) => isItemActive(location, i.href))
+        // "/" is canonically owned by the Home section. The Compliance section
+        // carries a convenience shortcut ("Compliance Dashboard") to the same
+        // route, but that duplicate must not force Compliance open on the home
+        // page — so ignore "/" for active/open detection outside Home.
+        const sectionActive = flattenEntries(section.items).some(
+          (i) =>
+            isItemActive(location, i.href) &&
+            !(i.href === "/" && section.id !== "home"),
+        )
         // The section holding the active page is always open; otherwise honor the
         // user's explicit choice, falling back to the section's sensible default.
         const open = sectionActive || (overrides[section.id] ?? section.defaultOpen ?? true)
@@ -406,14 +515,30 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             </button>
             {open && (
               <div className="mt-1 mb-1 space-y-1">
-                {section.items.map((item) => (
-                  <NavRow
-                    key={item.href}
-                    item={item}
-                    active={isItemActive(location, item.href)}
-                    onNavigate={onNavigate}
-                  />
-                ))}
+                {section.items.map((entry) =>
+                  isGroup(entry) ? (
+                    <NavGroupBlock
+                      key={`${section.id}:${entry.group}`}
+                      group={entry}
+                      location={location}
+                      open={overrides[`${section.id}:${entry.group}`]}
+                      onToggle={() =>
+                        setOverrides((prev) => {
+                          const key = `${section.id}:${entry.group}`
+                          return { ...prev, [key]: !(prev[key] ?? true) }
+                        })
+                      }
+                      onNavigate={onNavigate}
+                    />
+                  ) : (
+                    <NavRow
+                      key={entry.href}
+                      item={entry}
+                      active={isItemActive(location, entry.href)}
+                      onNavigate={onNavigate}
+                    />
+                  ),
+                )}
               </div>
             )}
           </div>
