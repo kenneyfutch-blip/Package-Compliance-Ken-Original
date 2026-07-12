@@ -50,12 +50,30 @@ import { cn } from "@/lib/utils"
 // Suggested groupings (mirrors GLOSSARY_CATEGORIES on the server). Category is
 // free-form, so an org can type its own, but these drive the create form + chips.
 const CATEGORIES = [
+  // Compliance-language types
   "Approved Claim",
   "Required Statement",
   "Defined Term",
   "Allergen & Warning",
   "Brand Language",
   "Prohibited Language",
+  // Dollar Tree product categories (diverse ecommerce offerings) so approved
+  // language can be organized by the merchandise area it applies to.
+  "Food & Beverage",
+  "Health & Wellness",
+  "Beauty & Personal Care",
+  "Household & Cleaning",
+  "Baby & Kids",
+  "Toys & Games",
+  "Pet Supplies",
+  "Party & Seasonal",
+  "Home & Kitchen",
+  "Office & School",
+  "Apparel & Accessories",
+  "Electronics",
+  "Arts & Crafts",
+  // Catch-all for anything that doesn't fit above.
+  "Other",
 ]
 
 const CATEGORY_TONE: Record<string, string> = {
@@ -65,6 +83,20 @@ const CATEGORY_TONE: Record<string, string> = {
   "Allergen & Warning": "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   "Brand Language": "bg-rose-500/10 text-rose-600 dark:text-rose-400",
   "Prohibited Language": "bg-destructive/10 text-destructive",
+  "Food & Beverage": "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+  "Health & Wellness": "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+  "Beauty & Personal Care": "bg-pink-500/10 text-pink-600 dark:text-pink-400",
+  "Household & Cleaning": "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400",
+  "Baby & Kids": "bg-sky-500/10 text-sky-600 dark:text-sky-400",
+  "Toys & Games": "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400",
+  "Pet Supplies": "bg-lime-500/10 text-lime-600 dark:text-lime-400",
+  "Party & Seasonal": "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+  "Home & Kitchen": "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+  "Office & School": "bg-slate-500/10 text-slate-600 dark:text-slate-400",
+  "Apparel & Accessories": "bg-red-500/10 text-red-600 dark:text-red-400",
+  Electronics: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  "Arts & Crafts": "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+  Other: "bg-muted text-muted-foreground",
 }
 
 function categoryTone(c: string): string {
@@ -179,8 +211,12 @@ export default function Glossary() {
   const updateMut = useUpdateGlossaryEntry()
 
   function invalidate() {
-    void queryClient.invalidateQueries({ queryKey: ["/glossary"] })
-    void queryClient.invalidateQueries({ queryKey: ["/resources/overview"] })
+    // NOTE: the generated query keys are prefixed with "/api" (e.g.
+    // ["/api/glossary", params]). Invalidating "/glossary" / "/resources/overview"
+    // never prefix-matched, so newly created/edited/retired entries silently
+    // failed to appear — making the whole tool look broken. Match the real keys.
+    void queryClient.invalidateQueries({ queryKey: ["/api/glossary"] })
+    void queryClient.invalidateQueries({ queryKey: ["/api/resources/overview"] })
   }
 
   // Group entries by category for a scannable, categorized browse.

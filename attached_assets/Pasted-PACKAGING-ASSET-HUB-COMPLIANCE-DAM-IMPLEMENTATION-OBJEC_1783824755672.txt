@@ -1,0 +1,138 @@
+PACKAGING ASSET HUB (COMPLIANCE DAM) IMPLEMENTATION
+
+OBJECTIVE
+
+Transform the current PRODUCTS section into a Packaging Asset Hub that acts as a compliance-focused DAM (Digital Asset Management) system.
+
+This should not be a generic file storage solution.
+
+This should become the central location where packaging assets, artwork, compliance reviews, approvals, versions, and audit history are managed.
+
+====================================================
+NAVIGATION CHANGES
+====================================================
+
+Rename:
+
+PRODUCTS
+
+to
+
+PACKAGING
+
+Replace the current structure:
+
+- All Packages
+- Active Reviews
+- Approved
+- Rejected
+- Archived
+
+with:
+
+PACKAGING
+├── Asset Library
+├── Reviews
+├── Versions
+├── Approvals
+├── Archive
+
+Important:
+
+Do not delete existing functionality.
+
+Migrate existing Approved, Rejected, Active Reviews, and Archived functionality into filters and status views where appropriate.
+
+====================================================
+ASSET LIBRARY
+====================================================
+
+Create a centralized Packaging Asset Library.
+
+Supported file types:
+
+- PDF
+- PNG
+- JPG
+- SVG
+- AI
+- EPS
+- DOCX
+- XLSX
+
+Each asset should support:
+
+- Asset Name
+- Product Name
+- SKU
+- Brand
+- Category
+- Owner
+- Market
+- Status
+- Upload Date
+- Last Modified
+- Current Version
+
+Capabilities:
+
+- Upload
+- Search
+- Filter
+- Sort
+- Preview
+- Download
+- Archive
+
+====================================================
+AI ASSET INTELLIGENCE
+====================================================
+
+For uploaded assets automatically extract:
+
+- Product Name
+- Claims
+- Ingredients
+- Nutrition Information
+- Warnings
+- Regulatory Statements
+- Barcode Information
+- Dimensions (if available)
+
+Store extracted metadata.
+
+Make metadata searchable.
+
+====================================================
+PACKAGING REVIEWS
+====================================================
+
+Connect every asset to:
+
+- Packaging Reviews
+- Compliance Reviews
+- Risk Scores
+- Findings
+- Recommendations
+
+Allow users to view all reviews associated with an asset.
+
+====================================================
+VERSION MANAGEMENT
+====================================================
+
+Build complete artwork version control.
+
+Every asset should support:
+
+Version 1
+Version 2
+Version 3
+etc.
+
+Track:
+
+- Upload Date
+- User
+- Change Notes
+- Approval

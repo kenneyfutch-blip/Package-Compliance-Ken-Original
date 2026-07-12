@@ -30,3 +30,5 @@
 - [Load test harness & perf baseline](loadtest-perf.md) — dev-only secret-gated auth+ratelimit bypass to load-test authed API; baseline p95s + ~580 req/s single-process ceiling (scale out, not query-tune).
 - [AI Usage Analytics & Cost](ai-usage-cost.md) — real-calls-only telemetry ledger; fire-and-forget logging never breaks AI path; identity via ALS in requireAuth; org-scoped SQL aggregate endpoints; cost is rate-card estimate.
 - [Claims Compliance Engine](claims-compliance-engine.md) — claim-auditing vertical cloned from language-review; claims_review workload escalates High/Critical findings to reasoning tier (Sol).
+- [Query-key invalidation](query-key-invalidation.md) — manual invalidateQueries must use the generated `/api`-prefixed keys; wrong prefix silently refreshes nothing → "button looks broken" while POST actually succeeds.
+- [Clerk shadcn theme CSS](clerk-shadcn-theme-css.md) — @clerk/themes/shadcn.css is only an `@source` directive; import it unlayered (Tailwind v4 rejects nested @source); modal layering comes from cssLayerName + @layer order.
