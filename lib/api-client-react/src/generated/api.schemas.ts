@@ -2378,6 +2378,62 @@ export interface SystemHealth {
   stalledJobs: number;
 }
 
+export interface TrainingProgressItem {
+  itemKey: string;
+  itemType: string;
+  completed?: boolean;
+  completedAt?: string | null;
+}
+
+export interface TrainingProgressList {
+  items: TrainingProgressItem[];
+}
+
+export interface TrainingProgressInput {
+  itemKey: string;
+  itemType?: string;
+  /** Defaults to true. Pass false to clear completion. */
+  completed?: boolean;
+}
+
+export interface SupportRequest {
+  id: number;
+  subject: string;
+  category: string;
+  priority: string;
+  message: string;
+  status: string;
+  pageContext?: string | null;
+  adminResponse?: string | null;
+  requesterUserId: number;
+  requesterName?: string | null;
+  requesterEmail?: string | null;
+  resolvedByUserId?: number | null;
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupportRequestList {
+  items: SupportRequest[];
+}
+
+export interface SupportRequestInput {
+  subject: string;
+  message: string;
+  /** general | bug | feature | account | billing | training | other */
+  category?: string;
+  /** low | normal | high | urgent */
+  priority?: string;
+  pageContext?: string | null;
+}
+
+export interface SupportRequestUpdate {
+  /** open | in_progress | resolved | closed */
+  status?: string;
+  adminResponse?: string;
+}
+
 export type GetAiUsageAnalyticsParams = {
 /**
  * Inclusive start day (YYYY-MM-DD). Defaults to 29 days before `to`.
@@ -2560,5 +2616,12 @@ q: string;
  */
 types?: string;
 limit?: number;
+};
+
+export type GetAllSupportRequestsParams = {
+/**
+ * Filter by status (open, in_progress, resolved, closed).
+ */
+status?: string;
 };
 

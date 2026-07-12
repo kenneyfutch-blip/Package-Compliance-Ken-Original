@@ -46,6 +46,15 @@ import {
   Star,
   LogOut,
   UserCog,
+  GraduationCap,
+  Rocket,
+  Compass,
+  Video,
+  Lightbulb,
+  HelpCircle,
+  Sparkles,
+  LifeBuoy,
+  BookMarked,
 } from "lucide-react"
 import { useUser, useClerk } from "@clerk/react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -226,6 +235,24 @@ const SECTIONS: NavSection[] = [
       { name: "Audit Center", href: "/operations/audit", icon: History },
       { name: "Queue & Health", href: "/operations/system", icon: Activity },
       { name: "Settings", href: "/admin", icon: Settings },
+    ],
+  },
+  {
+    id: "training",
+    label: "Training & Help",
+    // Available to everyone (including suppliers); collapsed by default.
+    defaultOpen: false,
+    items: [
+      { name: "Getting Started", href: "/training/getting-started", icon: Rocket },
+      { name: "User Guide", href: "/training/user-guide", icon: BookOpen },
+      { name: "Interactive Walkthroughs", href: "/training/walkthroughs", icon: Compass },
+      { name: "Video Tutorials", href: "/training/videos", icon: Video },
+      { name: "Best Practices", href: "/training/best-practices", icon: Lightbulb },
+      { name: "Compliance Academy", href: "/training/academy", icon: GraduationCap },
+      { name: "FAQ", href: "/training/faq", icon: HelpCircle },
+      { name: "Release Notes", href: "/training/release-notes", icon: Sparkles },
+      { name: "Platform Glossary", href: "/training/glossary", icon: BookMarked },
+      { name: "Contact Support", href: "/training/support", icon: LifeBuoy },
     ],
   },
 ]
@@ -657,7 +684,7 @@ function FavoritesMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" title="Favorite tools" aria-label="Favorite tools">
+        <Button data-tour="favorites" variant="ghost" size="icon" title="Favorite tools" aria-label="Favorite tools">
           <Star className={cn("w-5 h-5", hasFavorites && "text-amber-500 fill-amber-500")} />
         </Button>
       </DropdownMenuTrigger>
@@ -774,7 +801,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden flex-col md:flex-row">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card">
+      <aside data-tour="sidebar" className="hidden md:flex flex-col w-64 border-r border-border bg-card">
         <div className="h-16 flex items-center px-6 border-b border-border bg-card">
           <Brand />
         </div>
@@ -785,7 +812,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 sm:px-6 shrink-0 z-10">
-          <div className="flex items-center gap-3 flex-1">
+          <div data-tour="global-search" className="flex items-center gap-3 flex-1">
             {/* Mobile menu */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
@@ -827,7 +854,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </Button>
             <Link href="/notifications">
-              <Button variant="ghost" size="icon" className="relative">
+              <Button data-tour="notifications" variant="ghost" size="icon" className="relative">
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />}
               </Button>

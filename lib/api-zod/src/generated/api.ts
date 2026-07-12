@@ -5537,3 +5537,146 @@ export const SearchResourcesResponse = zod.object({
 })
 
 
+/**
+ * @summary The current user's completed training items
+ */
+export const GetTrainingProgressResponse = zod.object({
+  "items": zod.array(zod.object({
+  "itemKey": zod.string(),
+  "itemType": zod.string(),
+  "completed": zod.boolean().optional(),
+  "completedAt": zod.coerce.date().nullish()
+}))
+})
+
+
+/**
+ * @summary Mark a training item complete or incomplete
+ */
+export const SetTrainingProgressBody = zod.object({
+  "itemKey": zod.string(),
+  "itemType": zod.string().optional(),
+  "completed": zod.boolean().optional().describe('Defaults to true. Pass false to clear completion.')
+})
+
+export const SetTrainingProgressResponse = zod.object({
+  "itemKey": zod.string(),
+  "itemType": zod.string(),
+  "completed": zod.boolean().optional(),
+  "completedAt": zod.coerce.date().nullish()
+})
+
+
+/**
+ * @summary The current user's own support requests
+ */
+export const GetMySupportRequestsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "subject": zod.string(),
+  "category": zod.string(),
+  "priority": zod.string(),
+  "message": zod.string(),
+  "status": zod.string(),
+  "pageContext": zod.string().nullish(),
+  "adminResponse": zod.string().nullish(),
+  "requesterUserId": zod.number(),
+  "requesterName": zod.string().nullish(),
+  "requesterEmail": zod.string().nullish(),
+  "resolvedByUserId": zod.number().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary File a new support request (notifies admins in-app)
+ */
+export const CreateSupportRequestBody = zod.object({
+  "subject": zod.string(),
+  "message": zod.string(),
+  "category": zod.string().optional().describe('general | bug | feature | account | billing | training | other'),
+  "priority": zod.string().optional().describe('low | normal | high | urgent'),
+  "pageContext": zod.string().nullish()
+})
+
+export const CreateSupportRequestResponse = zod.object({
+  "id": zod.number(),
+  "subject": zod.string(),
+  "category": zod.string(),
+  "priority": zod.string(),
+  "message": zod.string(),
+  "status": zod.string(),
+  "pageContext": zod.string().nullish(),
+  "adminResponse": zod.string().nullish(),
+  "requesterUserId": zod.number(),
+  "requesterName": zod.string().nullish(),
+  "requesterEmail": zod.string().nullish(),
+  "resolvedByUserId": zod.number().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Admin inbox — every support request in the organization
+ */
+export const GetAllSupportRequestsQueryParams = zod.object({
+  "status": zod.coerce.string().optional().describe('Filter by status (open, in_progress, resolved, closed).')
+})
+
+export const GetAllSupportRequestsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "subject": zod.string(),
+  "category": zod.string(),
+  "priority": zod.string(),
+  "message": zod.string(),
+  "status": zod.string(),
+  "pageContext": zod.string().nullish(),
+  "adminResponse": zod.string().nullish(),
+  "requesterUserId": zod.number(),
+  "requesterName": zod.string().nullish(),
+  "requesterEmail": zod.string().nullish(),
+  "resolvedByUserId": zod.number().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Admin update — change status and/or leave a response
+ */
+export const UpdateSupportRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSupportRequestBody = zod.object({
+  "status": zod.string().optional().describe('open | in_progress | resolved | closed'),
+  "adminResponse": zod.string().optional()
+})
+
+export const UpdateSupportRequestResponse = zod.object({
+  "id": zod.number(),
+  "subject": zod.string(),
+  "category": zod.string(),
+  "priority": zod.string(),
+  "message": zod.string(),
+  "status": zod.string(),
+  "pageContext": zod.string().nullish(),
+  "adminResponse": zod.string().nullish(),
+  "requesterUserId": zod.number(),
+  "requesterName": zod.string().nullish(),
+  "requesterEmail": zod.string().nullish(),
+  "resolvedByUserId": zod.number().nullish(),
+  "resolvedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+

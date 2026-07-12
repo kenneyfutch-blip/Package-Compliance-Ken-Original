@@ -64,6 +64,16 @@ import PolicyRepository from "@/pages/resources/policy-repository"
 import ResourceCenter from "@/pages/resources/resource-center"
 import SopDocuments from "@/pages/resources/sop-documents"
 import Glossary from "@/pages/resources/glossary"
+import GettingStarted from "@/pages/training/getting-started"
+import UserGuide from "@/pages/training/user-guide"
+import Walkthroughs from "@/pages/training/walkthroughs"
+import VideoTutorials from "@/pages/training/videos"
+import BestPractices from "@/pages/training/best-practices"
+import Academy from "@/pages/training/academy"
+import Faq from "@/pages/training/faq"
+import ReleaseNotes from "@/pages/training/release-notes"
+import PlatformGlossary from "@/pages/training/glossary"
+import ContactSupport from "@/pages/training/support"
 
 const queryClient = new QueryClient()
 
@@ -315,6 +325,16 @@ function AppRoutes() {
         <Route path="/resources/policies" component={PolicyRepository} />
         <Route path="/resources/sop" component={SopDocuments} />
         <Route path="/resources/glossary" component={Glossary} />
+        <Route path="/training/getting-started" component={GettingStarted} />
+        <Route path="/training/user-guide" component={UserGuide} />
+        <Route path="/training/walkthroughs" component={Walkthroughs} />
+        <Route path="/training/videos" component={VideoTutorials} />
+        <Route path="/training/best-practices" component={BestPractices} />
+        <Route path="/training/academy" component={Academy} />
+        <Route path="/training/faq" component={Faq} />
+        <Route path="/training/release-notes" component={ReleaseNotes} />
+        <Route path="/training/glossary" component={PlatformGlossary} />
+        <Route path="/training/support" component={ContactSupport} />
         <Route path="/admin" component={AdminPage} />
         {/* Dedicated account page (replaces the Clerk modal). `nest` lets Clerk
             drive its own sub-routes (/account/security, etc.). */}

@@ -27,6 +27,7 @@ import sopDocumentsRouter from "./sop-documents";
 import glossaryRouter from "./glossary";
 import resourcesRouter from "./resources";
 import usageRouter from "./usage";
+import trainingRouter from "./training";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -61,5 +62,6 @@ router.use(sopDocumentsRouter);
 router.use(glossaryRouter);
 router.use(resourcesRouter);
 router.use(usageRouter);
+router.use(trainingRouter);
 
 export default router;

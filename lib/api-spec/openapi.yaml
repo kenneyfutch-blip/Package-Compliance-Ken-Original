@@ -44,6 +44,8 @@ tags:
     description: SOP document management — uploaded standard-operating-procedure files with version history and comparison
   - name: ai-usage
     description: AI usage analytics & cost dashboard — per-request spend, volume, model/tier mix, escalation frequency, and success/error rates
+  - name: training
+    description: Training Center — per-user learning progress and in-platform support requests
 paths:
   /healthz:
     get:
@@ -3248,6 +3250,141 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ResourceSearchResponse"
+
+  /training/progress:
+    get:
+      operationId: getTrainingProgress
+      tags: [training]
+      summary: The current user's completed training items
+      responses:
+        "200":
+          description: Completed training items for the caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingProgressList"
+    put:
+      operationId: setTrainingProgress
+      tags: [training]
+      summary: Mark a training item complete or incomplete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TrainingProgressInput"
+      responses:
+        "200":
+          description: The updated progress item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrainingProgressItem"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /support/requests:
+    get:
+      operationId: getMySupportRequests
+      tags: [training]
+      summary: The current user's own support requests
+      responses:
+        "200":
+          description: The caller's support requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportRequestList"
+    post:
+      operationId: createSupportRequest
+      tags: [training]
+      summary: File a new support request (notifies admins in-app)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportRequestInput"
+      responses:
+        "201":
+          description: The created support request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportRequest"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /support/admin/requests:
+    get:
+      operationId: getAllSupportRequests
+      tags: [training]
+      summary: Admin inbox — every support request in the organization
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filter by status (open, in_progress, resolved, closed).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: All support requests in the org
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportRequestList"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /support/admin/requests/{id}:
+    patch:
+      operationId: updateSupportRequest
+      tags: [training]
+      summary: Admin update — change status and/or leave a response
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportRequestUpdate"
+      responses:
+        "200":
+          description: The updated support request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupportRequest"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 
 components:
   schemas:
@@ -8202,3 +8339,130 @@ components:
         - services
         - pendingJobs
         - stalledJobs
+
+    TrainingProgressItem:
+      type: object
+      required: [itemKey, itemType]
+      properties:
+        itemKey:
+          type: string
+        itemType:
+          type: string
+        completed:
+          type: boolean
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    TrainingProgressList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrainingProgressItem"
+
+    TrainingProgressInput:
+      type: object
+      required: [itemKey]
+      properties:
+        itemKey:
+          type: string
+        itemType:
+          type: string
+        completed:
+          type: boolean
+          description: Defaults to true. Pass false to clear completion.
+
+    SupportRequest:
+      type: object
+      required:
+        [
+          id,
+          subject,
+          category,
+          priority,
+          message,
+          status,
+          requesterUserId,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        id:
+          type: integer
+        subject:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+        message:
+          type: string
+        status:
+          type: string
+        pageContext:
+          type: string
+          nullable: true
+        adminResponse:
+          type: string
+          nullable: true
+        requesterUserId:
+          type: integer
+        requesterName:
+          type: string
+          nullable: true
+        requesterEmail:
+          type: string
+          nullable: true
+        resolvedByUserId:
+          type: integer
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    SupportRequestList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SupportRequest"
+
+    SupportRequestInput:
+      type: object
+      required: [subject, message]
+      properties:
+        subject:
+          type: string
+        message:
+          type: string
+        category:
+          type: string
+          description: general | bug | feature | account | billing | training | other
+        priority:
+          type: string
+          description: low | normal | high | urgent
+        pageContext:
+          type: string
+          nullable: true
+
+    SupportRequestUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          description: open | in_progress | resolved | closed
+        adminResponse:
+          type: string

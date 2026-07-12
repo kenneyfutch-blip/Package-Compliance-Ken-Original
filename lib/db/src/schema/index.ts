@@ -27,3 +27,5 @@ export * from "./policy_versions";
 export * from "./sop_documents";
 export * from "./ai_usage";
 export * from "./ai_usage_health";
+export * from "./training_progress";
+export * from "./support_requests";
