@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { FileText, Download, FileJson, FileSpreadsheet } from "lucide-react"
+import { servingUrl } from "@/lib/proof-utils"
 
 export default function ReportsPage() {
   const { data: reports = [], isLoading } = useListReports()
@@ -62,9 +63,21 @@ export default function ReportsPage() {
                     {new Date(r.createdAt).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" className="gap-2">
-                      <Download className="w-4 h-4" /> Download
-                    </Button>
+                    {(() => {
+                      const url = servingUrl(r.objectPath)
+                      return (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-2"
+                          disabled={!url}
+                          title={url ? "Download report" : "No file available for this report"}
+                          onClick={() => { if (url) window.open(url, "_blank", "noopener") }}
+                        >
+                          <Download className="w-4 h-4" /> Download
+                        </Button>
+                      )
+                    })()}
                   </TableCell>
                 </TableRow>
               ))}

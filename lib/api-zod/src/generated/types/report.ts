@@ -15,5 +15,7 @@ export interface Report {
   format: string;
   /** @nullable */
   summary?: string | null;
+  /** @nullable */
+  objectPath?: string | null;
   createdAt: Date;
 }

@@ -1578,6 +1578,7 @@ export const GenerateReportResponse = zod.object({
   "type": zod.string(),
   "format": zod.string(),
   "summary": zod.string().nullish(),
+  "objectPath": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -2736,6 +2737,7 @@ export const ListReportsResponseItem = zod.object({
   "type": zod.string(),
   "format": zod.string(),
   "summary": zod.string().nullish(),
+  "objectPath": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListReportsResponse = zod.array(ListReportsResponseItem)

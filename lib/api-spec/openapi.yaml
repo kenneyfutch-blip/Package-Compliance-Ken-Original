@@ -6533,6 +6533,8 @@ components:
           type: string
         summary:
           type: ["string", "null"]
+        objectPath:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
