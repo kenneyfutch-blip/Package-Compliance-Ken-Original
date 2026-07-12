@@ -1,8 +1,15 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
-import { db, aiUsageTable, aiUsageWriteHealthTable } from "@workspace/db";
-import { gte, lt } from "drizzle-orm";
+import {
+  db,
+  aiUsageTable,
+  aiUsageWriteHealthTable,
+  notificationsTable,
+  usersTable,
+} from "@workspace/db";
+import { and, eq, gte, inArray, isNotNull, lt } from "drizzle-orm";
 import { logger } from "./logger";
+import { ROLES } from "./rbac/permissions";
 import type { AiTier } from "./ai-client";
 import type { AiWorkload } from "./ai-orchestration";
 
@@ -143,6 +150,8 @@ function onWriteSuccess(): void {
   writeHealth.successes += 1;
   writeHealth.consecutiveFailures = 0;
   writeHealth.lastSuccessAt = Date.now();
+  // A healthy write clears any outstanding "logging is failing" alert.
+  maybeResolveAlert();
 }
 
 function onWriteFailure(err: unknown, workload: string): void {
@@ -172,6 +181,166 @@ function onWriteFailure(err: unknown, workload: string): void {
     lastWarnAt = now;
     failuresSinceLastWarn = 0;
   }
+
+  // Proactively alert admins once telemetry has clearly broken (not just a
+  // single transient blip).
+  maybeFireAlert();
+}
+
+// ---------------------------------------------------------------------------
+// Proactive admin alerting
+// ---------------------------------------------------------------------------
+// The warn log above only helps someone tailing logs, and the dashboard banner
+// only appears if an admin happens to open the AI Usage page. If telemetry
+// breaks at 2am nobody notices. So once writes cross a sustained-failure
+// threshold we drop a critical notification into the in-app notification center
+// for every admin, and auto-dismiss it when writes recover.
+//
+// Invariants (must match recordAiUsage's fire-and-forget contract):
+//   * This NEVER throws and is NEVER awaited by the AI path — all DB work runs
+//     in a detached, fully-guarded async task.
+//   * Fires once per incident (rate-limited by alertActive), not once per
+//     failed write.
+//   * The alert-emitting write can itself fail (the DB may be the very thing
+//     that's down); that's fine — we simply retry on the next failed write and
+//     the warn log still covers the outage.
+
+// Sustained consecutive failures before we page admins. Higher than 1 so a
+// single transient write blip never spams the notification center.
+const ALERT_THRESHOLD = 5;
+
+// Admin roles = anyone who can manage users/roles (platform admins + directors).
+// Derived from the permission taxonomy so it tracks role changes automatically.
+const ADMIN_ROLE_KEYS: string[] = ROLES.filter(
+  (r) => r.permissions === "*" || r.permissions.includes("users:write"),
+).map((r) => r.key);
+
+const ALERT_TITLE = "AI cost logging is failing";
+
+// Incident state. alertActive gates re-alerting so an ongoing outage produces
+// one notification per admin, not one per failed write. alertInFlight guards
+// against a burst of failures launching overlapping emit tasks.
+let alertActive = false;
+let alertInFlight = false;
+let alertNotificationIds: number[] = [];
+
+// Await a drizzle insert/values(...).returning(...) chain defensively: if the
+// query builder rejects (or a test stub hands back a bare Promise without
+// `.returning`), awaiting here HANDLES the rejection so it can never surface as
+// an unhandled rejection, and the caller's try/catch takes over.
+async function emitAlertNotifications(
+  rows: {
+    organizationId: number;
+    userId: number;
+    title: string;
+    message: string;
+    type: string;
+  }[],
+): Promise<number[]> {
+  const built = db.insert(notificationsTable).values(rows) as unknown as {
+    returning?: (cols: unknown) => Promise<{ id: number }[]>;
+  } & Promise<unknown>;
+  const inserted = built.returning
+    ? await built.returning({ id: notificationsTable.id })
+    : ((await built) as { id: number }[] | undefined);
+  return Array.isArray(inserted)
+    ? inserted.map((r) => r.id).filter((id): id is number => typeof id === "number")
+    : [];
+}
+
+function maybeFireAlert(): void {
+  if (alertActive || alertInFlight) return;
+  if (writeHealth.consecutiveFailures < ALERT_THRESHOLD) return;
+  alertInFlight = true;
+
+  const consecutiveFailures = writeHealth.consecutiveFailures;
+  const lastFailureMessage = writeHealth.lastFailureMessage;
+  const message =
+    `AI usage telemetry writes have failed ${consecutiveFailures} times in a row` +
+    (lastFailureMessage ? ` (last error: ${lastFailureMessage})` : "") +
+    ". Cost and usage dashboards may under-report until logging recovers.";
+
+  void (async () => {
+    try {
+      const admins = await db
+        .select({ id: usersTable.id, organizationId: usersTable.organizationId })
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.active, true),
+            isNotNull(usersTable.organizationId),
+            inArray(usersTable.roleKey, ADMIN_ROLE_KEYS),
+          ),
+        );
+
+      const rows = admins
+        .filter((a): a is { id: number; organizationId: number } =>
+          typeof a.organizationId === "number",
+        )
+        .map((a) => ({
+          organizationId: a.organizationId,
+          userId: a.id,
+          title: ALERT_TITLE,
+          message,
+          type: "critical",
+        }));
+
+      if (rows.length > 0) {
+        alertNotificationIds = await emitAlertNotifications(rows);
+      } else {
+        alertNotificationIds = [];
+      }
+      // Only mark the incident open once the notification actually landed, so a
+      // failed emit is retried on the next write failure rather than silently
+      // suppressed.
+      alertActive = true;
+    } catch (err) {
+      logger.debug(
+        { err },
+        "failed to emit AI usage telemetry alert (will retry on next failed write)",
+      );
+    } finally {
+      alertInFlight = false;
+      // Reconcile against the race where a write RECOVERED while this emit was
+      // still in flight: any onWriteSuccess that fired during emission saw
+      // alertActive === false and no-op'd, so the freshly-opened incident would
+      // otherwise stay open with unread notifications forever. writeHealth is the
+      // source of truth — consecutiveFailures === 0 means the latest write
+      // succeeded, so auto-dismiss immediately.
+      if (alertActive && writeHealth.consecutiveFailures === 0) {
+        maybeResolveAlert();
+      }
+    }
+  })();
+}
+
+function maybeResolveAlert(): void {
+  // If an emit is still in flight, defer: the emit's finally reconciliation will
+  // resolve the incident once alertActive is set. Resolving here would no-op
+  // (alertActive is still false) and lose the recovery signal.
+  if (alertInFlight) return;
+  if (!alertActive) return;
+  const ids = alertNotificationIds;
+  // Clear state synchronously so a rapid success/failure flap can't double-fire.
+  alertActive = false;
+  alertNotificationIds = [];
+  if (ids.length === 0) return;
+
+  void (async () => {
+    try {
+      // Auto-dismiss the incident notifications (mark read) now that writes are
+      // healthy again.
+      await db
+        .update(notificationsTable)
+        .set({ read: true })
+        .where(inArray(notificationsTable.id, ids));
+    } catch (err) {
+      logger.debug(
+        { err },
+        "failed to auto-dismiss recovered AI usage telemetry alert",
+      );
+    }
+  })();
 }
 
 export type AiUsageWriteHealth = {
