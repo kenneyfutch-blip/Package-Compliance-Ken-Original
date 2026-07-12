@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import { db, aiUsageTable, aiUsageWriteHealthTable } from "@workspace/db";
-import { gte } from "drizzle-orm";
+import { gte, lt } from "drizzle-orm";
 import { logger } from "./logger";
 import type { AiTier } from "./ai-client";
 import type { AiWorkload } from "./ai-orchestration";
@@ -289,6 +289,36 @@ export function initAiUsageWriteHealthHeartbeat(): void {
   }, HEALTH_FLUSH_INTERVAL_MS);
   if (typeof healthHeartbeatTimer.unref === "function") {
     healthHeartbeatTimer.unref();
+  }
+}
+
+// Rows for instances whose last heartbeat is older than this are considered
+// permanently dead and deleted. Set FAR beyond INSTANCE_STALE_MS (which only
+// governs the live aggregate's freshness window) so cleanup can never race a
+// briefly-paused-but-still-alive instance: a row this old belongs to a process
+// that has been gone for a full day and is already excluded from the aggregate.
+const HEALTH_ROW_RETENTION_MS = 24 * 60 * 60 * 1000;
+
+// Delete health rows left behind by dead instances. Each process uses a fresh
+// INSTANCE_ID, so every restart/redeploy strands its row; without this the
+// table grows unbounded (one dead row per process lifetime). Only rows far past
+// the freshness window are removed, so the live aggregate is never affected.
+// Non-throwing: like the rest of the health plumbing this must never disturb the
+// maintenance pass, so a failure (e.g. table missing pre-migration) is logged at
+// debug and reported as 0 rather than propagated.
+export async function pruneStaleAiUsageWriteHealth(now: Date): Promise<number> {
+  try {
+    const cutoff = new Date(now.getTime() - HEALTH_ROW_RETENTION_MS);
+    const res = await db
+      .delete(aiUsageWriteHealthTable)
+      .where(lt(aiUsageWriteHealthTable.updatedAt, cutoff));
+    return (res as unknown as { rowCount?: number }).rowCount ?? 0;
+  } catch (err) {
+    logger.debug(
+      { err },
+      "stale ai usage write-health prune failed (non-fatal)",
+    );
+    return 0;
   }
 }
 

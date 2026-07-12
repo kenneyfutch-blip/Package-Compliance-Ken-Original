@@ -29,6 +29,7 @@
 - [Favorite tools navigation](favorites-nav.md) — per-user starred nav tools; localStorage scoped by userId (not global); persist write-through, reload-only on user change to dodge key-change race.
 - [Load test harness & perf baseline](loadtest-perf.md) — dev-only secret-gated auth+ratelimit bypass to load-test authed API; baseline p95s + ~580 req/s single-process ceiling (scale out, not query-tune).
 - [AI Usage Analytics & Cost](ai-usage-cost.md) — real-calls-only telemetry ledger; fire-and-forget logging never breaks AI path; identity via ALS in requireAuth; org-scoped SQL aggregate endpoints; cost is rate-card estimate.
+- [Write-health row cleanup](write-health-cleanup.md) — per-instance health rows are stranded on every restart; daily maintenance prunes dead rows far past the aggregate freshness window, non-fatally.
 - [Claims Compliance Engine](claims-compliance-engine.md) — claim-auditing vertical cloned from language-review; claims_review workload escalates High/Critical findings to reasoning tier (Sol).
 - [AI legal guardrails](ai-legal-guardrails.md) — low-confidence/uncertain AI compliance findings must never be surfaced as definitive violations; enforce deterministically in code, not via prompt trust.
 - [Query-key invalidation](query-key-invalidation.md) — manual invalidateQueries must use the generated `/api`-prefixed keys; wrong prefix silently refreshes nothing → "button looks broken" while POST actually succeeds.
