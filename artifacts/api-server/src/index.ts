@@ -7,6 +7,7 @@ import { ensureEcfrIndexes } from "./lib/ecfr/engine";
 import { ensurePolicyIndexes } from "./lib/policies/engine";
 import { initMaintenance } from "./lib/maintenance/archive";
 import { backfillSupplierLinks } from "./lib/suppliers/link";
+import { initAiUsageWriteHealthHeartbeat } from "./lib/ai-usage";
 
 const rawPort = process.env["PORT"];
 
@@ -52,4 +53,9 @@ app.listen(port, (err) => {
   // Schedule data maintenance: roll cold audit into the partitioned archive,
   // enforce retention, and prune orphaned violations.
   initMaintenance();
+
+  // Heartbeat this instance's AI usage write-health into the shared table so the
+  // /ai-usage/health signal reflects fleet-wide telemetry health, not just this
+  // process. Off the AI path — never adds latency to AI responses.
+  initAiUsageWriteHealthHeartbeat();
 });

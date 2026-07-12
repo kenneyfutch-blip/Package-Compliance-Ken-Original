@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
-import { db, aiUsageTable } from "@workspace/db";
+import { db, aiUsageTable, aiUsageWriteHealthTable } from "@workspace/db";
+import { gte } from "drizzle-orm";
 import { logger } from "./logger";
 import type { AiTier } from "./ai-client";
 import type { AiWorkload } from "./ai-orchestration";
@@ -99,7 +100,23 @@ function normalizeTokens(usage: unknown): {
 // rate-limited warn-level log. This is a lightweight in-memory signal (it
 // resets on restart and is per-process); it is a health hint, not an audit
 // ledger.
+//
+// To make the signal correct when the API runs on MORE THAN ONE instance, each
+// process also periodically flushes its local counters into a shared table
+// (aiUsageWriteHealthTable, one row per instance) via a throttled heartbeat, and
+// the /ai-usage/health endpoint aggregates across all recently-seen instances.
+// The heartbeat is off the AI path, so this never adds latency to AI responses.
 const WARN_INTERVAL_MS = 60_000;
+
+// Per-process instance id: one row in the shared health table belongs to this
+// process. Restarts get a fresh id; the old row goes stale and is ignored.
+const INSTANCE_ID = `instance-${process.pid}-${randomUUID().slice(0, 8)}`;
+
+// How often each instance flushes its local counters to the shared table.
+const HEALTH_FLUSH_INTERVAL_MS = 20_000;
+// Instances whose heartbeat is older than this are treated as gone and excluded
+// from the aggregate (≈4 missed flushes of slack for GC pauses / hiccups).
+const INSTANCE_STALE_MS = 90_000;
 
 type WriteHealth = {
   successes: number;
@@ -159,6 +176,7 @@ function onWriteFailure(err: unknown, workload: string): void {
 
 export type AiUsageWriteHealth = {
   // True when the most recent write attempt succeeded (or none has run yet).
+  // Fleet-wide: false if ANY active instance is currently failing.
   healthy: boolean;
   successes: number;
   failures: number;
@@ -166,11 +184,15 @@ export type AiUsageWriteHealth = {
   lastSuccessAt: string | null;
   lastFailureAt: string | null;
   lastFailureMessage: string | null;
+  // Number of running API instances currently contributing to this signal
+  // (heartbeats seen within the freshness window). Always ≥ 1 (this process).
+  instanceCount: number;
 };
 
-// Snapshot of usage-write health for the admin AI usage dashboard. Lets admins
-// tell "cost data looks low because telemetry isn't logging" apart from "usage
-// genuinely dropped".
+// Snapshot of THIS process's usage-write health. Reflects only the local,
+// in-memory counters (resets on restart, per-process). Used as the fleet
+// aggregator's fresh view of this instance and as the fail-safe fallback when
+// the shared table is unreadable.
 export function aiUsageWriteHealthSnapshot(): AiUsageWriteHealth {
   return {
     healthy: writeHealth.consecutiveFailures === 0,
@@ -184,7 +206,176 @@ export function aiUsageWriteHealthSnapshot(): AiUsageWriteHealth {
       ? new Date(writeHealth.lastFailureAt).toISOString()
       : null,
     lastFailureMessage: writeHealth.lastFailureMessage,
+    instanceCount: 1,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Fleet-wide health (multi-instance)
+// ---------------------------------------------------------------------------
+// The in-memory counters above only describe THIS process. Once the API runs on
+// several instances, an admin polling /ai-usage/health could hit a healthy
+// process while another is silently dropping writes. To close that gap each
+// instance heartbeats its counters into a shared table and the endpoint
+// aggregates across all instances seen recently.
+
+// Per-instance view used while aggregating (numeric timestamps for easy max()).
+type InstanceHealth = {
+  successes: number;
+  failures: number;
+  consecutiveFailures: number;
+  lastSuccessMs: number | null;
+  lastFailureMs: number | null;
+  lastFailureMessage: string | null;
+};
+
+function localInstanceHealth(): InstanceHealth {
+  return {
+    successes: writeHealth.successes,
+    failures: writeHealth.failures,
+    consecutiveFailures: writeHealth.consecutiveFailures,
+    lastSuccessMs: writeHealth.lastSuccessAt,
+    lastFailureMs: writeHealth.lastFailureAt,
+    lastFailureMessage: writeHealth.lastFailureMessage,
+  };
+}
+
+// Flush this instance's current counters to its row in the shared table. Called
+// on a throttled heartbeat (never on the AI path). Non-throwing: a failed flush
+// is logged at debug and otherwise ignored so telemetry-health plumbing can
+// never disturb request handling. Note we do NOT feed a failed flush back into
+// the write-health counters (those track ai_usage ledger writes, not this
+// heartbeat) to avoid a self-referential failure loop.
+export async function flushAiUsageWriteHealth(): Promise<void> {
+  try {
+    const now = new Date();
+    const row = {
+      successes: writeHealth.successes,
+      failures: writeHealth.failures,
+      consecutiveFailures: writeHealth.consecutiveFailures,
+      lastSuccessAt: writeHealth.lastSuccessAt
+        ? new Date(writeHealth.lastSuccessAt)
+        : null,
+      lastFailureAt: writeHealth.lastFailureAt
+        ? new Date(writeHealth.lastFailureAt)
+        : null,
+      lastFailureMessage: writeHealth.lastFailureMessage,
+      updatedAt: now,
+    };
+    await db
+      .insert(aiUsageWriteHealthTable)
+      .values({ instanceId: INSTANCE_ID, ...row })
+      .onConflictDoUpdate({
+        target: aiUsageWriteHealthTable.instanceId,
+        set: row,
+      });
+  } catch (err) {
+    logger.debug({ err }, "ai usage write-health heartbeat failed (non-fatal)");
+  }
+}
+
+let healthHeartbeatTimer: ReturnType<typeof setInterval> | null = null;
+
+// Start the periodic heartbeat that flushes this instance's write-health into
+// the shared table. Idempotent; the timer is unref'd so it never keeps the
+// process alive on its own.
+export function initAiUsageWriteHealthHeartbeat(): void {
+  if (healthHeartbeatTimer) return;
+  // Publish an initial row promptly so a fresh instance shows up in the fleet
+  // aggregate without waiting a full interval.
+  void flushAiUsageWriteHealth();
+  healthHeartbeatTimer = setInterval(() => {
+    void flushAiUsageWriteHealth();
+  }, HEALTH_FLUSH_INTERVAL_MS);
+  if (typeof healthHeartbeatTimer.unref === "function") {
+    healthHeartbeatTimer.unref();
+  }
+}
+
+// Aggregate write-health across every recently-seen instance. Reads the shared
+// table, overlays THIS process's live in-memory counters (which may be ahead of
+// its last flush), and folds them into a single fleet snapshot:
+//   * successes/failures  — summed across instances
+//   * consecutiveFailures — the worst (max) across instances
+//   * healthy             — true only if NO active instance is failing
+//   * last*/message       — most recent across instances
+// Fail-safe: if the shared table can't be read, fall back to the local snapshot
+// so the endpoint never errors.
+export async function aiUsageWriteHealthFleet(): Promise<AiUsageWriteHealth> {
+  try {
+    const cutoff = new Date(Date.now() - INSTANCE_STALE_MS);
+    const rows = await db
+      .select({
+        instanceId: aiUsageWriteHealthTable.instanceId,
+        successes: aiUsageWriteHealthTable.successes,
+        failures: aiUsageWriteHealthTable.failures,
+        consecutiveFailures: aiUsageWriteHealthTable.consecutiveFailures,
+        lastSuccessAt: aiUsageWriteHealthTable.lastSuccessAt,
+        lastFailureAt: aiUsageWriteHealthTable.lastFailureAt,
+        lastFailureMessage: aiUsageWriteHealthTable.lastFailureMessage,
+      })
+      .from(aiUsageWriteHealthTable)
+      .where(gte(aiUsageWriteHealthTable.updatedAt, cutoff));
+
+    const byInstance = new Map<string, InstanceHealth>();
+    for (const r of rows) {
+      byInstance.set(r.instanceId, {
+        successes: r.successes,
+        failures: r.failures,
+        consecutiveFailures: r.consecutiveFailures,
+        lastSuccessMs: r.lastSuccessAt ? r.lastSuccessAt.getTime() : null,
+        lastFailureMs: r.lastFailureAt ? r.lastFailureAt.getTime() : null,
+        lastFailureMessage: r.lastFailureMessage,
+      });
+    }
+    // Overlay this process's live counters so the responding instance always
+    // reports its freshest state (its persisted row may lag by up to one flush).
+    byInstance.set(INSTANCE_ID, localInstanceHealth());
+
+    let successes = 0;
+    let failures = 0;
+    let maxConsecutive = 0;
+    let lastSuccessMs: number | null = null;
+    let lastFailureMs: number | null = null;
+    let lastFailureMessage: string | null = null;
+    for (const h of byInstance.values()) {
+      successes += h.successes;
+      failures += h.failures;
+      if (h.consecutiveFailures > maxConsecutive) {
+        maxConsecutive = h.consecutiveFailures;
+      }
+      if (
+        h.lastSuccessMs != null &&
+        (lastSuccessMs == null || h.lastSuccessMs > lastSuccessMs)
+      ) {
+        lastSuccessMs = h.lastSuccessMs;
+      }
+      if (
+        h.lastFailureMs != null &&
+        (lastFailureMs == null || h.lastFailureMs > lastFailureMs)
+      ) {
+        lastFailureMs = h.lastFailureMs;
+        lastFailureMessage = h.lastFailureMessage;
+      }
+    }
+
+    return {
+      healthy: maxConsecutive === 0,
+      successes,
+      failures,
+      consecutiveFailures: maxConsecutive,
+      lastSuccessAt: lastSuccessMs ? new Date(lastSuccessMs).toISOString() : null,
+      lastFailureAt: lastFailureMs ? new Date(lastFailureMs).toISOString() : null,
+      lastFailureMessage,
+      instanceCount: byInstance.size,
+    };
+  } catch (err) {
+    logger.debug(
+      { err },
+      "ai usage fleet write-health read failed; using local snapshot",
+    );
+    return aiUsageWriteHealthSnapshot();
+  }
 }
 
 // ---------------------------------------------------------------------------

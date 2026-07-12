@@ -922,7 +922,7 @@ export const getGetAiUsageHealthUrl = () => {
 }
 
 /**
- * Lightweight in-memory health of the fire-and-forget AI usage logging pipeline. Because usage writes never block the AI response, a failing write is otherwise invisible and the cost/usage figures can silently under-report. Use this to tell "cost looks low because logging is failing" apart from "usage genuinely dropped". Counters are per-process and reset on restart.
+ * Fleet-wide health of the fire-and-forget AI usage logging pipeline. Because usage writes never block the AI response, a failing write is otherwise invisible and the cost/usage figures can silently under-report. Each API instance heartbeats its write-health into a shared store, and this endpoint aggregates across all recently-seen instances so an admin hitting a healthy process still sees when another instance is dropping writes. Use it to tell "cost looks low because logging is failing" apart from "usage genuinely dropped".
  * @summary AI usage telemetry write-health signal
  */
 export const getAiUsageHealth = async ( options?: RequestInit): Promise<AiUsageHealth> => {

@@ -7,18 +7,20 @@
  */
 
 export interface AiUsageHealth {
-  /** True when the most recent usage-write attempt succeeded (or none has run yet). */
+  /** True when no active instance is currently failing usage writes (fleet-wide). */
   healthy: boolean;
-  /** Total successful usage writes since this process started. */
+  /** Total successful usage writes summed across all active instances. */
   successes: number;
-  /** Total failed usage writes since this process started. */
+  /** Total failed usage writes summed across all active instances. */
   failures: number;
-  /** Number of failed writes since the last successful one. */
+  /** Worst (max) run of consecutive failed writes across active instances. */
   consecutiveFailures: number;
-  /** ISO timestamp of the last successful write, or null. */
+  /** ISO timestamp of the most recent successful write across instances, or null. */
   lastSuccessAt: string | null;
-  /** ISO timestamp of the last failed write, or null. */
+  /** ISO timestamp of the most recent failed write across instances, or null. */
   lastFailureAt: string | null;
-  /** Message from the most recent write failure, or null. */
+  /** Message from the most recent write failure across instances, or null. */
   lastFailureMessage: string | null;
+  /** Number of running API instances currently contributing to this signal (always at least 1). */
+  instanceCount: number;
 }

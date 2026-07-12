@@ -11,7 +11,7 @@ import {
   formatExportRow,
   type Cursor,
 } from "./usage-export";
-import { aiUsageWriteHealthSnapshot } from "../lib/ai-usage";
+import { aiUsageWriteHealthFleet } from "../lib/ai-usage";
 
 const router: IRouter = Router();
 
@@ -327,15 +327,16 @@ router.get(
 
 // Telemetry write-health signal. Usage logging is fire-and-forget, so a failing
 // write is otherwise invisible and the cost/usage figures can silently
-// under-report. This endpoint exposes a lightweight in-memory health snapshot so
-// admins can tell "cost looks low because logging is failing" apart from "usage
-// genuinely dropped". Not org-scoped: it reports the process's telemetry
-// pipeline health (no tenant data), gated on the same dashboard:read permission.
+// under-report. This endpoint reports FLEET-WIDE health: it aggregates the
+// heartbeated write-health of every running API instance so an admin hitting a
+// healthy process still sees when another instance is dropping usage writes.
+// Not org-scoped: it reports the telemetry pipeline's health (no tenant data),
+// gated on the same dashboard:read permission.
 router.get(
   "/ai-usage/health",
   requirePermission("dashboard:read"),
   async (_req: Request, res: Response): Promise<void> => {
-    res.json(aiUsageWriteHealthSnapshot());
+    res.json(await aiUsageWriteHealthFleet());
   },
 );
 

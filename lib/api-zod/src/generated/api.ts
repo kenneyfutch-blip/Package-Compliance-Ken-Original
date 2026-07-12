@@ -175,17 +175,18 @@ export const ListAiUsageRequestsResponse = zod.array(ListAiUsageRequestsResponse
 
 
 /**
- * Lightweight in-memory health of the fire-and-forget AI usage logging pipeline. Because usage writes never block the AI response, a failing write is otherwise invisible and the cost/usage figures can silently under-report. Use this to tell "cost looks low because logging is failing" apart from "usage genuinely dropped". Counters are per-process and reset on restart.
+ * Fleet-wide health of the fire-and-forget AI usage logging pipeline. Because usage writes never block the AI response, a failing write is otherwise invisible and the cost/usage figures can silently under-report. Each API instance heartbeats its write-health into a shared store, and this endpoint aggregates across all recently-seen instances so an admin hitting a healthy process still sees when another instance is dropping writes. Use it to tell "cost looks low because logging is failing" apart from "usage genuinely dropped".
  * @summary AI usage telemetry write-health signal
  */
 export const GetAiUsageHealthResponse = zod.object({
-  "healthy": zod.boolean().describe('True when the most recent usage-write attempt succeeded (or none has run yet).'),
-  "successes": zod.number().describe('Total successful usage writes since this process started.'),
-  "failures": zod.number().describe('Total failed usage writes since this process started.'),
-  "consecutiveFailures": zod.number().describe('Number of failed writes since the last successful one.'),
-  "lastSuccessAt": zod.string().nullable().describe('ISO timestamp of the last successful write, or null.'),
-  "lastFailureAt": zod.string().nullable().describe('ISO timestamp of the last failed write, or null.'),
-  "lastFailureMessage": zod.string().nullable().describe('Message from the most recent write failure, or null.')
+  "healthy": zod.boolean().describe('True when no active instance is currently failing usage writes (fleet-wide).'),
+  "successes": zod.number().describe('Total successful usage writes summed across all active instances.'),
+  "failures": zod.number().describe('Total failed usage writes summed across all active instances.'),
+  "consecutiveFailures": zod.number().describe('Worst (max) run of consecutive failed writes across active instances.'),
+  "lastSuccessAt": zod.string().nullable().describe('ISO timestamp of the most recent successful write across instances, or null.'),
+  "lastFailureAt": zod.string().nullable().describe('ISO timestamp of the most recent failed write across instances, or null.'),
+  "lastFailureMessage": zod.string().nullable().describe('Message from the most recent write failure across instances, or null.'),
+  "instanceCount": zod.number().describe('Number of running API instances currently contributing to this signal (always at least 1).')
 })
 
 
