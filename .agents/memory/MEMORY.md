@@ -25,3 +25,4 @@
 - [Scale hardening — pagination & caching](scale-hardening-cache.md) — clamp-not-reject list pagination (bare arrays); process-local single-flight TTL caches for AI (org+prompt+model key) and dashboards (org+role+supplier key).
 - [Upload limit & config lockstep](upload-limits.md) — client upload-config.ts mirrors server MAX_UPLOAD_BYTES/allowlist (manual sync); validate by extension not MIME (keeps .ai/.indd); friendly UploadError, never raw HTTP.
 - [Reviewer presence & locking](reviewer-presence-locking.md) — live presence + soft advisory review locks; expiry-on-read authoritative (sweep only prunes), locks warn not block, idle/offline derived, suppliers excluded.
+- [Load test harness & perf baseline](loadtest-perf.md) — dev-only secret-gated auth+ratelimit bypass to load-test authed API; baseline p95s + ~580 req/s single-process ceiling (scale out, not query-tune).

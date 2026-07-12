@@ -1,1 +1,3 @@
 dist-test
+loadtest/.secret
+loadtest/last-run.json

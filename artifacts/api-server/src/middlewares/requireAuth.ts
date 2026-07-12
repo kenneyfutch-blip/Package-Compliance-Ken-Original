@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
-import { provisionUser } from "../lib/rbac/provision";
+import { provisionUser, loadTestContextForEmail } from "../lib/rbac/provision";
 import { setAuthContext } from "../lib/rbac/context";
+import { loadTestIdentity } from "../lib/loadtest";
 
 // Access is restricted to Dollar Tree associates. Enforced here on the server so
 // the restriction holds in production regardless of any client-side checks.
@@ -33,6 +34,43 @@ export async function requireAuth(
   res: Response,
   next: NextFunction,
 ): Promise<void> {
+  // Dev-only load-test authentication hook (see lib/loadtest.ts). Hard-disabled
+  // in production; only active when NODE_ENV!=="production" AND a load-test secret
+  // is configured, AND the request presents that exact secret. Lets the
+  // performance harness authenticate as a seeded user without a live Clerk
+  // session, reusing that user's real role, permissions, and tenant scope.
+  const loadTest = loadTestIdentity(req);
+  if (loadTest) {
+    try {
+      const ctx = await loadTestContextForEmail(loadTest.email);
+      if (!ctx) {
+        res.status(401).json({ error: "Unknown load-test user" });
+        return;
+      }
+      if (!isEmailAllowed(ctx.email)) {
+        res
+          .status(403)
+          .json({ error: "Access is restricted to Dollar Tree associates." });
+        return;
+      }
+      const authed = req as Request & {
+        userId?: string;
+        userEmail?: string | null;
+        userName?: string;
+      };
+      authed.userId = ctx.clerkUserId ?? `loadtest:${loadTest.email}`;
+      authed.userEmail = ctx.email;
+      authed.userName = ctx.name;
+      setAuthContext(req, ctx);
+      next();
+      return;
+    } catch (err) {
+      req.log?.error({ err }, "Load-test auth hook failed");
+      res.status(500).json({ error: "Failed to establish user session" });
+      return;
+    }
+  }
+
   const auth = getAuth(req);
   const userId = auth?.userId;
   if (!userId) {

@@ -254,3 +254,18 @@ export async function provisionUser(
   cache.set(clerkUserId, { ctx, expires: Date.now() + CACHE_TTL_MS });
   return ctx;
 }
+
+// Dev-only: resolve an existing seeded user's authorization context by email for
+// the load-test harness. Read-only — it never creates, links, or mutates user
+// rows, so running the harness cannot alter real data. Whether this may be used
+// at all is gated by the production-disabled load-test hook in requireAuth.
+export async function loadTestContextForEmail(
+  email: string,
+): Promise<AuthContext | null> {
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.email, email));
+  if (!user) return null;
+  return buildContext(user);
+}

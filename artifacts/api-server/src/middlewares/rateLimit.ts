@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { getAuth } from "@clerk/express";
+import { isLoadTestRequest } from "../lib/loadtest";
 
 // Rate limiting for the API. Requests are keyed by the authenticated Clerk user
 // when present (fair per-user limits behind the shared Replit/Clerk proxy) and
@@ -68,6 +69,14 @@ const UPLOAD_POST_PATHS: RegExp[] = [/^\/api\/storage\/uploads\/request-url$/];
 // stricter limiter, everything else to the general limiter. Keeping the routing
 // in one place avoids sprinkling limiter middleware across every route file.
 export function apiRateLimiter(req: Request, res: Response, next: NextFunction): void {
+  // Dev-only: the performance harness bypasses anti-abuse rate limiting so it can
+  // measure raw server throughput (production-disabled + secret-gated; see
+  // lib/loadtest.ts). The limiter itself is exercised separately.
+  if (isLoadTestRequest(req)) {
+    next();
+    return;
+  }
+
   if (req.method === "POST") {
     // This runs mounted at "/api", so req.path has that prefix stripped;
     // recombine with baseUrl to match the full "/api/..." patterns. Strip any
