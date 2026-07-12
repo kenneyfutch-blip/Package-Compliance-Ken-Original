@@ -1,4 +1,9 @@
-import { useGetReviewMetrics, useGetReviewOversight } from "@workspace/api-client-react"
+import {
+  useGetReviewMetrics,
+  useGetReviewOversight,
+  useGetReviewPresence,
+  getGetReviewPresenceQueryKey,
+} from "@workspace/api-client-react"
 import type { OversightMember } from "@workspace/api-client-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -6,6 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { initialsFor } from "@/components/review-ownership"
+import { PresenceStrip, PresenceLabel } from "@/components/presence-indicators"
 import {
   Gauge,
   Loader2,
@@ -46,14 +52,24 @@ const STATUS_META: Record<OversightMember["status"], { label: string; className:
 export default function WorkloadDashboard() {
   const { data: oversight, isLoading } = useGetReviewOversight()
   const { data: metrics } = useGetReviewMetrics()
+  const { data: presence } = useGetReviewPresence({
+    query: { refetchInterval: 10_000, queryKey: getGetReviewPresenceQueryKey() },
+  })
+  const presenceByUser = new Map((presence ?? []).map((p) => [p.userId, p]))
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Gauge className="w-7 h-7 text-primary" /> Workload & SLA
-        </h1>
-        <p className="text-muted-foreground mt-1">Review ownership, reviewer load, team capacity, and service-level performance.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Gauge className="w-7 h-7 text-primary" /> Workload & SLA
+          </h1>
+          <p className="text-muted-foreground mt-1">Review ownership, reviewer load, team capacity, and service-level performance.</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2">
+          <span className="text-xs font-medium text-muted-foreground">Online now</span>
+          <PresenceStrip presence={presence} />
+        </div>
       </div>
 
       {metrics && (
@@ -93,7 +109,15 @@ export default function WorkloadDashboard() {
                           </Avatar>
                           <div className="min-w-0 flex-1">
                             <div className="font-medium truncate">{m.name}</div>
-                            <div className="text-xs text-muted-foreground truncate">{m.teamNames.join(", ") || "No team"}</div>
+                            {presenceByUser.has(m.userId) ? (
+                              <PresenceLabel
+                                state={presenceByUser.get(m.userId)!.state}
+                                packageName={presenceByUser.get(m.userId)!.packageName}
+                                className="truncate"
+                              />
+                            ) : (
+                              <div className="text-xs text-muted-foreground truncate">{m.teamNames.join(", ") || "No team"}</div>
+                            )}
                           </div>
                           <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
                         </div>

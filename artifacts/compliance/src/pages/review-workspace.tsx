@@ -42,7 +42,10 @@ import { hasDistinctFix } from "@/lib/compliance"
 import { LanguageReviewTab } from "@/components/language-review-tab"
 import { DocumentAiTab } from "@/components/document-ai-tab"
 import { ReviewOwnership } from "@/components/review-ownership"
+import { ReviewLockBanner, useReviewLock } from "@/components/presence-indicators"
 import { AssignmentDialog } from "@/components/assignment-dialog"
+import { usePermissions } from "@/lib/access"
+import { usePresence } from "@/lib/presence"
 import { UserCog } from "lucide-react"
 
 const OCR_MAX_DIM = 1600
@@ -108,6 +111,21 @@ export default function ReviewWorkspace() {
   const [assignOpen, setAssignOpen] = React.useState(false)
   const invalidateAssignment = () =>
     qc.invalidateQueries({ queryKey: getGetPackageAssignmentQueryKey(packageId) })
+
+  // Live presence + advisory review lock. Internal reviewers only — supplier
+  // users never participate in review-ownership/presence.
+  const { me } = usePermissions()
+  const presenceEnabled = !!me && me.roleKey !== "supplier_user" && !!packageId
+  const { setFocus, clearFocus } = usePresence()
+  const { lock, isMine } = useReviewLock(packageId, {
+    enabled: presenceEnabled,
+    myUserId: me?.id ?? null,
+  })
+  React.useEffect(() => {
+    if (!presenceEnabled) return
+    setFocus("reviewing", packageId)
+    return () => clearFocus()
+  }, [presenceEnabled, packageId, setFocus, clearFocus])
 
   const [tool, setTool] = React.useState<MarkupTool>("hand")
   const [selectedId, setSelectedId] = React.useState<number | null>(null)
@@ -255,10 +273,11 @@ export default function ReviewWorkspace() {
         <ScoreTile label="Open tasks" value={String(sc.openTasks)} />
       </div>
 
-      {/* Review ownership */}
-      <div className="pb-3 shrink-0">
+      {/* Review ownership + live lock state */}
+      <div className="pb-3 shrink-0 space-y-2">
         <ReviewOwnership assignment={assignmentDetail?.assignment} variant="inline"
           className="rounded-lg border border-border bg-card px-3 py-2" />
+        {presenceEnabled && <ReviewLockBanner lock={lock} isMine={isMine} />}
       </div>
 
       {/* Split */}

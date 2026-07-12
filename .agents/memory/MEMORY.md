@@ -24,3 +24,4 @@
 - [Fast Refresh boundary crash](fast-refresh-boundary-crash.md) — "useX must be used within XProvider" white-screen in dev = a .tsx mixing component+plain-fn exports breaks HMR (context torn down); also transient during orval clean:true codegen.
 - [Scale hardening — pagination & caching](scale-hardening-cache.md) — clamp-not-reject list pagination (bare arrays); process-local single-flight TTL caches for AI (org+prompt+model key) and dashboards (org+role+supplier key).
 - [Upload limit & config lockstep](upload-limits.md) — client upload-config.ts mirrors server MAX_UPLOAD_BYTES/allowlist (manual sync); validate by extension not MIME (keeps .ai/.indd); friendly UploadError, never raw HTTP.
+- [Reviewer presence & locking](reviewer-presence-locking.md) — live presence + soft advisory review locks; expiry-on-read authoritative (sweep only prunes), locks warn not block, idle/offline derived, suppliers excluded.

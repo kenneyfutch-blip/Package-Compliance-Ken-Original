@@ -114,9 +114,63 @@ export const reviewMetricsTable = pgTable("review_metrics", {
   index("idx_review_metrics_user").on(t.assigneeUserId),
 ]);
 
+// Live reviewer presence. Exactly one row per user (unique userId), updated by a
+// client heartbeat while the reviewer is active. `state` is the client-reported
+// activity; "offline"/"idle" are DERIVED at read time from lastSeenAt staleness
+// and never persisted here (a client that stops heartbeating simply goes stale).
+// This is ephemeral live state — not seeded and safe to prune.
+export const reviewerPresenceTable = pgTable("reviewer_presence", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"),
+  userId: integer("user_id").notNull().unique(),
+  // online | reviewing | approving | commenting | idle
+  state: text("state").notNull().default("online"),
+  // The package the reviewer is currently focused on, when working a specific
+  // review (drives "currently reviewing" context); null when just online.
+  packageId: integer("package_id"),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (t) => [
+  index("idx_presence_org").on(t.organizationId),
+  index("idx_presence_last_seen").on(t.lastSeenAt),
+]);
+
+// Advisory (soft) review lock: marks that a package review is actively being
+// worked, by whom, and since when. At most one active lock per package (unique
+// packageId). The lock is kept alive by a heartbeat (lastHeartbeatAt) and
+// expires automatically once heartbeats stop (see LOCK_TTL). It warns against
+// duplicate work but never hard-blocks writes.
+export const reviewLocksTable = pgTable("review_locks", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"),
+  packageId: integer("package_id").notNull().unique(),
+  userId: integer("user_id").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  lastHeartbeatAt: timestamp("last_heartbeat_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (t) => [
+  index("idx_review_locks_org").on(t.organizationId),
+  index("idx_review_locks_user").on(t.userId),
+  index("idx_review_locks_heartbeat").on(t.lastHeartbeatAt),
+]);
+
 export type ReviewAssignmentRow = typeof reviewAssignmentsTable.$inferSelect;
 export type InsertReviewAssignment = typeof reviewAssignmentsTable.$inferInsert;
 export type ReviewHistoryRow = typeof reviewHistoryTable.$inferSelect;
 export type InsertReviewHistory = typeof reviewHistoryTable.$inferInsert;
 export type ReviewMetricRow = typeof reviewMetricsTable.$inferSelect;
 export type InsertReviewMetric = typeof reviewMetricsTable.$inferInsert;
+export type ReviewerPresenceRow = typeof reviewerPresenceTable.$inferSelect;
+export type InsertReviewerPresence = typeof reviewerPresenceTable.$inferInsert;
+export type ReviewLockRow = typeof reviewLocksTable.$inferSelect;
+export type InsertReviewLock = typeof reviewLocksTable.$inferInsert;

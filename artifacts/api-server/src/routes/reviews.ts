@@ -8,7 +8,7 @@ import {
   type ReviewAssignmentRow,
 } from "@workspace/db";
 import { and, eq, isNull } from "drizzle-orm";
-import { AssignPackageReviewBody, BulkAssignReviewsBody } from "@workspace/api-zod";
+import { AssignPackageReviewBody, BulkAssignReviewsBody, HeartbeatPresenceBody } from "@workspace/api-zod";
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 import { packageConds, canAccessPackage, opsTeamScope } from "../lib/rbac/scope";
 import { writeAudit } from "../lib/audit";
@@ -16,6 +16,13 @@ import { parsePagination } from "../lib/pagination";
 import { mapReviewAssignment, mapReviewHistory } from "../lib/mappers";
 import { assignReview, autoAssignReview, getPackageAssignment } from "../lib/reviews/engine";
 import { matchTeamName } from "../lib/reviews/routing";
+import {
+  acquireLock,
+  getLocks,
+  getPresence,
+  heartbeatPresence,
+  releaseLock,
+} from "../lib/reviews/presence";
 import {
   computeMetrics,
   computeMyWork,
@@ -480,6 +487,105 @@ router.post(
     });
 
     res.json(await assignmentDetail(organizationId, pkg));
+  },
+);
+
+// -----------------------------------------------------------------------------
+// Live reviewer presence + advisory review locking
+//
+// Presence and locks are internal review operations: supplier users are blocked
+// so one vendor can never enumerate staff (or other vendors) in the org. All
+// reads/writes are org-scoped via orgId(req).
+// -----------------------------------------------------------------------------
+
+// POST /reviews/presence — heartbeat the caller's live presence. Called on a
+// short interval by every active reviewer so dashboards can show who is online
+// and what they are working on.
+router.post(
+  "/reviews/presence",
+  requirePermission("packages:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    if (blockSupplierUsers(req, res)) return;
+    const body = HeartbeatPresenceBody.parse(req.body);
+    const ctx = getAuthContext(req);
+    // If the reviewer claims a focused package, make sure they can actually see
+    // it before advertising it as their current work.
+    let packageId: number | null = body.packageId ?? null;
+    if (packageId != null) {
+      const [pkg] = await db
+        .select()
+        .from(packagesTable)
+        .where(eq(packagesTable.id, packageId));
+      if (!pkg || !canAccessPackage(req, pkg)) packageId = null;
+    }
+    await heartbeatPresence({
+      organizationId: orgId(req),
+      userId: ctx.userId,
+      state: body.state,
+      packageId,
+    });
+    res.json({ ok: true });
+  },
+);
+
+// GET /reviews/presence — everyone currently online in the organization, with
+// their activity state and focused package.
+router.get(
+  "/reviews/presence",
+  requirePermission("packages:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    if (blockSupplierUsers(req, res)) return;
+    res.json(await getPresence(orgId(req)));
+  },
+);
+
+// GET /reviews/locks — all active advisory review locks in the organization.
+router.get(
+  "/reviews/locks",
+  requirePermission("packages:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    if (blockSupplierUsers(req, res)) return;
+    res.json(await getLocks(orgId(req)));
+  },
+);
+
+// POST /packages/:id/review-lock — acquire or refresh the advisory lock on a
+// package the caller is reviewing. Returns the current holder so the UI can warn
+// when someone else is already working it (soft lock — never hard-blocks).
+router.post(
+  "/packages/:id/review-lock",
+  requirePermission("packages:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    if (blockSupplierUsers(req, res)) return;
+    const id = requireId(req.params["id"], res);
+    if (id === null) return;
+    const pkg = await loadOwnedPackage(req, res, id);
+    if (!pkg) return;
+    const ctx = getAuthContext(req);
+    const result = await acquireLock({
+      organizationId: orgId(req),
+      packageId: id,
+      userId: ctx.userId,
+    });
+    res.json(result);
+  },
+);
+
+// DELETE /packages/:id/review-lock — release the caller's lock when they leave
+// or finish the review. Only the holder can release it.
+router.delete(
+  "/packages/:id/review-lock",
+  requirePermission("packages:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    if (blockSupplierUsers(req, res)) return;
+    const id = requireId(req.params["id"], res);
+    if (id === null) return;
+    await releaseLock({
+      organizationId: orgId(req),
+      packageId: id,
+      userId: getAuthContext(req).userId,
+    });
+    res.json({ ok: true });
   },
 );
 

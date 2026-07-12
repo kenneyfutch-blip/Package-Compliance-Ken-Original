@@ -2402,6 +2402,95 @@ paths:
               schema:
                 $ref: "#/components/schemas/BulkAssignResult"
 
+  /reviews/presence:
+    get:
+      operationId: getReviewPresence
+      tags: [reviews]
+      summary: Live presence of reviewers currently online in the organization
+      responses:
+        "200":
+          description: Presence snapshot
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReviewerPresence"
+    post:
+      operationId: heartbeatPresence
+      tags: [reviews]
+      summary: Heartbeat the signed-in reviewer's live presence and current focus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PresenceHeartbeatInput"
+      responses:
+        "200":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /reviews/locks:
+    get:
+      operationId: getReviewLocks
+      tags: [reviews]
+      summary: All active advisory review locks in the organization
+      responses:
+        "200":
+          description: Active locks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReviewLock"
+
+  /packages/{id}/review-lock:
+    post:
+      operationId: acquireReviewLock
+      tags: [reviews]
+      summary: Acquire or refresh the advisory lock while reviewing a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lock state (includes the current holder if held by someone else)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewLockResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: releaseReviewLock
+      tags: [reviews]
+      summary: Release the caller's advisory lock on a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Released
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
   /policies:
     get:
       operationId: listPolicies
@@ -3993,6 +4082,90 @@ components:
           type: string
       required:
         - error
+
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required:
+        - ok
+
+    PresenceHeartbeatInput:
+      type: object
+      properties:
+        state:
+          type: string
+          enum: [online, reviewing, approving, commenting, idle]
+        packageId:
+          type: integer
+          nullable: true
+      required:
+        - state
+
+    ReviewerPresence:
+      type: object
+      properties:
+        userId:
+          type: integer
+        name:
+          type: string
+        role:
+          type: string
+        state:
+          type: string
+          enum: [online, reviewing, approving, commenting, idle, offline]
+        packageId:
+          type: integer
+          nullable: true
+        packageName:
+          type: string
+          nullable: true
+        lastSeenAt:
+          type: string
+      required:
+        - userId
+        - name
+        - role
+        - state
+        - lastSeenAt
+
+    ReviewLock:
+      type: object
+      properties:
+        packageId:
+          type: integer
+        packageName:
+          type: string
+          nullable: true
+        userId:
+          type: integer
+        userName:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+        lastHeartbeatAt:
+          type: string
+      required:
+        - packageId
+        - userId
+        - startedAt
+        - lastHeartbeatAt
+
+    ReviewLockResult:
+      type: object
+      properties:
+        acquired:
+          type: boolean
+        heldByOther:
+          type: boolean
+        lock:
+          $ref: "#/components/schemas/ReviewLock"
+      required:
+        - acquired
+        - heldByOther
+        - lock
 
     DashboardStats:
       type: object

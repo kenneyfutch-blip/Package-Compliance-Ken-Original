@@ -1,5 +1,12 @@
 import { useState } from "react"
-import { useListPackages, useListReviewAssignments } from "@workspace/api-client-react"
+import {
+  useListPackages,
+  useListReviewAssignments,
+  useGetReviewPresence,
+  getGetReviewPresenceQueryKey,
+  useGetReviewLocks,
+  getGetReviewLocksQueryKey,
+} from "@workspace/api-client-react"
 import { Link } from "wouter"
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -7,11 +14,30 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Search, Loader2, ArrowRight, Clock } from "lucide-react"
 import { ReviewOwnership } from "@/components/review-ownership"
+import { PresenceStrip, LockIndicator } from "@/components/presence-indicators"
+import { usePermissions } from "@/lib/access"
 
 export default function ReviewsPage() {
   const [search, setSearch] = useState("")
+  const { me } = usePermissions()
+  const canSeePresence = !!me && me.roleKey !== "supplier_user"
   const { data: packages = [], isLoading } = useListPackages({ search })
   const { data: assignments = [] } = useListReviewAssignments()
+  const { data: presence } = useGetReviewPresence({
+    query: {
+      enabled: canSeePresence,
+      refetchInterval: canSeePresence ? 10_000 : false,
+      queryKey: getGetReviewPresenceQueryKey(),
+    },
+  })
+  const { data: locks = [] } = useGetReviewLocks({
+    query: {
+      enabled: canSeePresence,
+      refetchInterval: canSeePresence ? 10_000 : false,
+      queryKey: getGetReviewLocksQueryKey(),
+    },
+  })
+  const lockByPkg = new Map(locks.map((l) => [l.packageId, l]))
   const assignmentByPkg = new Map(
     assignments.map((a) => [a.assignment.packageId, a.assignment]),
   )
@@ -33,6 +59,13 @@ export default function ReviewsPage() {
           />
         </div>
       </div>
+
+      {canSeePresence && (
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+          <span className="text-sm font-medium text-muted-foreground">Reviewers online</span>
+          <PresenceStrip presence={presence} />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
@@ -64,9 +97,15 @@ export default function ReviewsPage() {
                 </div>
               </CardHeader>
               <CardContent className="flex-1 pb-3">
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
                   <Badge variant="outline">{pkg.status}</Badge>
                   <Badge variant="outline">{pkg.category}</Badge>
+                  {lockByPkg.has(pkg.id) && (
+                    <LockIndicator
+                      lock={lockByPkg.get(pkg.id)!}
+                      isMine={!!me && lockByPkg.get(pkg.id)!.userId === me.id}
+                    />
+                  )}
                 </div>
 
                 {assignmentByPkg.has(pkg.id) && (

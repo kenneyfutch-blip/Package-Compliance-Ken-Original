@@ -14,6 +14,7 @@ import { shadcn } from "@clerk/themes"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Shell } from "@/components/layout"
 import { PermissionProvider, usePermissions, NoAccess } from "@/lib/access"
+import { PresenceProvider } from "@/lib/presence"
 import { requiredPermFor } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
 import { ShieldCheck, Loader2, Lock } from "lucide-react"
@@ -325,7 +326,9 @@ function ProtectedArea() {
       <Show when="signed-in">
         <DomainGate>
           <PermissionProvider>
-            <AppRoutes />
+            <PresenceProvider>
+              <AppRoutes />
+            </PresenceProvider>
           </PermissionProvider>
         </DomainGate>
       </Show>

@@ -4316,6 +4316,81 @@ export const BulkAssignReviewsResponse = zod.object({
 
 
 /**
+ * @summary Live presence of reviewers currently online in the organization
+ */
+export const GetReviewPresenceResponseItem = zod.object({
+  "userId": zod.number(),
+  "name": zod.string(),
+  "role": zod.string(),
+  "state": zod.enum(['online', 'reviewing', 'approving', 'commenting', 'idle', 'offline']),
+  "packageId": zod.number().nullish(),
+  "packageName": zod.string().nullish(),
+  "lastSeenAt": zod.string()
+})
+export const GetReviewPresenceResponse = zod.array(GetReviewPresenceResponseItem)
+
+
+/**
+ * @summary Heartbeat the signed-in reviewer's live presence and current focus
+ */
+export const HeartbeatPresenceBody = zod.object({
+  "state": zod.enum(['online', 'reviewing', 'approving', 'commenting', 'idle']),
+  "packageId": zod.number().nullish()
+})
+
+export const HeartbeatPresenceResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary All active advisory review locks in the organization
+ */
+export const GetReviewLocksResponseItem = zod.object({
+  "packageId": zod.number(),
+  "packageName": zod.string().nullish(),
+  "userId": zod.number(),
+  "userName": zod.string().nullish(),
+  "startedAt": zod.string(),
+  "lastHeartbeatAt": zod.string()
+})
+export const GetReviewLocksResponse = zod.array(GetReviewLocksResponseItem)
+
+
+/**
+ * @summary Acquire or refresh the advisory lock while reviewing a package
+ */
+export const AcquireReviewLockParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AcquireReviewLockResponse = zod.object({
+  "acquired": zod.boolean(),
+  "heldByOther": zod.boolean(),
+  "lock": zod.object({
+  "packageId": zod.number(),
+  "packageName": zod.string().nullish(),
+  "userId": zod.number(),
+  "userName": zod.string().nullish(),
+  "startedAt": zod.string(),
+  "lastHeartbeatAt": zod.string()
+})
+})
+
+
+/**
+ * @summary Release the caller's advisory lock on a package
+ */
+export const ReleaseReviewLockParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReleaseReviewLockResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
  * @summary List internal policies and standards
  */
 export const ListPoliciesQueryParams = zod.object({

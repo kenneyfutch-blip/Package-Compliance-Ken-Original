@@ -430,6 +430,63 @@ export interface ApiError {
   error: string;
 }
 
+export interface OkResponse {
+  ok: boolean;
+}
+
+export type PresenceHeartbeatInputState = typeof PresenceHeartbeatInputState[keyof typeof PresenceHeartbeatInputState];
+
+
+export const PresenceHeartbeatInputState = {
+  online: 'online',
+  reviewing: 'reviewing',
+  approving: 'approving',
+  commenting: 'commenting',
+  idle: 'idle',
+} as const;
+
+export interface PresenceHeartbeatInput {
+  state: PresenceHeartbeatInputState;
+  packageId?: number | null;
+}
+
+export type ReviewerPresenceState = typeof ReviewerPresenceState[keyof typeof ReviewerPresenceState];
+
+
+export const ReviewerPresenceState = {
+  online: 'online',
+  reviewing: 'reviewing',
+  approving: 'approving',
+  commenting: 'commenting',
+  idle: 'idle',
+  offline: 'offline',
+} as const;
+
+export interface ReviewerPresence {
+  userId: number;
+  name: string;
+  role: string;
+  state: ReviewerPresenceState;
+  packageId?: number | null;
+  packageName?: string | null;
+  lastSeenAt: string;
+}
+
+export interface ReviewLock {
+  packageId: number;
+  packageName?: string | null;
+  userId: number;
+  userName?: string | null;
+  startedAt: string;
+  lastHeartbeatAt: string;
+}
+
+export interface ReviewLockResult {
+  acquired: boolean;
+  heldByOther: boolean;
+  lock: ReviewLock;
+}
+
 export interface DashboardStats {
   reviewedToday: number;
   inReview: number;

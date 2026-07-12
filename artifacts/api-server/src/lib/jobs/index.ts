@@ -9,6 +9,11 @@ import {
   ECFR_SYNC_INTERVAL_MS,
   runEcfrSync,
 } from "../ecfr/sync";
+import {
+  PRESENCE_SWEEP_TYPE,
+  PRESENCE_SWEEP_INTERVAL_MS,
+  sweepPresenceAndLocks,
+} from "../reviews/presence";
 import { ensurePendingJob, ensureScheduledJob } from "./queue";
 import { registerJobHandler, startJobWorker } from "./worker";
 
@@ -46,6 +51,18 @@ export async function initJobs(): Promise<void> {
     };
   });
 
+  // Housekeeping sweep that prunes aged-out reviewer presence and expired
+  // advisory review locks. Read paths are already staleness-guarded; this only
+  // bounds table growth. Re-enqueues its own next run like the other sweeps.
+  registerJobHandler(PRESENCE_SWEEP_TYPE, async () => {
+    const result = await sweepPresenceAndLocks();
+    await ensurePendingJob({
+      type: PRESENCE_SWEEP_TYPE,
+      runAt: new Date(Date.now() + PRESENCE_SWEEP_INTERVAL_MS),
+    });
+    return result;
+  });
+
   startJobWorker();
 
   try {
@@ -63,5 +80,14 @@ export async function initJobs(): Promise<void> {
     });
   } catch (err) {
     logger.error({ err }, "Failed to schedule eCFR sync");
+  }
+
+  try {
+    await ensureScheduledJob({
+      type: PRESENCE_SWEEP_TYPE,
+      runAt: new Date(Date.now() + PRESENCE_SWEEP_INTERVAL_MS),
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to schedule presence sweep");
   }
 }

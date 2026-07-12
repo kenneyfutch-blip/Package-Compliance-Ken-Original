@@ -88,6 +88,7 @@ import type {
   Notification,
   OcrExtractInput,
   OcrExtractResult,
+  OkResponse,
   OversightResponse,
   Package,
   PackageDetail,
@@ -102,6 +103,7 @@ import type {
   PolicyUpdate,
   PolicyVersion,
   PolicyVersionInput,
+  PresenceHeartbeatInput,
   ProofExport,
   QueueMetrics,
   RecommendReviewAssigneeParams,
@@ -114,10 +116,13 @@ import type {
   ResourceSearchResponse,
   ReviewAssignInput,
   ReviewAssignmentDetail,
+  ReviewLock,
+  ReviewLockResult,
   ReviewMetricsSummary,
   ReviewTask,
   ReviewTaskInput,
   ReviewTaskUpdate,
+  ReviewerPresence,
   RoleInfo,
   SearchEcfrParams,
   SearchPoliciesParams,
@@ -7649,6 +7654,373 @@ export const useBulkAssignReviews = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getBulkAssignReviewsMutationOptions(options));
+    }
+
+export const getGetReviewPresenceUrl = () => {
+
+
+
+
+  return `/api/reviews/presence`
+}
+
+/**
+ * @summary Live presence of reviewers currently online in the organization
+ */
+export const getReviewPresence = async ( options?: RequestInit): Promise<ReviewerPresence[]> => {
+
+  return customFetch<ReviewerPresence[]>(getGetReviewPresenceUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReviewPresenceQueryKey = () => {
+    return [
+    `/api/reviews/presence`
+    ] as const;
+    }
+
+
+export const getGetReviewPresenceQueryOptions = <TData = Awaited<ReturnType<typeof getReviewPresence>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewPresence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReviewPresenceQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewPresence>>> = ({ signal }) => getReviewPresence({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReviewPresence>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReviewPresenceQueryResult = NonNullable<Awaited<ReturnType<typeof getReviewPresence>>>
+export type GetReviewPresenceQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Live presence of reviewers currently online in the organization
+ */
+
+export function useGetReviewPresence<TData = Awaited<ReturnType<typeof getReviewPresence>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewPresence>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReviewPresenceQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getHeartbeatPresenceUrl = () => {
+
+
+
+
+  return `/api/reviews/presence`
+}
+
+/**
+ * @summary Heartbeat the signed-in reviewer's live presence and current focus
+ */
+export const heartbeatPresence = async (presenceHeartbeatInput: PresenceHeartbeatInput, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getHeartbeatPresenceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(presenceHeartbeatInput)
+  }
+);}
+
+
+
+
+
+export const getHeartbeatPresenceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof heartbeatPresence>>, TError,{data: BodyType<PresenceHeartbeatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof heartbeatPresence>>, TError,{data: BodyType<PresenceHeartbeatInput>}, TContext> => {
+
+const mutationKey = ['heartbeatPresence'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof heartbeatPresence>>, {data: BodyType<PresenceHeartbeatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  heartbeatPresence(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HeartbeatPresenceMutationResult = NonNullable<Awaited<ReturnType<typeof heartbeatPresence>>>
+    export type HeartbeatPresenceMutationBody = BodyType<PresenceHeartbeatInput>
+    export type HeartbeatPresenceMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Heartbeat the signed-in reviewer's live presence and current focus
+ */
+export const useHeartbeatPresence = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof heartbeatPresence>>, TError,{data: BodyType<PresenceHeartbeatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof heartbeatPresence>>,
+        TError,
+        {data: BodyType<PresenceHeartbeatInput>},
+        TContext
+      > => {
+      return useMutation(getHeartbeatPresenceMutationOptions(options));
+    }
+
+export const getGetReviewLocksUrl = () => {
+
+
+
+
+  return `/api/reviews/locks`
+}
+
+/**
+ * @summary All active advisory review locks in the organization
+ */
+export const getReviewLocks = async ( options?: RequestInit): Promise<ReviewLock[]> => {
+
+  return customFetch<ReviewLock[]>(getGetReviewLocksUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetReviewLocksQueryKey = () => {
+    return [
+    `/api/reviews/locks`
+    ] as const;
+    }
+
+
+export const getGetReviewLocksQueryOptions = <TData = Awaited<ReturnType<typeof getReviewLocks>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewLocks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetReviewLocksQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getReviewLocks>>> = ({ signal }) => getReviewLocks({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getReviewLocks>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetReviewLocksQueryResult = NonNullable<Awaited<ReturnType<typeof getReviewLocks>>>
+export type GetReviewLocksQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary All active advisory review locks in the organization
+ */
+
+export function useGetReviewLocks<TData = Awaited<ReturnType<typeof getReviewLocks>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getReviewLocks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetReviewLocksQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getAcquireReviewLockUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/review-lock`
+}
+
+/**
+ * @summary Acquire or refresh the advisory lock while reviewing a package
+ */
+export const acquireReviewLock = async (id: number, options?: RequestInit): Promise<ReviewLockResult> => {
+
+  return customFetch<ReviewLockResult>(getAcquireReviewLockUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getAcquireReviewLockMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acquireReviewLock>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof acquireReviewLock>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['acquireReviewLock'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof acquireReviewLock>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  acquireReviewLock(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AcquireReviewLockMutationResult = NonNullable<Awaited<ReturnType<typeof acquireReviewLock>>>
+
+    export type AcquireReviewLockMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Acquire or refresh the advisory lock while reviewing a package
+ */
+export const useAcquireReviewLock = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof acquireReviewLock>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof acquireReviewLock>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getAcquireReviewLockMutationOptions(options));
+    }
+
+export const getReleaseReviewLockUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/review-lock`
+}
+
+/**
+ * @summary Release the caller's advisory lock on a package
+ */
+export const releaseReviewLock = async (id: number, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getReleaseReviewLockUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getReleaseReviewLockMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof releaseReviewLock>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof releaseReviewLock>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['releaseReviewLock'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof releaseReviewLock>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  releaseReviewLock(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReleaseReviewLockMutationResult = NonNullable<Awaited<ReturnType<typeof releaseReviewLock>>>
+
+    export type ReleaseReviewLockMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Release the caller's advisory lock on a package
+ */
+export const useReleaseReviewLock = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof releaseReviewLock>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof releaseReviewLock>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getReleaseReviewLockMutationOptions(options));
     }
 
 export const getListPoliciesUrl = (params?: ListPoliciesParams,) => {
