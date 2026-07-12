@@ -23,15 +23,15 @@ const FEATURES = [
 
 export default function Landing() {
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-[#07231A] text-white">
+    <div className="relative min-h-[100dvh] overflow-hidden bg-[#0A1533] text-white">
       {/* Ambient glow */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-[#00A651]/30 blur-[120px]" />
-      <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-emerald-500/10 blur-[100px]" />
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-[#1F47FF]/30 blur-[120px]" />
+      <div className="pointer-events-none absolute bottom-0 right-0 h-96 w-96 rounded-full bg-cyan-500/10 blur-[100px]" />
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-6xl flex-col px-6">
         <header className="flex items-center justify-between py-6">
           <div className="flex items-center gap-2 font-bold tracking-tight">
-            <ShieldCheck className="h-6 w-6 text-[#3FCE7C]" />
+            <ShieldCheck className="h-6 w-6 text-[#5B7BFF]" />
             <span>Packaging Compliance AI</span>
           </div>
           <Link
@@ -45,12 +45,12 @@ export default function Landing() {
         <main className="flex flex-1 flex-col justify-center py-12">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#5B7BFF]" />
               Dollar Tree Compliance Platform
             </div>
             <h1 className="mt-6 text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
               Ship compliant packaging,
-              <span className="block bg-gradient-to-r from-[#3FCE7C] to-emerald-300 bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-[#7B93FF] to-cyan-300 bg-clip-text text-transparent">
                 faster and with confidence.
               </span>
             </h1>
@@ -61,7 +61,7 @@ export default function Landing() {
             <div className="mt-8 flex flex-wrap items-center gap-4">
               <Link
                 href="/sign-in"
-                className="inline-flex items-center gap-2 rounded-lg bg-[#00A651] px-6 py-3 font-semibold text-white shadow-lg shadow-[#00A651]/30 transition-transform hover:scale-[1.02]"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#1F47FF] px-6 py-3 font-semibold text-white shadow-lg shadow-[#1F47FF]/30 transition-transform hover:scale-[1.02]"
               >
                 Sign in to continue
                 <ArrowRight className="h-4 w-4" />
@@ -78,7 +78,7 @@ export default function Landing() {
                   key={f.title}
                   className="rounded-xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#00A651]/20 text-[#3FCE7C]">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1F47FF]/20 text-[#7B93FF]">
                     <Icon className="h-5 w-5" />
                   </div>
                   <h3 className="mt-4 font-semibold">{f.title}</h3>
