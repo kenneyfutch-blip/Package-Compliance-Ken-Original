@@ -1,0 +1,224 @@
+PROMPT AUDIT & OPTIMIZATION REVIEW
+
+Do NOT replace any existing prompts.
+
+Do NOT rebuild any existing AI workflows.
+
+Instead, review the current AI Package Review prompt and determine whether it is comprehensive enough to support enterprise-grade packaging compliance analysis.
+
+Act as:
+
+- Senior Packaging Compliance Officer
+- FDA Labeling Consultant
+- FTC Claims Compliance Expert
+- Packaging Regulatory Affairs Director
+- AI Prompt Engineering Specialist
+
+Your task is to audit the existing Package Review AI instructions.
+
+=================================================
+
+EVALUATE WHETHER THE CURRENT PROMPT CLEARLY DEFINES:
+
+1. The role of the AI
+
+Can the model clearly understand:
+
+- What it is
+- Why it exists
+- What its primary objective is
+
+If not, explain gaps.
+
+=================================================
+
+2. ANALYSIS SCOPE
+
+Determine if the prompt instructs the AI to review:
+
+- Packaging text
+- Product claims
+- Warnings
+- Ingredient declarations
+- Nutrition facts
+- Barcode information
+- Packaging structure
+- Dimensions
+- Regulatory statements
+- Safety disclosures
+- Country-specific requirements
+- Retailer requirements
+
+Identify missing review areas.
+
+=================================================
+
+3. CLAIM REVIEW CAPABILITIES
+
+Determine whether the AI is instructed to evaluate claims such as:
+
+- Natural
+- Organic
+- Healthy
+- Sustainable
+- Eco-Friendly
+- Recyclable
+- Compostable
+- Non-GMO
+- Gluten-Free
+- Sugar-Free
+
+Assess whether claim substantiation risk is properly addressed.
+
+=================================================
+
+4. RISK ASSESSMENT LOGIC
+
+Verify whether the AI has:
+
+- Risk scoring guidance
+- Severity classifications
+- Compliance categories
+- Confidence scoring
+- Escalation logic
+
+Identify weaknesses.
+
+=================================================
+
+5. OUTPUT QUALITY
+
+Verify that the prompt forces the AI to return:
+
+- Structured findings
+- Severity level
+- Risk category
+- Explanation
+- Reasoning
+- Recommendation
+- Compliance impact
+
+Determine whether outputs will be actionable for business users.
+
+=================================================
+
+6. HALLUCINATION PROTECTION
+
+Verify the prompt instructs the AI:
+
+- Not to invent regulations
+- Not to declare violations without evidence
+- To indicate uncertainty
+- To recommend human review where appropriate
+
+Identify legal-risk areas.
+
+=================================================
+
+7. COMPLIANCE INTELLIGENCE
+
+Determine whether the prompt teaches the AI to analyze:
+
+FDA Requirements
+
+FTC Marketing Claims
+
+FTC Green Guides
+
+USDA Organic Claims
+
+Retail Readiness
+
+Consumer Safety Risks
+
+Packaging Best Practices
+
+Identify missing regulatory frameworks.
+
+=================================================
+
+8. PACKAGING INDUSTRY READINESS
+
+Will the current prompt perform effectively for:
+
+Food Packaging
+
+Supplements
+
+Consumer Packaged Goods
+
+Beauty Products
+
+Household Products
+
+Private Label Brands
+
+Enterprise Manufacturers
+
+Provide readiness assessment.
+
+=================================================
+
+9. EDGE CASE TESTING
+
+Evaluate whether the prompt can correctly handle:
+
+Missing information
+
+Incomplete labels
+
+Poor OCR extraction
+
+Conflicting claims
+
+Multiple claims
+
+Multi-language packaging
+
+International packaging
+
+Retail-specific requirements
+
+List weaknesses.
+
+=================================================
+
+10. FINAL RATING
+
+Score the existing prompt:
+
+Role Definition Score /100
+
+Compliance Coverage Score /100
+
+Risk Detection Score /100
+
+Claim Analysis Score /100
+
+Output Quality Score /100
+
+Hallucination Protection Score /100
+
+Enterprise Readiness Score /100
+
+Overall Prompt Score /100
+
+=================================================
+
+IMPORTANT
+
+Do NOT automatically rewrite anything.
+
+Only identify:
+
+- Gaps
+- Risks
+- Blind spots
+- Missing instructions
+- Opportunities to improve accuracy
+
+Then provide a section called:
+
+"Recommended Additions"
+
+Only include additions that would materially improve compliance review accuracy while preserving the existing implementation.
