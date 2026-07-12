@@ -592,16 +592,16 @@ function NavContent({
 
 function Brand() {
   return (
-    <Link href="/" className="flex items-center gap-2.5 tracking-tight min-w-0">
+    <Link href="/" className="flex items-center gap-2 tracking-tight min-w-0">
       <span className="flex items-center justify-center rounded-md bg-white p-1 ring-1 ring-black/5 shrink-0">
         <img
           src={`${import.meta.env.BASE_URL}dollar-tree-logo.png`}
           alt="Dollar Tree"
-          className="h-12 w-auto object-contain"
+          className="h-10 w-auto object-contain"
         />
       </span>
-      <span className="flex flex-col leading-none border-l border-border pl-2.5 min-w-0">
-        <span className="text-base font-bold text-foreground truncate">Compliance AI</span>
+      <span className="flex flex-col leading-none border-l border-border pl-2 min-w-0">
+        <span className="text-sm font-bold text-foreground truncate">Compliance AI</span>
         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground truncate">
           Packaging Review
         </span>
@@ -812,7 +812,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen w-full bg-background overflow-hidden flex-col md:flex-row">
       {/* Desktop Sidebar */}
       <aside data-tour="sidebar" className="hidden md:flex flex-col w-64 border-r border-border bg-card">
-        <div className="h-16 flex items-center px-6 border-b border-border bg-card">
+        <div className="h-16 flex items-center px-4 border-b border-border bg-card">
           <Brand />
         </div>
         <NavContent excludeSectionIds={TOP_SECTION_IDS} />

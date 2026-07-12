@@ -112,7 +112,12 @@ export default function AccountPage() {
               </h2>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {group.links.map((link) => (
-                  <Link key={link.path} href={link.path}>
+                  // This page renders inside a `nest`ed /account route (so Clerk
+                  // can own its sub-routes). A plain "/admin/..." href would
+                  // resolve relative to /account and go nowhere — the `~` prefix
+                  // escapes the nest, and we re-add BASE_PATH since `~` also
+                  // strips the app's top-level router base.
+                  <Link key={link.path} href={`~${BASE_PATH}${link.path}`}>
                     <Card className="cursor-pointer transition-all hover:border-primary/50 hover:shadow-sm">
                       <CardContent className="p-4 flex items-center gap-3">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
