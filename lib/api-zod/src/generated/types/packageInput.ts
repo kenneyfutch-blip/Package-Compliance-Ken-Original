@@ -7,15 +7,11 @@
  */
 
 export interface PackageInput {
-  /** @minLength 1 */
-  sku: string;
+  sku?: string;
   upc?: string;
-  /** @minLength 1 */
-  name: string;
-  /** @minLength 1 */
-  brand: string;
-  /** @minLength 1 */
-  vendor: string;
+  name?: string;
+  brand?: string;
+  vendor?: string;
   category?: string;
   country?: string;
   netWeight?: string;

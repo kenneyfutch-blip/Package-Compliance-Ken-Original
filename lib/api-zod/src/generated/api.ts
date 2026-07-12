@@ -259,18 +259,12 @@ export const ListPackagesResponse = zod.array(ListPackagesResponseItem)
 /**
  * @summary Upload a package for review (auto-runs AI analysis when artwork text is provided)
  */
-
-
-
-
-
-
 export const CreatePackageBody = zod.object({
-  "sku": zod.string().min(1),
+  "sku": zod.string().optional(),
   "upc": zod.string().optional(),
-  "name": zod.string().min(1),
-  "brand": zod.string().min(1),
-  "vendor": zod.string().min(1),
+  "name": zod.string().optional(),
+  "brand": zod.string().optional(),
+  "vendor": zod.string().optional(),
   "category": zod.string().optional(),
   "country": zod.string().optional(),
   "netWeight": zod.string().optional(),

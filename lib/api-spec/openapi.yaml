@@ -5603,18 +5603,14 @@ components:
       properties:
         sku:
           type: string
-          minLength: 1
         upc:
           type: string
         name:
           type: string
-          minLength: 1
         brand:
           type: string
-          minLength: 1
         vendor:
           type: string
-          minLength: 1
         category:
           type: string
         country:
@@ -5636,11 +5632,6 @@ components:
         allowDuplicate:
           type: boolean
           description: When true, bypass the duplicate SKU/UPC guard and create anyway.
-      required:
-        - sku
-        - name
-        - brand
-        - vendor
 
     DuplicatePackageCheck:
       type: object

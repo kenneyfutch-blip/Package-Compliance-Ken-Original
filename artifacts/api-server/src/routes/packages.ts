@@ -290,8 +290,9 @@ router.post(
     if (!data.allowDuplicate) {
       const duplicates = await findDuplicatePackages(req, data.sku, data.upc);
       if (duplicates.length > 0) {
+        const submittedSku = (data.sku ?? "").trim().toLowerCase();
         const skuMatch = duplicates.some(
-          (d) => d.sku.trim().toLowerCase() === data.sku.trim().toLowerCase(),
+          (d) => d.sku.trim().toLowerCase() === submittedSku,
         );
         res.status(409).json({
           error: `A package with this ${skuMatch ? "SKU" : "UPC"} already exists.`,
@@ -308,11 +309,14 @@ router.post(
       .insert(packagesTable)
       .values({
         organizationId,
-        sku: data.sku,
+        // Metadata is optional at upload time (partial/in-progress artwork,
+        // auditing). NOT NULL columns fall back to empty strings; reviewers can
+        // fill identifiers in later.
+        sku: data.sku ?? "",
         upc: data.upc ?? null,
-        name: data.name,
-        brand: data.brand,
-        vendor: data.vendor,
+        name: data.name ?? "",
+        brand: data.brand ?? "",
+        vendor: data.vendor ?? "",
         supplierId,
         category: data.category ?? "Uncategorized",
         country: data.country ?? null,

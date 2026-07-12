@@ -57,12 +57,15 @@ function fileToDownscaledDataUrl(file: File): Promise<string> {
   })
 }
 
+// Metadata is optional so specialists can upload & analyze in-progress or
+// partial artwork (also enabling auditing of existing packages). The AI runs on
+// whatever text is available; any blank identifiers can be filled in later.
 const uploadSchema = z.object({
-  sku: z.string().min(1, "SKU is required"),
+  sku: z.string().optional(),
   upc: z.string().optional(),
-  name: z.string().min(1, "Product name is required"),
-  brand: z.string().min(1, "Brand is required"),
-  vendor: z.string().min(1, "Vendor is required"),
+  name: z.string().optional(),
+  brand: z.string().optional(),
+  vendor: z.string().optional(),
   category: z.string().optional(),
   country: z.string().optional(),
   netWeight: z.string().optional(),
@@ -385,8 +388,11 @@ export default function UploadPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="sku">SKU <span className="text-destructive">*</span></Label>
-                  <Input id="sku" {...register("sku")} className={errors.sku ? "border-destructive" : ""} />
+                  <div className="flex items-center justify-between gap-2">
+                    <Label htmlFor="sku">SKU</Label>
+                    <ReviewHint field="sku" />
+                  </div>
+                  <Input id="sku" {...register("sku")} className={reviewClass("sku")} />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
@@ -398,7 +404,7 @@ export default function UploadPage() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="name">Product Name <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="name">Product Name</Label>
                   <ReviewHint field="name" />
                 </div>
                 <Input id="name" {...register("name")} className={errors.name ? "border-destructive" : reviewClass("name")} />
@@ -406,14 +412,14 @@ export default function UploadPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="brand">Brand <span className="text-destructive">*</span></Label>
+                    <Label htmlFor="brand">Brand</Label>
                     <ReviewHint field="brand" />
                   </div>
                   <Input id="brand" {...register("brand")} className={errors.brand ? "border-destructive" : reviewClass("brand")} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="vendor">Vendor <span className="text-destructive">*</span></Label>
-                  <Input id="vendor" {...register("vendor")} className={errors.vendor ? "border-destructive" : ""} />
+                  <Label htmlFor="vendor">Vendor</Label>
+                  <Input id="vendor" {...register("vendor")} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
