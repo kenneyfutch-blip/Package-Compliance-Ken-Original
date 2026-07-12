@@ -13,6 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Search, BookOpen, ShieldCheck, CalendarClock, Sparkles, ArrowLeft } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { usePermissions } from "@/lib/access"
+import { PolicyCreateDialog } from "@/components/policy-create-dialog"
 
 function severityTone(sev: string): string {
   if (sev === "critical") return "bg-destructive/10 text-destructive"
@@ -75,6 +77,8 @@ function PolicyCard({ p, highlight }: { p: Row; highlight?: boolean }) {
 }
 
 export default function PolicyRepository() {
+  const { has } = usePermissions()
+  const canWrite = has("policies:write")
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState<string>("all")
 
@@ -133,14 +137,17 @@ export default function PolicyRepository() {
       <Link href="/resources" className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
         <ArrowLeft className="h-4 w-4" /> Resource Center
       </Link>
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <BookOpen className="w-7 h-7 text-primary" />
-          Policy Repository
-        </h1>
-        <p className="text-muted-foreground mt-1 max-w-2xl">
-          Browse and search your organization&apos;s internal standards. These policies are enforced automatically during compliance reviews.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <BookOpen className="w-7 h-7 text-primary" />
+            Policy Repository
+          </h1>
+          <p className="text-muted-foreground mt-1 max-w-2xl">
+            Browse and search your organization&apos;s internal standards. These policies are enforced automatically during compliance reviews.
+          </p>
+        </div>
+        {canWrite && <PolicyCreateDialog triggerLabel="Add policy" />}
       </div>
 
       <div className="relative max-w-xl">
@@ -180,7 +187,12 @@ export default function PolicyRepository() {
           <div className="p-8 text-center text-muted-foreground">Loading policies…</div>
         ) : rows.length === 0 ? (
           <div className="p-8 text-center bg-card rounded-xl border border-dashed text-muted-foreground">
-            {isSearching ? "No policies matched your search." : "No active policies to display."}
+            <p>{isSearching ? "No policies matched your search." : "No active policies to display."}</p>
+            {!isSearching && canWrite && (
+              <div className="mt-4 flex justify-center">
+                <PolicyCreateDialog triggerLabel="Add your first policy" triggerVariant="outline" />
+              </div>
+            )}
           </div>
         ) : (
           rows.map((p) => (

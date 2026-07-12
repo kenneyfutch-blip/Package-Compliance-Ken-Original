@@ -2,7 +2,6 @@ import { useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   useListPolicies,
-  useCreatePolicy,
   useUpdatePolicy,
   useReprocessPolicy,
   useListPolicyVersions,
@@ -11,7 +10,6 @@ import {
   getListPolicyVersionsQueryKey,
   type Policy,
 } from "@workspace/api-client-react"
-import { useUpload } from "@workspace/object-storage-web"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,7 +23,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   Select,
@@ -43,169 +40,27 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  Plus,
   Search,
-  UploadCloud,
   Loader2,
   FileText,
   History,
   RefreshCw,
   Archive,
   ShieldCheck,
-  X,
 } from "lucide-react"
-
-const CATEGORIES = [
-  "Packaging",
-  "Brand",
-  "Supplier",
-  "Legal",
-  "Artwork",
-  "Marketing",
-  "Safety",
-  "Labeling",
-  "Uncategorized",
-]
-const SEVERITIES = ["critical", "major", "minor", "informational"]
-const STATUSES = ["draft", "active", "archived"]
-
-type Draft = {
-  name: string
-  category: string
-  policyType: string
-  department: string
-  owner: string
-  source: string
-  summary: string
-  status: string
-  defaultSeverity: string
-  tags: string
-  effectiveDate: string
-  expirationDate: string
-}
-
-const EMPTY_DRAFT: Draft = {
-  name: "",
-  category: "Packaging",
-  policyType: "",
-  department: "",
-  owner: "",
-  source: "",
-  summary: "",
-  status: "active",
-  defaultSeverity: "major",
-  tags: "",
-  effectiveDate: "",
-  expirationDate: "",
-}
+import {
+  PolicyForm,
+  PolicyCreateDialog,
+  STATUSES,
+  EMPTY_DRAFT,
+  draftToPayload,
+  type Draft,
+} from "@/components/policy-create-dialog"
 
 function statusVariant(status: string): string {
   if (status === "active") return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
   if (status === "draft") return "bg-amber-500/10 text-amber-600 dark:text-amber-400"
   return "bg-muted text-muted-foreground"
-}
-
-function draftToPayload(d: Draft) {
-  const trimmedTags = d.tags
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean)
-  return {
-    name: d.name.trim(),
-    category: d.category,
-    policyType: d.policyType.trim() || null,
-    department: d.department.trim() || null,
-    owner: d.owner.trim() || null,
-    source: d.source.trim() || null,
-    summary: d.summary.trim() || null,
-    status: d.status,
-    defaultSeverity: d.defaultSeverity,
-    tags: trimmedTags.length ? trimmedTags : null,
-    effectiveDate: d.effectiveDate.trim() || null,
-    expirationDate: d.expirationDate.trim() || null,
-  }
-}
-
-function PolicyForm({
-  draft,
-  setDraft,
-}: {
-  draft: Draft
-  setDraft: (d: Draft) => void
-}) {
-  const set = (k: keyof Draft) => (v: string) => setDraft({ ...draft, [k]: v })
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="space-y-2 sm:col-span-2">
-        <Label>Policy name <span className="text-destructive">*</span></Label>
-        <Input value={draft.name} onChange={(e) => set("name")(e.target.value)} placeholder="e.g. Private Label Packaging Standard" />
-      </div>
-      <div className="space-y-2">
-        <Label>Category</Label>
-        <Select value={draft.category} onValueChange={set("category")}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Policy type</Label>
-        <Input value={draft.policyType} onChange={(e) => set("policyType")(e.target.value)} placeholder="e.g. Brand Guideline" />
-      </div>
-      <div className="space-y-2">
-        <Label>Status</Label>
-        <Select value={draft.status} onValueChange={set("status")}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Default severity</Label>
-        <Select value={draft.defaultSeverity} onValueChange={set("defaultSeverity")}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {SEVERITIES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label>Owner</Label>
-        <Input value={draft.owner} onChange={(e) => set("owner")(e.target.value)} placeholder="Responsible person/team" />
-      </div>
-      <div className="space-y-2">
-        <Label>Department</Label>
-        <Input value={draft.department} onChange={(e) => set("department")(e.target.value)} placeholder="e.g. Compliance" />
-      </div>
-      <div className="space-y-2 sm:col-span-2">
-        <Label>Source / authority label</Label>
-        <Input value={draft.source} onChange={(e) => set("source")(e.target.value)} placeholder="Cited on generated findings, e.g. Dollar Tree Packaging Standard" />
-      </div>
-      <div className="space-y-2 sm:col-span-2">
-        <Label>Rule statement <span className="text-muted-foreground text-xs">(what the AI enforces)</span></Label>
-        <Textarea
-          value={draft.summary}
-          onChange={(e) => set("summary")(e.target.value)}
-          className="min-h-[120px]"
-          placeholder="State the standard precisely, e.g. 'All private-label packaging must display the $1.25 price legend on the principal display panel.'"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label>Effective date</Label>
-        <Input type="date" value={draft.effectiveDate} onChange={(e) => set("effectiveDate")(e.target.value)} />
-      </div>
-      <div className="space-y-2">
-        <Label>Expiration date</Label>
-        <Input type="date" value={draft.expirationDate} onChange={(e) => set("expirationDate")(e.target.value)} />
-      </div>
-      <div className="space-y-2 sm:col-span-2">
-        <Label>Tags <span className="text-muted-foreground text-xs">(comma separated)</span></Label>
-        <Input value={draft.tags} onChange={(e) => set("tags")(e.target.value)} placeholder="pricing, brand, private-label" />
-      </div>
-    </div>
-  )
 }
 
 function VersionHistory({ policyId }: { policyId: number }) {
@@ -240,50 +95,18 @@ export default function PolicyManagement() {
   }
   const { data: policies = [], isLoading } = useListPolicies(listParams)
 
-  const createPolicy = useCreatePolicy()
   const updatePolicy = useUpdatePolicy()
   const reprocessPolicy = useReprocessPolicy()
   const createVersion = useCreatePolicyVersion()
-  const [uploadErr, setUploadErr] = useState<string | null>(null)
-  const { uploadFile, isUploading } = useUpload({ onError: (e) => setUploadErr(e.message) })
 
-  const [createOpen, setCreateOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [versionOpen, setVersionOpen] = useState(false)
   const [historyFor, setHistoryFor] = useState<Policy | null>(null)
   const [editing, setEditing] = useState<Policy | null>(null)
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
-  const [doc, setDoc] = useState<{ name: string; url: string; contentType: string } | null>(null)
   const [changeNote, setChangeNote] = useState("")
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListPoliciesQueryKey() })
-
-  const onPickFile = async (files: FileList | null) => {
-    const file = files?.[0]
-    if (!file) return
-    setUploadErr(null)
-    const res = await uploadFile(file)
-    if (res) setDoc({ name: file.name, url: res.objectPath, contentType: file.type || "application/octet-stream" })
-    // On failure onError has already set a friendly, retryable message.
-  }
-
-  const openCreate = () => {
-    setDraft(EMPTY_DRAFT)
-    setDoc(null)
-    setCreateOpen(true)
-  }
-
-  const submitCreate = async () => {
-    if (!draft.name.trim()) return
-    await createPolicy.mutateAsync({
-      data: {
-        ...draftToPayload(draft),
-        ...(doc ? { documentUrl: doc.url, fileName: doc.name, contentType: doc.contentType } : {}),
-      },
-    })
-    invalidate()
-    setCreateOpen(false)
-  }
 
   const openEdit = (p: Policy) => {
     setEditing(p)
@@ -348,41 +171,7 @@ export default function PolicyManagement() {
             Company-specific standards that participate in every package review with equal authority to FDA, EPA, and eCFR regulations. New or updated policies influence future reviews immediately.
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2" onClick={openCreate}><Plus className="w-4 h-4" /> New Policy</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Create policy</DialogTitle>
-              <DialogDescription>Define the standard. The rule statement is what the AI enforces; an optional document is extracted for search and context.</DialogDescription>
-            </DialogHeader>
-            <PolicyForm draft={draft} setDraft={setDraft} />
-            <div className="mt-2">
-              <Label className="mb-2 block">Policy document <span className="text-muted-foreground text-xs">(optional — PDF, image, or text)</span></Label>
-              {doc ? (
-                <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-                  <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
-                  <span className="text-sm truncate flex-1">{doc.name}</span>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => setDoc(null)}><X className="w-4 h-4" /></Button>
-                </div>
-              ) : (
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-4 text-sm text-muted-foreground hover:bg-accent/40">
-                  {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UploadCloud className="w-4 h-4" />}
-                  {isUploading ? "Uploading…" : "Upload document"}
-                  <input type="file" className="hidden" accept=".pdf,.png,.jpg,.jpeg,.txt,.csv" onChange={(e) => onPickFile(e.target.files)} />
-                </label>
-              )}
-              {uploadErr && <p className="mt-2 text-xs text-destructive">{uploadErr}</p>}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-              <Button onClick={submitCreate} disabled={!draft.name.trim() || createPolicy.isPending}>
-                {createPolicy.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating…</> : "Create policy"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <PolicyCreateDialog onCreated={invalidate} />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
