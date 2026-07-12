@@ -770,6 +770,12 @@ function DataPanel({ pkg }: { pkg: Pkg }) {
   return (
     <div className="space-y-4">
       {pkg.summary && <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm">{pkg.summary}</div>}
+      {pkg.complianceImpact && (
+        <div className="mt-2 p-3 rounded-lg bg-destructive/5 border border-destructive/20 text-sm">
+          <span className="font-medium text-destructive">Compliance impact: </span>
+          {pkg.complianceImpact}
+        </div>
+      )}
       <div className="grid grid-cols-1 gap-2">
         {ocr && Object.entries(ocr).map(([k, val]) => {
           if (!val || (Array.isArray(val) && val.length === 0)) return null

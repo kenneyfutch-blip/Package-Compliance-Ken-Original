@@ -11,7 +11,7 @@ import { cachedAiCall } from "./cache/ai-cache";
 
 // Prompt-version constants: bump when a workload's prompt changes so cached
 // results produced by the previous prompt are no longer served (see ai-cache).
-const ANALYSIS_PROMPT_VERSION = 1;
+const ANALYSIS_PROMPT_VERSION = 2;
 const COPILOT_PROMPT_VERSION = 1;
 
 export type FindingClass = "issue" | "warning" | "passed" | "recommendation";
@@ -38,6 +38,7 @@ export type AnalysisResult = {
   riskScore: number;
   complianceStatus: string;
   summary: string;
+  complianceImpact: string;
   ocr: OcrData;
   recommendations: string[];
   violations: AnalyzedViolation[];
@@ -132,7 +133,29 @@ You must run ALL of these detection engines and label each violation's "engine" 
 8. "Category Regulation" — product-category-specific regulatory violations based on the declared category and product type (e.g. CPSC toy safety age grading, USDA labeling, textile fiber content/care labels, children's product tracking labels).
 9. "Internal Standard" — company-specific internal policies and standards (packaging, brand, supplier, legal, artwork, marketing) that are provided in the INTERNAL COMPANY STANDARDS section below. These carry EQUAL authority to government regulations: when the packaging violates one of the provided internal policies, raise a violation labeled engine "Internal Standard". Only raise Internal Standard violations for policies explicitly provided below — never invent internal policies.
 
-Marketing CLAIM detection: whenever you detect a marketing claim (e.g. "Kills 99.9% of Germs", "Organic", "Natural", "Safe", "Chemical Free", "Eco Friendly", "Clinically Proven", "Doctor Recommended"), create a violation and, in the description, state which authority should review it (Potential EPA Review / Potential FDA Review / Potential FTC Review / Potential Legal Review).`;
+Marketing CLAIM detection: whenever you detect a marketing claim (e.g. "Kills 99.9% of Germs", "Organic", "Natural", "Safe", "Chemical Free", "Eco Friendly", "Clinically Proven", "Doctor Recommended"), create a violation and, in the description, state which authority should review it (Potential EPA Review / Potential FDA Review / Potential FTC Review / Potential Legal Review).
+
+CLAIM SUBSTANTIATION DEPTH — apply the correct legal framework to each claim and name it in the description:
+- Environmental claims ("recyclable", "biodegradable", "compostable", "eco-friendly", "green", "sustainable", "non-toxic", "made with recycled content"): apply the FTC Green Guides (16 CFR Part 260). Unqualified "recyclable" requires recycling availability for a substantial majority of consumers; broad benefit claims ("eco-friendly", "green") are deceptive without a specific, prominent qualification. Flag FTC.
+- "Healthy" and nutrient-content/health claims ("low fat", "good source of", "high in", "reduced sodium", "lightly sweetened", "supports immunity"): apply FDA 21 CFR 101.13 / 101.65. "Healthy" is a defined regulatory term with compositional requirements. Flag FDA.
+- "Organic": apply the USDA National Organic Program (7 CFR Part 205). "100% Organic" / "Organic" / "Made with Organic Ingredients" have distinct thresholds and USDA seal rules. Flag FDA/Legal.
+- "Natural" / "All Natural": FDA has no formal food definition but treats added color, artificial, or synthetic substances as inconsistent; USDA has policy for meat/poultry. Treat as high-risk/potentially deceptive absent substantiation. Flag FDA/FTC.
+- "Made in USA" and origin claims: apply the FTC "all or virtually all" Made in USA standard and country-of-origin marking rules. Flag FTC/Legal.
+- Disease vs structure/function claims (foods, supplements, cosmetics): a disease claim can render the product an unapproved new drug/misbranded. Flag FDA/Legal.
+For EVERY claim, state in the description whether it is substantiated by the provided artwork/regulations or REQUIRES substantiation, and cite the specific framework.
+
+CATEGORY EDGE CASES:
+- Dietary supplements: require a "Supplement Facts" panel (NOT Nutrition Facts) and DSHEA compliance. Whenever a structure/function claim is present, the DSHEA disclaimer must appear ("This statement has not been evaluated by the Food and Drug Administration. This product is not intended to diagnose, treat, cure, or prevent any disease."). A structure/function claim without this disclaimer is a violation.
+- Multi-language / bilingual labels: when the artwork contains more than one language, EVERY mandatory element (ingredients, warnings, directions, net quantity, allergen "Contains" statements) must appear in EACH required language. Flag any mandatory element present in one language but missing in another, and flag inconsistent or mistranslated safety wording.
+- Conflicting claims: cross-check the ENTIRE artwork for internal contradictions (e.g. "Sugar Free" while the Nutrition Facts list sugars; "Made in USA" with "Product of China"; "Fragrance Free" with fragrance in the ingredient list; "0 Calories" contradicting the panel). Raise a violation quoting BOTH conflicting statements.
+
+ANTI-FABRICATION (CRITICAL): Never invent facts, regulation citations, CFR section numbers, EPA registration numbers, or claim text. Put a specific citation in regulationRef ONLY when it comes from the APPLICABLE REGULATIONS KNOWLEDGE BASE, the APPLICABLE eCFR REGULATIONS, or the INTERNAL COMPANY STANDARDS provided in the user message. If you know a requirement exists but no matching citation was provided, describe it generically and set regulationRef to null — do NOT guess a section number. detectedText must be copy that LITERALLY appears in the packaging artwork text — never paraphrase or invent it; use null when the finding is about a MISSING element. If the artwork text does not let you verify something, say so and lower confidence rather than asserting it.
+
+CONFIDENCE CALIBRATION & INPUT-QUALITY GATING: Calibrate "confidence" honestly — 90-100 = the offending or required text is explicitly present (or explicitly absent) AND a specific provided regulation/standard applies; 70-89 = clear issue but the citation is general or inferred from category; 50-69 = plausible but partly inferred; below 50 = speculative, in which case use findingClass "warning" (not "issue") and state what would confirm it. If the PACKAGING ARTWORK TEXT is empty, very short, garbled, or obviously incomplete (poor OCR), treat input quality as LOW: cap every confidence at 60, prefer "missing element" / "warning" framing over hard "issue" assertions, note the low input quality in the summary, and add a "recommendation" finding to re-capture higher-quality artwork text.
+
+RISK-SCORE RUBRIC — set riskScore consistently from the worst unresolved findings: 85-100 = one or more CRITICAL issues (safety/legal/mislabeling that could force a recall, customs hold, or regulatory action) -> complianceStatus "Failed"; 65-84 = one or more MAJOR issues (required disclosures or claims problems, likely rejection) -> "Failed" or "Needs Review"; 35-64 = only MINOR issues (formatting, minor copy) -> "Needs Review"; 10-34 = only warnings/recommendations, nothing actionable -> "Passed" or "Needs Review"; 0-9 = clean, all mandatory elements present and correct -> "Passed". Grade tracks the bands (A for 0-9, B for 10-34, C for 35-64, D for 65-84, F for 85-100). Keep grade, riskScore, and complianceStatus mutually consistent.
+
+OUTPUT SIZE & VALIDITY (do not truncate): You MUST return a SINGLE, COMPLETE, valid, minified JSON object — never stop mid-string or mid-object. When there are many findings, report only the most material ones (HARD CAP of 40 violations), keep each "description" under ~60 words and each detectedText/suggestedText to the relevant snippet, and drop the least-important low-severity items rather than emitting truncated JSON.`;
 
   const user = `Analyze this product packaging for compliance issues.
 
@@ -187,9 +210,10 @@ Perform:
 6. Assign an overall letter grade (A-F), a riskScore 0-100 (higher = riskier), and complianceStatus of "Passed", "Failed", or "Needs Review". Critical issues push toward Failed and high risk.
 7. Detect the best-fit product category.
 8. Provide 3-6 prioritized recommendations and a 1-2 sentence executive summary.
+9. complianceImpact: ONE sentence naming the concrete business/regulatory consequence of shipping this packaging as-is (e.g. "Recall and FDA misbranding exposure from a missing allergen declaration" or "Low impact — only minor formatting refinements needed").
 
 Respond with JSON of shape:
-{"category":string,"grade":string,"riskScore":number,"complianceStatus":string,"summary":string,"ocr":{"productName":string|null,"ingredients":string|null,"directions":string|null,"warnings":string|null,"claims":string[],"marketingCopy":string|null,"nutritionFacts":string|null,"allergenStatements":string|null,"netWeight":string|null,"countryOfOrigin":string|null,"manufacturerInfo":string|null,"expirationDate":string|null,"epaRegistrationNumbers":string|null,"hazardStatements":string|null},"recommendations":string[],"violations":[{"severity":string,"findingClass":string,"engine":string,"title":string,"description":string,"regulationRef":string|null,"recommendation":string|null,"detectedText":string|null,"suggestedText":string|null,"confidence":number,"claimFlags":string[],"page":number,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
+{"category":string,"grade":string,"riskScore":number,"complianceStatus":string,"summary":string,"complianceImpact":string,"ocr":{"productName":string|null,"ingredients":string|null,"directions":string|null,"warnings":string|null,"claims":string[],"marketingCopy":string|null,"nutritionFacts":string|null,"allergenStatements":string|null,"netWeight":string|null,"countryOfOrigin":string|null,"manufacturerInfo":string|null,"expirationDate":string|null,"epaRegistrationNumbers":string|null,"hazardStatements":string|null},"recommendations":string[],"violations":[{"severity":string,"findingClass":string,"engine":string,"title":string,"description":string,"regulationRef":string|null,"recommendation":string|null,"detectedText":string|null,"suggestedText":string|null,"confidence":number,"claimFlags":string[],"page":number,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
 
   const compute = async (): Promise<AnalysisResult> => {
     const { result, orchestration } = await runTiered<AnalysisResult>({
@@ -307,6 +331,7 @@ Respond with JSON of shape:
             ? parsed.complianceStatus
             : "Needs Review",
           summary: String(parsed?.summary ?? ""),
+          complianceImpact: String(parsed?.complianceImpact ?? ""),
           ocr,
           recommendations: Array.isArray(parsed?.recommendations)
             ? parsed.recommendations.map((r: any) => String(r))

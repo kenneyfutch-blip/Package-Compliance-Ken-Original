@@ -110,6 +110,7 @@ export function mapPackage(p: PackageRow) {
     reviewer: p.reviewer,
     artworkUrl: p.artworkUrl,
     summary: p.summary,
+    complianceImpact: p.complianceImpact,
     criticalCount: p.criticalCount,
     majorCount: p.majorCount,
     minorCount: p.minorCount,

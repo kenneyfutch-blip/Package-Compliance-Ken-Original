@@ -48,6 +48,8 @@ export interface PackageDetail {
   /** @nullable */
   summary?: string | null;
   /** @nullable */
+  complianceImpact?: string | null;
+  /** @nullable */
   extractedText?: string | null;
   /** @nullable */
   extractionStatus?: string | null;

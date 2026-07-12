@@ -5137,6 +5137,8 @@ components:
           type: ["string", "null"]
         summary:
           type: ["string", "null"]
+        complianceImpact:
+          type: ["string", "null"]
         criticalCount:
           type: integer
         majorCount:
@@ -5388,6 +5390,8 @@ components:
         artworkUrl:
           type: ["string", "null"]
         summary:
+          type: ["string", "null"]
+        complianceImpact:
           type: ["string", "null"]
         extractedText:
           type: ["string", "null"]

@@ -906,6 +906,8 @@ export interface Package {
   artworkUrl?: string | null;
   /** @nullable */
   summary?: string | null;
+  /** @nullable */
+  complianceImpact?: string | null;
   criticalCount: number;
   majorCount: number;
   minorCount: number;
@@ -1200,6 +1202,8 @@ export interface PackageDetail {
   artworkUrl?: string | null;
   /** @nullable */
   summary?: string | null;
+  /** @nullable */
+  complianceImpact?: string | null;
   /** @nullable */
   extractedText?: string | null;
   /** @nullable */

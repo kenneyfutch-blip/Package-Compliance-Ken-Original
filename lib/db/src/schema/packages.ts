@@ -58,6 +58,9 @@ export const packagesTable = pgTable("packages", {
   reviewer: text("reviewer"),
   artworkUrl: text("artwork_url"),
   summary: text("summary"),
+  // One-sentence business/regulatory consequence of shipping as-is, written by
+  // the AI analysis engine alongside the executive summary.
+  complianceImpact: text("compliance_impact"),
   extractedText: text("extracted_text"),
   // Google Document AI extraction status/metadata, denormalized for fast list
   // rendering. The full cached result lives in document_extractions.

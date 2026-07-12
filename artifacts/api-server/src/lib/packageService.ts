@@ -204,6 +204,7 @@ export async function applyAnalysis(
       complianceStatus: result.complianceStatus,
       status: gradeToStatus(result.complianceStatus),
       summary: result.summary,
+      complianceImpact: result.complianceImpact,
       ocr: result.ocr,
       recommendations: result.recommendations,
       criticalCount: counts.critical,

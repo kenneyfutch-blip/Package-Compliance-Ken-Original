@@ -1,0 +1,277 @@
+PACKAGING VERSION CONTROL & COMPLIANCE AUDIT HARDENING
+
+OBJECTIVE
+
+Audit and enhance the existing Packaging Asset Hub, Compliance Platform, and Artwork Management capabilities to ensure enterprise-grade version control, auditability, traceability, and compliance evidence retention.
+
+Do not remove existing functionality.
+
+Do not rebuild components that already exist.
+
+Perform a gap analysis and implement missing capabilities.
+
+====================================================
+PACKAGING RECORD PERSISTENCE
+====================================================
+
+Verify that every packaging record is permanently tracked.
+
+Each package should maintain:
+
+- Unique Package ID
+- Product Name
+- SKU
+- Brand
+- Category
+- Market
+- Current Status
+- Current Version
+- Date Created
+- Date Modified
+
+Ensure packaging records never lose historical data.
+
+====================================================
+ARTWORK VERSION CONTROL
+====================================================
+
+Verify full version management exists.
+
+Every uploaded file must support:
+
+Version 1.0
+Version 1.1
+Version 2.0
+Version 3.0
+
+Track:
+
+- Upload Date
+- Uploaded By
+- Change Summary
+- Approval Status
+- File Hash
+- Previous Version Reference
+
+Users must be able to:
+
+- View version history
+- Restore previous versions
+- Compare versions
+- Download historical versions
+
+No version should ever be overwritten.
+
+====================================================
+COMPLIANCE REVIEW HISTORY
+====================================================
+
+Every compliance review must be retained.
+
+Track:
+
+- Review ID
+- Asset
+- Package
+- Reviewer
+- AI Findings
+- Risk Score
+- Claims Found
+- Compliance Results
+- Recommendations
+- Review Date
+
+Store all historical reviews.
+
+Allow comparison between reviews across time.
+
+====================================================
+DECISION HISTORY
+====================================================
+
+Track every compliance decision.
+
+Examples:
+
+Approved
+Rejected
+Requires Revision
+Escalated
+Archived
+
+Store:
+
+- Decision
+- Date
+- User
+- Reason
+- Comments
+
+Create a complete approval timeline.
+
+====================================================
+COMPLIANCE MEMORY
+====================================================
+
+Create persistent organizational memory.
+
+Store:
+
+Previous Findings
+
+Historical Decisions
+
+Approval Logic
+
+Resolution Outcomes
+
+Reviewer Notes
+
+Allow future reviews to reference historical decisions.
+
+Example:
+
+"This claim was previously reviewed and approved on Version 3 by Regulatory Affairs."
+
+====================================================
+AI CHANGE DETECTION
+====================================================
+
+Verify artwork comparison capability.
+
+When new versions are uploaded:
+
+Automatically detect:
+
+- Text Changes
+- Ingredient Changes
+- Nutrition Changes
+- Warning Changes
+- Claim Changes
+- Barcode Changes
+- Regulatory Statement Changes
+
+Generate:
+
+Change Summary
+
+Risk Assessment
+
+Recommended Actions
+
+====================================================
+AUDIT TRAIL
+====================================================
+
+Create immutable audit logs.
+
+Track:
+
+- Uploads
+- Downloads
+- Reviews
+- AI Analyses
+- Version Creation
+- Version Restores
+- Approvals
+- Rejections
+- User Actions
+
+Display timeline view.
+
+Nothing should be deletable from audit logs.
+
+====================================================
+REGULATORY EVIDENCE MANAGEMENT
+====================================================
+
+Store evidence supporting reviews.
+
+Allow attachment of:
+
+- FDA References
+- FTC References
+- Regulatory Documentation
+- Internal SOPs
+- Supporting Files
+
+Link evidence to:
+
+- Reviews
+- Findings
+- Decisions
+
+====================================================
+SEARCH & DISCOVERY
+====================================================
+
+Allow users to search historical records by:
+
+- Product
+- SKU
+- Claim
+- Reviewer
+- Date
+- Risk Score
+- Decision
+- Regulatory Topic
+
+Examples:
+
+"Show all packaging containing Organic claims"
+
+"Show rejected packages from 2026"
+
+"Show all high-risk reviews"
+
+====================================================
+LEGAL & COMPLIANCE READINESS
+====================================================
+
+Verify platform provides complete traceability.
+
+For any package, users should be able to answer:
+
+- Who uploaded it?
+- Who reviewed it?
+- What changed?
+- When did it change?
+- Why was it approved?
+- What findings existed?
+- Which version was active?
+
+====================================================
+DATA RETENTION
+====================================================
+
+Verify retention policy.
+
+Ensure:
+
+- Historical versions are preserved
+- Reviews are preserved
+- Approval history is preserved
+- Audit logs are preserved
+
+Prevent accidental deletion of compliance evidence.
+
+====================================================
+FINAL AUDIT REPORT
+====================================================
+
+Provide:
+
+1. Current Version Control Assessment
+2. Current Audit Trail Assessment
+3. Current Compliance History Assessment
+4. Missing Enterprise Features
+5. Versioning Gaps
+6. Evidence Retention Gaps
+7. Compliance Traceability Gaps
+8. Recommended Improvements
+9. Database Changes Required
+10. Enterprise Readiness Score
+
+Goal:
+
+Transform the existing Packaging Asset Hub into a fully auditable, compliance-focused system of record capable of serving as the source of truth for packaging, artwork, reviews, approvals, and regulatory evidence.

@@ -799,7 +799,8 @@ router.post(
     let passed = 0;
     let failed = 0;
     let analyzed = 0;
-    for (const pkg of rows) {
+
+    const analyzeOne = async (pkg: (typeof rows)[number]): Promise<void> => {
       try {
         const priorKnowledge = await priorKnowledgeFor(pkg, req);
         const internalStandards = await relevantPoliciesFor(pkg, req);
@@ -819,7 +820,27 @@ router.post(
       } catch (err) {
         logger.error({ err, packageId: pkg.id }, "Bulk analysis item failed");
       }
-    }
+    };
+
+    // Analyze packages with bounded concurrency so a large selection finishes
+    // far faster than the old strictly-sequential loop, without firing every AI
+    // request at once (which would blow past provider rate limits and DB
+    // connection headroom). Workers pull from a shared cursor; JS is
+    // single-threaded so the cursor/counter updates need no extra locking. Each
+    // worker operates on a distinct package id, so their DB writes never contend.
+    const BULK_CONCURRENCY = 4;
+    let cursor = 0;
+    const worker = async (): Promise<void> => {
+      while (cursor < rows.length) {
+        const pkg = rows[cursor++]!;
+        await analyzeOne(pkg);
+      }
+    };
+    await Promise.all(
+      Array.from({ length: Math.min(BULK_CONCURRENCY, rows.length) }, () =>
+        worker(),
+      ),
+    );
 
     res.json({ analyzed, passed, failed });
   },
