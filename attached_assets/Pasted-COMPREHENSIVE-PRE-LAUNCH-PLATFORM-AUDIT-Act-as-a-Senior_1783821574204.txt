@@ -1,0 +1,116 @@
+COMPREHENSIVE PRE-LAUNCH PLATFORM AUDIT
+
+Act as a Senior Product Manager, Senior QA Engineer, Senior UX Designer, Senior Full-Stack Engineer, and SaaS Founder.
+
+Perform a complete end-to-end audit of the entire Packaging Compliance Platform before launch.
+
+Do NOT assume anything works.
+
+Verify every feature, workflow, integration, button, page, API, database operation, AI workflow, permission, and user journey.
+
+====================================================
+PHASE 1: APPLICATION INVENTORY
+====================================================
+
+First create a complete inventory of:
+
+- Pages
+- Dashboards
+- Tools
+- Features
+- Navigation Items
+- Menus
+- Admin Functions
+- User Functions
+- Customer Functions
+- APIs
+- Database Tables
+- Background Jobs
+- AI Features
+- Reporting Features
+- Export Features
+
+List everything discovered.
+
+====================================================
+PHASE 2: FRONTEND AUDIT
+====================================================
+
+Inspect every screen.
+
+Verify:
+
+- Buttons work
+- Navigation works
+- Forms submit properly
+- Form validation exists
+- Loading states exist
+- Error states exist
+- Empty states exist
+- Mobile responsiveness
+- Desktop responsiveness
+- Accessibility issues
+- Broken links
+- Missing pages
+- Dead-end navigation
+- Duplicate menu items
+
+Identify:
+
+- Confusing UX
+- Unnecessary clicks
+- Redundant workflows
+- Orphaned features
+- Inconsistent naming
+- Inconsistent styling
+
+Provide screenshots or references where applicable.
+
+====================================================
+PHASE 3: USER FLOW AUDIT
+====================================================
+
+Analyze complete user journeys.
+
+Test:
+
+New User
+
+1. Signup
+2. Email Verification
+3. Onboarding
+4. Upload First Artwork
+5. Run Compliance Scan
+6. Review Results
+7. Generate Report
+8. Export Report
+
+Existing User
+
+1. Login
+2. View Dashboard
+3. Upload New Packaging
+4. Run Audit
+5. Review Findings
+6. Take Action
+
+Admin User
+
+1. Access Admin
+2. Review Usage
+3. Manage Customers
+4. Review Costs
+5. Manage AI Models
+
+For every flow identify:
+
+- Friction
+- Confusion
+- Missing steps
+- Duplicate actions
+- Unclear language
+
+Provide recommendations.
+
+====================================================
+PHASE 4: BRAND 

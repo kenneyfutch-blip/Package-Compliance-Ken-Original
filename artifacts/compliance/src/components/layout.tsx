@@ -274,7 +274,7 @@ function NavRow({
           "flex min-w-0 flex-1 items-center gap-3 pl-3 pr-1 py-2 text-sm",
           active
             ? "text-primary font-medium"
-            : "text-muted-foreground group-hover/navrow:text-foreground",
+            : "text-foreground group-hover/navrow:text-foreground",
         )}
       >
         <Icon className={cn("w-4 h-4 shrink-0", active && "text-primary")} />
@@ -345,7 +345,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         <div className="mb-1 border-b border-border/60 pb-1">
           <div className="flex items-center gap-2 px-3 py-2">
             <Star className="w-3.5 h-3.5 shrink-0 text-amber-500 fill-amber-500" aria-hidden />
-            <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-foreground/80">
               Favorites
             </span>
           </div>
@@ -366,8 +366,17 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
         // The section holding the active page is always open; otherwise honor the
         // user's explicit choice, falling back to the section's sensible default.
         const open = sectionActive || (overrides[section.id] ?? section.defaultOpen ?? true)
+        // Give the "My Work" section a light grey backing so it visually breaks
+        // up the long navigation list.
+        const isMyWork = section.id === "my-work"
         return (
-          <div key={section.id} className={cn(idx > 0 && "mt-1 border-t border-border/60 pt-1")}>
+          <div
+            key={section.id}
+            className={cn(
+              idx > 0 && !isMyWork && "mt-1 border-t border-border/60 pt-1",
+              isMyWork && "mt-1 rounded-lg bg-muted/60 px-1 py-1",
+            )}
+          >
             <button
               type="button"
               onClick={() => toggle(section)}
@@ -377,7 +386,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
               <span
                 className={cn(
                   "flex-1 text-[11px] font-semibold uppercase tracking-wider",
-                  sectionActive ? "text-foreground/70" : "text-muted-foreground",
+                  sectionActive ? "text-foreground" : "text-foreground/80",
                 )}
               >
                 {section.label}
