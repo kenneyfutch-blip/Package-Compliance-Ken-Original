@@ -40,8 +40,17 @@ Glossary, Contact Support.
 - Uses **driver.js** (`lib/training/tours.ts`). Tours anchor to stable `data-tour`
   attributes on the **persistent chrome** (sidebar `[data-tour="sidebar"]`, top-bar
   search/favorites/notifications) so a tour works from any page.
-- `startTour(id)` filters out steps whose anchor is absent (`document.querySelector`)
-  before driving, so permission-hidden elements don't produce empty spotlights.
+- `startTour(id, { onDestroyed })` filters out steps whose anchor is absent
+  (`document.querySelector`) before driving, so permission-hidden elements don't
+  produce empty spotlights. `onDestroyed` fires when the tour ends by ANY means
+  (finished, Done, Esc, close button, overlay click); returns `false` if no
+  anchors were present so callers can decide what to do.
+- **First-run auto-tour:** `OnboardingTour` (mounted in `Shell`) auto-launches
+  `platform-orientation` the first time a user reaches the app, then records a
+  `onboarding:orientation` flag in `training_progress` via `onDestroyed` — so it's
+  marked seen whether the user completes OR exits early, and never re-triggers.
+  The flag is a "seen" marker, not a real training item. Uses a small mount delay
+  so the chrome has painted before spotlighting.
 - **Why:** cross-page/route-navigating tours are brittle in driver.js; anchoring to
   always-present chrome is reliable. Illustrated step-guides (data in
   `WALKTHROUGHS`) cover flow-specific content that isn't a live tour.

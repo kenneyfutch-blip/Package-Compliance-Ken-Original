@@ -113,10 +113,17 @@ export function getTour(id: string): TourDef | undefined {
   return TOURS.find((t) => t.id === id)
 }
 
-// Launch a live tour by id. Safe to call from any page.
-export function startTour(id: string): void {
+export interface StartTourOptions {
+  // Fires once the tour ends — whether the user finished it or exited early
+  // (Esc, the close button, or clicking the overlay).
+  onDestroyed?: () => void
+}
+
+// Launch a live tour by id. Safe to call from any page. Returns true if the tour
+// actually started (at least one anchor was present), false otherwise.
+export function startTour(id: string, options?: StartTourOptions): boolean {
   const def = getTour(id)
-  if (!def) return
+  if (!def) return false
 
   const steps: DriveStep[] = def.steps
     .filter((s) => !s.element || document.querySelector(s.element))
@@ -128,7 +135,7 @@ export function startTour(id: string): void {
       },
     }))
 
-  if (steps.length === 0) return
+  if (steps.length === 0) return false
 
   const d = driver({
     showProgress: true,
@@ -137,7 +144,11 @@ export function startTour(id: string): void {
     nextBtnText: "Next",
     prevBtnText: "Back",
     doneBtnText: "Done",
+    onDestroyed: () => {
+      options?.onDestroyed?.()
+    },
     steps,
   })
   d.drive()
+  return true
 }

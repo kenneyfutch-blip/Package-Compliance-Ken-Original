@@ -72,6 +72,7 @@ import { useListNotifications } from "@workspace/api-client-react"
 import { usePermissions } from "@/lib/access"
 import { useFavorites } from "@/lib/favorites"
 import { requiredPermFor } from "@/lib/permissions"
+import { OnboardingTour } from "@/components/training/onboarding-tour"
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> }
 /** A labeled, collapsible cluster of items rendered inside a section. */
@@ -866,6 +867,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
+      <OnboardingTour />
     </div>
   )
 }
