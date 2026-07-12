@@ -129,7 +129,9 @@ export const ListPackagesQueryParams = zod.object({
   "category": zod.coerce.string().optional(),
   "risk": zod.coerce.string().optional(),
   "engine": zod.coerce.string().optional(),
-  "vendor": zod.coerce.string().optional()
+  "vendor": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
 })
 
 export const ListPackagesResponseItem = zod.object({
@@ -1679,7 +1681,9 @@ export const ListLanguageFindingsQueryParams = zod.object({
   "severity": zod.coerce.string().optional(),
   "status": zod.coerce.string().optional(),
   "minScore": zod.coerce.number().optional(),
-  "maxScore": zod.coerce.number().optional()
+  "maxScore": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
 })
 
 export const ListLanguageFindingsResponseItem = zod.object({
@@ -1767,6 +1771,11 @@ export const UpdateLanguageFindingResponse = zod.object({
 /**
  * @summary Per-package language review summaries for bulk review
  */
+export const ListLanguageReviewsQueryParams = zod.object({
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
+})
+
 export const ListLanguageReviewsResponseItem = zod.object({
   "packageId": zod.number(),
   "sku": zod.string(),
@@ -2006,7 +2015,9 @@ export const SearchEcfrResponse = zod.object({
 export const ListRegulationsQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "agency": zod.coerce.string().optional(),
-  "category": zod.coerce.string().optional()
+  "category": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
 })
 
 export const ListRegulationsResponseItem = zod.object({
@@ -2380,7 +2391,9 @@ export const RecordSupplierScorecardResponse = zod.object({
  */
 export const ListSupplierSubmissionsQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
-  "supplierId": zod.coerce.number().optional()
+  "supplierId": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
 })
 
 export const ListSupplierSubmissionsResponseItem = zod.object({
@@ -3882,7 +3895,9 @@ export const GetReviewWorkloadResponse = zod.object({
 export const ListReviewAssignmentsQueryParams = zod.object({
   "status": zod.coerce.string().optional(),
   "teamId": zod.coerce.number().optional(),
-  "assigneeUserId": zod.coerce.number().optional()
+  "assigneeUserId": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
 })
 
 export const ListReviewAssignmentsResponseItem = zod.object({

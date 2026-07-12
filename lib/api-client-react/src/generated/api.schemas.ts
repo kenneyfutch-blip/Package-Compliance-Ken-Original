@@ -2135,6 +2135,8 @@ category?: string;
 risk?: string;
 engine?: string;
 vendor?: string;
+limit?: number;
+offset?: number;
 };
 
 export type CheckPackageDuplicatesParams = {
@@ -2149,6 +2151,13 @@ severity?: string;
 status?: string;
 minScore?: number;
 maxScore?: number;
+limit?: number;
+offset?: number;
+};
+
+export type ListLanguageReviewsParams = {
+limit?: number;
+offset?: number;
 };
 
 export type ListFdaRecallsParams = {
@@ -2183,11 +2192,15 @@ export type ListRegulationsParams = {
 search?: string;
 agency?: string;
 category?: string;
+limit?: number;
+offset?: number;
 };
 
 export type ListSupplierSubmissionsParams = {
 status?: string;
 supplierId?: number;
+limit?: number;
+offset?: number;
 };
 
 export type ListAuditEventsParams = {
@@ -2204,6 +2217,8 @@ export type ListReviewAssignmentsParams = {
 status?: string;
 teamId?: number;
 assigneeUserId?: number;
+limit?: number;
+offset?: number;
 };
 
 export type RecommendReviewAssigneeParams = {

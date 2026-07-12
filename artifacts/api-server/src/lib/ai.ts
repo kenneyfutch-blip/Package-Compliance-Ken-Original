@@ -5,6 +5,12 @@ import {
   readUsage,
   type AiOrchestration,
 } from "./ai-orchestration";
+import { cachedAiCall } from "./cache/ai-cache";
+
+// Prompt-version constants: bump when a workload's prompt changes so cached
+// results produced by the previous prompt are no longer served (see ai-cache).
+const ANALYSIS_PROMPT_VERSION = 1;
+const COPILOT_PROMPT_VERSION = 1;
 
 export type FindingClass = "issue" | "warning" | "passed" | "recommendation";
 
@@ -183,7 +189,8 @@ Perform:
 Respond with JSON of shape:
 {"category":string,"grade":string,"riskScore":number,"complianceStatus":string,"summary":string,"ocr":{"productName":string|null,"ingredients":string|null,"directions":string|null,"warnings":string|null,"claims":string[],"marketingCopy":string|null,"nutritionFacts":string|null,"allergenStatements":string|null,"netWeight":string|null,"countryOfOrigin":string|null,"manufacturerInfo":string|null,"expirationDate":string|null,"epaRegistrationNumbers":string|null,"hazardStatements":string|null},"recommendations":string[],"violations":[{"severity":string,"findingClass":string,"engine":string,"title":string,"description":string,"regulationRef":string|null,"recommendation":string|null,"detectedText":string|null,"suggestedText":string|null,"confidence":number,"claimFlags":string[],"page":number,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
 
-  const { result, orchestration } = await runTiered<AnalysisResult>({
+  const compute = async (): Promise<AnalysisResult> => {
+    const { result, orchestration } = await runTiered<AnalysisResult>({
     workload: "packaging_analysis",
     assess: (r) => {
       const confs = r.violations
@@ -301,9 +308,18 @@ Respond with JSON of shape:
         usage: readUsage(response.usage),
       };
     },
-  });
+    });
 
-  return { ...result, orchestration };
+    return { ...result, orchestration };
+  };
+
+  return cachedAiCall<AnalysisResult>({
+    orgId: pkg.organizationId,
+    workload: "packaging_analysis",
+    promptVersion: ANALYSIS_PROMPT_VERSION,
+    keyParts: [system, user],
+    compute,
+  });
 }
 
 /**
@@ -457,28 +473,36 @@ REVIEWER QUESTION: ${question}
 
 Answer the question using the context above. Cite the specific regulations you rely on in the citations array.`;
 
-  const { client, model } = await resolveAiClientForTier("standard");
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 2048,
-  });
+  return cachedAiCall({
+    orgId: pkg.organizationId,
+    workload: "copilot",
+    promptVersion: COPILOT_PROMPT_VERSION,
+    keyParts: [system, user],
+    compute: async () => {
+      const { client, model } = await resolveAiClientForTier("standard");
+      const response = await client.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 2048,
+      });
 
-  const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
-  return {
-    answer: String(parsed?.answer ?? "I could not generate an answer."),
-    citations: Array.isArray(parsed?.citations)
-      ? parsed.citations.map((c: any) => ({
-          source: String(c?.source ?? "Regulation"),
-          section: c?.section ?? null,
-          text: c?.text ?? null,
-        }))
-      : [],
-  };
+      const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
+      return {
+        answer: String(parsed?.answer ?? "I could not generate an answer."),
+        citations: Array.isArray(parsed?.citations)
+          ? parsed.citations.map((c: any) => ({
+              source: String(c?.source ?? "Regulation"),
+              section: c?.section ?? null,
+              text: c?.text ?? null,
+            }))
+          : [],
+      };
+    },
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -6,10 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListRegulationsParams = {
-search?: string;
-agency?: string;
-category?: string;
+export type ListLanguageReviewsParams = {
 limit?: number;
 offset?: number;
 };

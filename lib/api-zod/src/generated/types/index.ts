@@ -89,6 +89,7 @@ export * from './listAuditEventsParams';
 export * from './listFdaRecallsCategory';
 export * from './listFdaRecallsParams';
 export * from './listLanguageFindingsParams';
+export * from './listLanguageReviewsParams';
 export * from './listPackagesParams';
 export * from './listPoliciesParams';
 export * from './listRegulationsParams';

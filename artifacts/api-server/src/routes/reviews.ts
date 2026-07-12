@@ -12,6 +12,7 @@ import { AssignPackageReviewBody, BulkAssignReviewsBody } from "@workspace/api-z
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 import { packageConds, canAccessPackage, opsTeamScope } from "../lib/rbac/scope";
 import { writeAudit } from "../lib/audit";
+import { parsePagination } from "../lib/pagination";
 import { mapReviewAssignment, mapReviewHistory } from "../lib/mappers";
 import { assignReview, autoAssignReview, getPackageAssignment } from "../lib/reviews/engine";
 import { matchTeamName } from "../lib/reviews/routing";
@@ -161,6 +162,7 @@ router.get(
       filters,
       packageConds(req),
       opsTeamScope(req),
+      parsePagination(req),
     );
     res.json(
       rows.map((r) => ({

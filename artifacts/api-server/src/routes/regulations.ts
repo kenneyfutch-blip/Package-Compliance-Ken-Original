@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, regulationsTable } from "@workspace/db";
 import { eq, desc, and, or, ilike, type SQL } from "drizzle-orm";
 import { CreateRegulationBody } from "@workspace/api-zod";
+import { parsePagination } from "../lib/pagination";
 import { mapRegulation } from "../lib/mappers";
 import { requirePermission } from "../lib/rbac/context";
 
@@ -16,6 +17,7 @@ router.get(
   requirePermission("regulations:read"),
   async (req: Request, res: Response): Promise<void> => {
     const { search, agency, category } = req.query;
+    const { limit, offset } = parsePagination(req);
     const conditions: SQL[] = [];
     if (typeof search === "string" && search.trim()) {
       const term = `%${search.trim()}%`;
@@ -37,7 +39,9 @@ router.get(
       .select()
       .from(regulationsTable)
       .where(conditions.length ? and(...conditions) : undefined)
-      .orderBy(desc(regulationsTable.createdAt));
+      .orderBy(desc(regulationsTable.createdAt))
+      .limit(limit)
+      .offset(offset);
     res.json(rows.map(mapRegulation));
   },
 );

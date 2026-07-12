@@ -226,6 +226,16 @@ paths:
           required: false
           schema:
             type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           description: List of packages
@@ -737,6 +747,16 @@ paths:
           required: false
           schema:
             type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           description: List of language findings with package context
@@ -783,6 +803,17 @@ paths:
       operationId: listLanguageReviews
       tags: [language]
       summary: Per-package language review summaries for bulk review
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           description: Language review summaries
@@ -958,6 +989,16 @@ paths:
           required: false
           schema:
             type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
       responses:
         "200":
           description: List of regulations
@@ -1178,6 +1219,16 @@ paths:
           schema:
             type: string
         - name: supplierId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
           in: query
           required: false
           schema:
@@ -2146,6 +2197,16 @@ paths:
           schema:
             type: integer
         - name: assigneeUserId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
           in: query
           required: false
           schema:

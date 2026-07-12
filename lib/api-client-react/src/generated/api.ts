@@ -70,6 +70,7 @@ import type {
   ListAuditEventsParams,
   ListFdaRecallsParams,
   ListLanguageFindingsParams,
+  ListLanguageReviewsParams,
   ListPackagesParams,
   ListPoliciesParams,
   ListRegulationsParams,
@@ -2365,20 +2366,27 @@ export const useUpdateLanguageFinding = <TError = ErrorType<ApiError>,
       return useMutation(getUpdateLanguageFindingMutationOptions(options));
     }
 
-export const getListLanguageReviewsUrl = () => {
+export const getListLanguageReviewsUrl = (params?: ListLanguageReviewsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/language-reviews`
+  return stringifiedParams.length > 0 ? `/api/language-reviews?${stringifiedParams}` : `/api/language-reviews`
 }
 
 /**
  * @summary Per-package language review summaries for bulk review
  */
-export const listLanguageReviews = async ( options?: RequestInit): Promise<LanguageReviewSummary[]> => {
+export const listLanguageReviews = async (params?: ListLanguageReviewsParams, options?: RequestInit): Promise<LanguageReviewSummary[]> => {
 
-  return customFetch<LanguageReviewSummary[]>(getListLanguageReviewsUrl(),
+  return customFetch<LanguageReviewSummary[]>(getListLanguageReviewsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -2391,23 +2399,23 @@ export const listLanguageReviews = async ( options?: RequestInit): Promise<Langu
 
 
 
-export const getListLanguageReviewsQueryKey = () => {
+export const getListLanguageReviewsQueryKey = (params?: ListLanguageReviewsParams,) => {
     return [
-    `/api/language-reviews`
+    `/api/language-reviews`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListLanguageReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listLanguageReviews>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguageReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListLanguageReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listLanguageReviews>>, TError = ErrorType<unknown>>(params?: ListLanguageReviewsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguageReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListLanguageReviewsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListLanguageReviewsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLanguageReviews>>> = ({ signal }) => listLanguageReviews({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLanguageReviews>>> = ({ signal }) => listLanguageReviews(params, { signal, ...requestOptions });
 
 
 
@@ -2425,11 +2433,11 @@ export type ListLanguageReviewsQueryError = ErrorType<unknown>
  */
 
 export function useListLanguageReviews<TData = Awaited<ReturnType<typeof listLanguageReviews>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguageReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListLanguageReviewsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLanguageReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListLanguageReviewsQueryOptions(options)
+  const queryOptions = getListLanguageReviewsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

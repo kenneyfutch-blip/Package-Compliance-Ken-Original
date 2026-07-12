@@ -18,6 +18,7 @@ import {
   lt,
   type SQL,
 } from "drizzle-orm";
+import { parsePagination, MAX_LIMIT } from "../lib/pagination";
 import {
   CreatePackageBody,
   UpdatePackageBody,
@@ -171,6 +172,7 @@ router.get(
   requirePermission("packages:read"),
   async (req: Request, res: Response): Promise<void> => {
     const { search, status, category, risk, vendor, engine } = req.query;
+    const { limit, offset } = parsePagination(req);
     const conditions: SQL[] = [...packageConds(req)];
 
     if (typeof search === "string" && search.trim()) {
@@ -222,7 +224,9 @@ router.get(
       .select()
       .from(packagesTable)
       .where(and(...conditions))
-      .orderBy(desc(packagesTable.createdAt));
+      .orderBy(desc(packagesTable.createdAt))
+      .limit(limit)
+      .offset(offset);
 
     res.json(rows.map(mapPackage));
   },
@@ -247,7 +251,8 @@ async function findDuplicatePackages(
     .select()
     .from(packagesTable)
     .where(and(...packageConds(req), or(...matchers)!))
-    .orderBy(desc(packagesTable.createdAt));
+    .orderBy(desc(packagesTable.createdAt))
+    .limit(MAX_LIMIT);
 }
 
 // GET /packages/duplicates — registered before /packages/:id so the literal

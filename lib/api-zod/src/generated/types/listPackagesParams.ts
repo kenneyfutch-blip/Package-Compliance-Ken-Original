@@ -13,4 +13,6 @@ category?: string;
 risk?: string;
 engine?: string;
 vendor?: string;
+limit?: number;
+offset?: number;
 };

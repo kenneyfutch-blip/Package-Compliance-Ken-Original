@@ -4,6 +4,10 @@ import {
   readUsage,
   type AiOrchestration,
 } from "./ai-orchestration";
+import { cachedAiCall } from "./cache/ai-cache";
+
+// Bump when the language-review prompt changes to invalidate cached results.
+const LANGUAGE_PROMPT_VERSION = 1;
 
 export type LanguageFinding = {
   issueType:
@@ -124,7 +128,8 @@ ${regContext || "(none provided; rely on standard US packaging regulations)"}
 Respond with JSON of shape:
 {"score":number,"confidence":number,"summary":string,"findings":[{"issueType":string,"severity":string,"originalText":string|null,"suggestedText":string|null,"reason":string|null,"regulationReference":string|null,"confidenceScore":number,"claimRiskScore":number|null,"reviewFlags":{"fda":boolean,"epa":boolean,"ftc":boolean,"legal":boolean}|null,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
 
-  const { result, orchestration } = await runTiered<LanguageReviewResult>({
+  const compute = async (): Promise<LanguageReviewResult> => {
+    const { result, orchestration } = await runTiered<LanguageReviewResult>({
     workload: "language_review",
     assess: (r) => {
       const risky = r.score < 70;
@@ -206,7 +211,16 @@ Respond with JSON of shape:
         usage: readUsage(response.usage),
       };
     },
-  });
+    });
 
-  return { ...result, orchestration };
+    return { ...result, orchestration };
+  };
+
+  return cachedAiCall<LanguageReviewResult>({
+    orgId: pkg.organizationId,
+    workload: "language_review",
+    promptVersion: LANGUAGE_PROMPT_VERSION,
+    keyParts: [system, user],
+    compute,
+  });
 }

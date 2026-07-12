@@ -10,4 +10,6 @@ export type ListReviewAssignmentsParams = {
 status?: string;
 teamId?: number;
 assigneeUserId?: number;
+limit?: number;
+offset?: number;
 };

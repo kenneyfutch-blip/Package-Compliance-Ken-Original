@@ -8,12 +8,14 @@ import {
   type PackageRow,
   type LanguageFindingRow,
 } from "@workspace/db";
-import { eq, and, or, ilike, gte, lte, desc, inArray, type SQL } from "drizzle-orm";
+import { eq, and, or, ilike, gte, lte, desc, inArray, isNotNull, type SQL } from "drizzle-orm";
 import { analyzeLanguage, type LanguageReviewResult } from "../lib/language-ai";
 import { logger } from "../lib/logger";
 import { requirePermission, orgId } from "../lib/rbac/context";
 import { packageConds } from "../lib/rbac/scope";
 import { writeAudit } from "../lib/audit";
+import { parsePagination } from "../lib/pagination";
+import { cachedDashboard } from "../lib/cache/dashboard-cache";
 
 const router: IRouter = Router();
 
@@ -369,6 +371,7 @@ router.get(
   async (req: Request, res: Response): Promise<void> => {
     const { issueType, severity, status, minScore, maxScore, search } =
       req.query;
+    const { limit, offset } = parsePagination(req);
 
     // Join findings -> packages and scope by caller-visible packages in SQL so
     // we never preload every package row into memory.
@@ -411,7 +414,8 @@ router.get(
       )
       .where(and(...conds))
       .orderBy(desc(languageFindingsTable.id))
-      .limit(500);
+      .limit(limit)
+      .offset(offset);
 
     const usage = await historicalUsageMap(
       orgId(req),
@@ -438,15 +442,19 @@ router.get(
   "/language-reviews",
   requirePermission("violations:read"),
   async (req: Request, res: Response): Promise<void> => {
+    const { limit, offset } = parsePagination(req);
     const pkgs = await db
       .select()
       .from(packagesTable)
-      .where(and(...packageConds(req)))
-      .orderBy(desc(packagesTable.languageAnalyzedAt));
+      .where(
+        and(...packageConds(req), isNotNull(packagesTable.languageAnalyzedAt)),
+      )
+      .orderBy(desc(packagesTable.languageAnalyzedAt))
+      .limit(limit)
+      .offset(offset);
 
     res.json(
       pkgs
-        .filter((p) => p.languageAnalyzedAt != null)
         .map((p) => ({
           packageId: p.id,
           sku: p.sku,
@@ -529,6 +537,7 @@ router.get(
   "/dashboard/language-quality",
   requirePermission("dashboard:read"),
   async (req: Request, res: Response): Promise<void> => {
+    const payload = await cachedDashboard(req, "language-quality", async () => {
     const pkgs = await db
       .select()
       .from(packagesTable)
@@ -572,7 +581,9 @@ router.get(
       }
     }
 
-    res.json({ averageScore, reviewedCount: reviewed, criticalFindings, ...byType });
+    return { averageScore, reviewedCount: reviewed, criticalFindings, ...byType };
+    });
+    res.json(payload);
   },
 );
 

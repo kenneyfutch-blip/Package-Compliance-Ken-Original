@@ -21,4 +21,5 @@
 - [AI orchestration tiers](ai-orchestration-tiers.md) — Luna/Terra/Sol tiers, bounded confidence/risk escalation, keyless-custom-fallback model-resolution rule.
 - [SOP Document Management](sop-documents.md) — uploaded SOP files + full version lineage + server LCS diff; reuses policies perms/extract; orval path+query param collision gotcha.
 - [Fast Refresh boundary crash](fast-refresh-boundary-crash.md) — "useX must be used within XProvider" white-screen in dev = a .tsx mixing component+plain-fn exports breaks HMR (context torn down); also transient during orval clean:true codegen.
+- [Scale hardening — pagination & caching](scale-hardening-cache.md) — clamp-not-reject list pagination (bare arrays); process-local single-flight TTL caches for AI (org+prompt+model key) and dashboards (org+role+supplier key).
 - [Upload limit & config lockstep](upload-limits.md) — client upload-config.ts mirrors server MAX_UPLOAD_BYTES/allowlist (manual sync); validate by extension not MIME (keeps .ai/.indd); friendly UploadError, never raw HTTP.

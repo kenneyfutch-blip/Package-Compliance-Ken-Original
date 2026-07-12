@@ -9,4 +9,6 @@
 export type ListSupplierSubmissionsParams = {
 status?: string;
 supplierId?: number;
+limit?: number;
+offset?: number;
 };

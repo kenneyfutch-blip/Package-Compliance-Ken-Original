@@ -9,6 +9,7 @@ import { eq, and, desc, inArray, type SQL } from "drizzle-orm";
 import { mapSupplierSubmission } from "../lib/mappers";
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 import { writeAudit } from "../lib/audit";
+import { parsePagination } from "../lib/pagination";
 
 const router: IRouter = Router();
 
@@ -49,6 +50,7 @@ router.get(
   requirePermission("submissions:read"),
   async (req: Request, res: Response): Promise<void> => {
     const conds = submissionConds(req);
+    const { limit, offset } = parsePagination(req);
     const status = str(req.query["status"]);
     if (status && SUBMISSION_STATUSES.includes(status)) {
       conds.push(eq(supplierSubmissionsTable.status, status));
@@ -64,7 +66,8 @@ router.get(
       .from(supplierSubmissionsTable)
       .where(and(...conds))
       .orderBy(desc(supplierSubmissionsTable.createdAt))
-      .limit(300);
+      .limit(limit)
+      .offset(offset);
 
     // Resolve supplier names in a single batched query (no N+1).
     const supplierIds = [...new Set(rows.map((r) => r.supplierId))];

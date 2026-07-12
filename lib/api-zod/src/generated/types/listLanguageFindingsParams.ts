@@ -13,4 +13,6 @@ severity?: string;
 status?: string;
 minScore?: number;
 maxScore?: number;
+limit?: number;
+offset?: number;
 };

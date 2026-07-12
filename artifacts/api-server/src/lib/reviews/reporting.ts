@@ -16,6 +16,7 @@ import {
   DEFAULT_CAPACITY,
   REBALANCE_THRESHOLD,
 } from "./engine";
+import { DEFAULT_LIMIT, MAX_LIMIT } from "../pagination";
 
 export interface MemberWorkload {
   userId: number;
@@ -236,6 +237,10 @@ export async function listAssignments(
   // restriction (org-wide oversight roles, or supplier callers handled by
   // packageScope). See opsTeamScope in rbac/scope.ts.
   teamScope: { teamIds: number[]; userId: number } | null = null,
+  pagination: { limit: number; offset: number } = {
+    limit: DEFAULT_LIMIT,
+    offset: 0,
+  },
 ) {
   const conds = [
     eq(reviewAssignmentsTable.organizationId, organizationId),
@@ -278,7 +283,9 @@ export async function listAssignments(
     .leftJoin(backupUsers, eq(reviewAssignmentsTable.backupUserId, backupUsers.id))
     .leftJoin(managerUsers, eq(reviewAssignmentsTable.managerUserId, managerUsers.id))
     .where(and(...conds))
-    .orderBy(desc(reviewAssignmentsTable.updatedAt));
+    .orderBy(desc(reviewAssignmentsTable.updatedAt))
+    .limit(Math.min(pagination.limit, MAX_LIMIT))
+    .offset(pagination.offset);
 }
 
 function startOfToday(now: Date): Date {
