@@ -591,11 +591,19 @@ function NavContent({
 
 function Brand() {
   return (
-    <Link href="/" className="flex items-center gap-2 font-bold text-primary tracking-tight">
-      <ShieldCheck className="w-6 h-6 shrink-0" />
-      <span className="flex flex-col leading-none">
-        <span className="text-lg">Compliance AI</span>
-        <span className="text-[11px] font-medium text-muted-foreground">Dollar Tree</span>
+    <Link href="/" className="flex items-center gap-2.5 tracking-tight min-w-0">
+      <span className="flex items-center justify-center rounded-md bg-white p-1 ring-1 ring-black/5 shrink-0">
+        <img
+          src={`${import.meta.env.BASE_URL}dollar-tree-logo.png`}
+          alt="Dollar Tree"
+          className="h-6 w-auto object-contain"
+        />
+      </span>
+      <span className="flex flex-col leading-none border-l border-border pl-2.5 min-w-0">
+        <span className="text-base font-bold text-foreground truncate">Compliance AI</span>
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground truncate">
+          Packaging Review
+        </span>
       </span>
     </Link>
   )

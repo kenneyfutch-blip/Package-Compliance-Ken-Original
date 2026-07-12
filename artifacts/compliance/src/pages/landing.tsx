@@ -1,5 +1,5 @@
 import { Link } from "wouter"
-import { ShieldCheck, ScanText, Gauge, Sparkles, ArrowRight } from "lucide-react"
+import { ScanText, Gauge, Sparkles, ArrowRight } from "lucide-react"
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "")
 
@@ -30,9 +30,15 @@ export default function Landing() {
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-6xl flex-col px-6">
         <header className="flex items-center justify-between py-6">
-          <div className="flex items-center gap-2 font-bold tracking-tight">
-            <ShieldCheck className="h-6 w-6 text-[#5B7BFF]" />
-            <span>Packaging Compliance AI</span>
+          <div className="flex items-center gap-2.5 font-bold tracking-tight">
+            <span className="flex items-center justify-center rounded-md bg-white p-1 ring-1 ring-black/5">
+              <img
+                src={`${basePath}/dollar-tree-logo.png`}
+                alt="Dollar Tree"
+                className="h-6 w-auto object-contain"
+              />
+            </span>
+            <span className="border-l border-white/15 pl-2.5">Packaging Compliance AI</span>
           </div>
           <Link
             href="/sign-in"
