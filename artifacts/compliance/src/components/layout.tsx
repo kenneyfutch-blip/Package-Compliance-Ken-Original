@@ -577,7 +577,8 @@ function initialsFrom(value: string): string {
 function UserBlock() {
   const { me } = usePermissions()
   const { user } = useUser()
-  const { signOut, openUserProfile } = useClerk()
+  const { signOut } = useClerk()
+  const [, navigate] = useLocation()
   const displayName = me?.name || me?.email || "Signed in"
   const roleName = me?.role || "Member"
   const email = me?.email ?? user?.primaryEmailAddress?.emailAddress ?? null
@@ -615,10 +616,10 @@ function UserBlock() {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="gap-2 cursor-pointer"
-            onSelect={() => openUserProfile()}
+            onSelect={() => navigate("/account")}
           >
             <UserCog className="w-4 h-4 shrink-0 text-muted-foreground" />
-            <span>Manage account &amp; photo</span>
+            <span>Account &amp; settings</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

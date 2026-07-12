@@ -34,3 +34,4 @@
 - [Query-key invalidation](query-key-invalidation.md) — manual invalidateQueries must use the generated `/api`-prefixed keys; wrong prefix silently refreshes nothing → "button looks broken" while POST actually succeeds.
 - [openapi Package vs PackageDetail](openapi-package-schemas.md) — the two schemas duplicate full property lists (no $ref); a new package field must be added to BOTH or detail-page tsc fails.
 - [Clerk shadcn theme CSS](clerk-shadcn-theme-css.md) — @clerk/themes/shadcn.css is only an `@source` directive; import it unlayered (Tailwind v4 rejects nested @source); modal layering comes from cssLayerName + @layer order.
+- [Clerk path-routing with wouter](clerk-path-routing.md) — render UserProfile/SignIn as pages: path must include BASE_URL, wouter route needs `nest` for sub-routes, requiredPermFor leaves /account ungated.

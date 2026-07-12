@@ -28,6 +28,7 @@ import MyDashboardPage from "@/pages/my-dashboard"
 import BulkQueuePage from "@/pages/bulk"
 import ReviewWorkspace from "@/pages/review-workspace"
 import AdminPage from "@/pages/admin"
+import AccountPage from "@/pages/account"
 import ReportsPage from "@/pages/reports"
 import RegulationsPage from "@/pages/regulations"
 import SuppliersPage from "@/pages/suppliers"
@@ -315,6 +316,9 @@ function AppRoutes() {
         <Route path="/resources/sop" component={SopDocuments} />
         <Route path="/resources/glossary" component={Glossary} />
         <Route path="/admin" component={AdminPage} />
+        {/* Dedicated account page (replaces the Clerk modal). `nest` lets Clerk
+            drive its own sub-routes (/account/security, etc.). */}
+        <Route path="/account" nest component={AccountPage} />
         <Route path="/notifications" component={NotificationsPage} />
         <Route component={NotFound} />
       </Switch>
