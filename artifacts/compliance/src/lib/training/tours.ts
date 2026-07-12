@@ -119,13 +119,11 @@ export interface StartTourOptions {
   onDestroyed?: () => void
 }
 
-// Launch a live tour by id. Safe to call from any page. Returns true if the tour
-// actually started (at least one anchor was present), false otherwise.
-export function startTour(id: string, options?: StartTourOptions): boolean {
-  const def = getTour(id)
-  if (!def) return false
-
-  const steps: DriveStep[] = def.steps
+// Drive an arbitrary set of steps. Steps whose anchor is absent are skipped so a
+// tour never shows an empty spotlight. Returns true if it started (at least one
+// step remained), false otherwise.
+export function startTourSteps(steps: TourStep[], options?: StartTourOptions): boolean {
+  const driveSteps: DriveStep[] = steps
     .filter((s) => !s.element || document.querySelector(s.element))
     .map((s) => ({
       element: s.element,
@@ -135,7 +133,7 @@ export function startTour(id: string, options?: StartTourOptions): boolean {
       },
     }))
 
-  if (steps.length === 0) return false
+  if (driveSteps.length === 0) return false
 
   const d = driver({
     showProgress: true,
@@ -147,8 +145,16 @@ export function startTour(id: string, options?: StartTourOptions): boolean {
     onDestroyed: () => {
       options?.onDestroyed?.()
     },
-    steps,
+    steps: driveSteps,
   })
   d.drive()
   return true
+}
+
+// Launch a predefined live tour by id. Safe to call from any page. Returns true
+// if the tour actually started (at least one anchor was present), false otherwise.
+export function startTour(id: string, options?: StartTourOptions): boolean {
+  const def = getTour(id)
+  if (!def) return false
+  return startTourSteps(def.steps, options)
 }

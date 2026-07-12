@@ -12,7 +12,7 @@ import {
 import { TrainingHeader, Chip } from "@/components/training/kit"
 import { cn } from "@/lib/utils"
 import { GUIDE_SECTIONS } from "@/lib/training/content-guide"
-import { startTour } from "@/lib/training/tours"
+import { startTourSteps } from "@/lib/training/tours"
 
 export default function UserGuide() {
   const [query, setQuery] = useState("")
@@ -37,6 +37,25 @@ export default function UserGuide() {
     document.getElementById(`guide-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
   }
 
+  const takeCategoryTour = () => {
+    // Clear any active search so every category section is mounted for the tour.
+    setQuery("")
+    const steps = [
+      {
+        title: "The main areas of the platform",
+        description:
+          "This guide is organized by area. Here's a quick walkthrough of each main category — what it covers and where it fits into your work.",
+      },
+      ...GUIDE_SECTIONS.map((s) => ({
+        element: `#guide-${s.id}`,
+        title: s.title,
+        description: s.summary,
+      })),
+    ]
+    // Wait a tick for the cleared-search re-render to mount all sections.
+    window.setTimeout(() => startTourSteps(steps), 60)
+  }
+
   return (
     <div className="space-y-8">
       <TrainingHeader
@@ -45,7 +64,7 @@ export default function UserGuide() {
         title="User Guide"
         description="The complete reference for Packaging Compliance AI, organized by area. Search across every article or jump straight to a section."
       >
-        <Button onClick={() => startTour("platform-orientation")} className="gap-2">
+        <Button onClick={takeCategoryTour} className="gap-2">
           <PlayCircle className="h-4 w-4" />
           Take the tour
         </Button>
