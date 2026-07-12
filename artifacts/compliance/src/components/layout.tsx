@@ -20,7 +20,6 @@ import {
   ShieldCheck,
   ChevronDown,
   Box,
-  Sparkles,
   Menu,
   Zap,
   AlertTriangle,
@@ -36,7 +35,6 @@ import {
   LineChart,
   BookOpen,
   Languages,
-  Cog,
   Users,
   UsersRound,
   Gauge,
@@ -51,48 +49,75 @@ import { useListNotifications } from "@workspace/api-client-react"
 import { usePermissions } from "@/lib/access"
 import { requiredPermFor } from "@/lib/permissions"
 
-type NavLink = { name: string; href: string; icon?: React.ComponentType<{ className?: string }> }
-type NavGroup = { name: string; icon: React.ComponentType<{ className?: string }>; items: NavLink[] }
-type NavEntry = ({ type: "link" } & NavLink) | ({ type: "group" } & NavGroup)
+type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> }
+type NavSection = {
+  id: string
+  label: string
+  /** Sensible default when the user has never toggled this section. Defaults to true. */
+  defaultOpen?: boolean
+  items: NavItem[]
+}
 
-const NAV: NavEntry[] = [
-  { type: "link", name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { type: "link", name: "My Work", href: "/my-work", icon: Briefcase },
-  { type: "link", name: "My Dashboard", href: "/my-dashboard", icon: Gauge },
+// Declarative navigation model. Sections are labeled, scannable groupings; new
+// modules are added by editing this data, never the layout below. Every href
+// must map to a route registered in App.tsx — no dead links. Reserved sections
+// (My Work, Team Management, Compliance, Knowledge, …) already have slots so
+// modules from other in-flight work drop in by adding a line here.
+const SECTIONS: NavSection[] = [
   {
-    type: "group",
-    name: "Review Queue",
-    icon: ListChecks,
+    id: "my-work",
+    label: "My Work",
     items: [
+      { name: "My Dashboard", href: "/my-dashboard", icon: Gauge },
       { name: "My Reviews", href: "/reviews", icon: ClipboardList },
-      { name: "High Risk", href: "/queue/high-risk", icon: AlertTriangle },
+      { name: "My Tasks", href: "/my-work", icon: Briefcase },
+      { name: "My Notifications", href: "/notifications", icon: Bell },
+    ],
+  },
+  {
+    id: "home",
+    label: "Home",
+    items: [
+      { name: "Dashboard", href: "/", icon: LayoutDashboard },
+      { name: "New Package", href: "/upload", icon: Upload },
+    ],
+  },
+  {
+    id: "review-operations",
+    label: "Review Operations",
+    items: [
+      { name: "High Risk Queue", href: "/queue/high-risk", icon: AlertTriangle },
+      { name: "Assigned Reviews", href: "/queue/assigned", icon: ClipboardList },
       { name: "Bulk Review", href: "/bulk", icon: Layers },
       { name: "Fast Review", href: "/fast-review", icon: Zap },
-      { name: "Assigned Reviews", href: "/queue/assigned", icon: ClipboardList },
     ],
   },
   {
-    type: "group",
-    name: "Packages",
-    icon: Box,
+    id: "products",
+    label: "Products",
     items: [
-      { name: "All Packages", href: "/packages" },
-      { name: "Active Reviews", href: "/packages/active" },
-      { name: "Approved", href: "/packages/approved" },
-      { name: "Rejected", href: "/packages/rejected" },
-      { name: "Archived", href: "/packages/archived" },
+      { name: "All Packages", href: "/packages", icon: Box },
+      { name: "Active Reviews", href: "/packages/active", icon: ListChecks },
+      { name: "Approved", href: "/packages/approved", icon: ShieldCheck },
+      { name: "Rejected", href: "/packages/rejected", icon: AlertTriangle },
+      { name: "Archived", href: "/packages/archived", icon: History },
     ],
   },
   {
-    type: "group",
-    name: "Regulatory Intelligence",
-    icon: Scale,
+    id: "compliance",
+    label: "Compliance",
     items: [
-      { name: "FDA Library", href: "/regulatory/fda" },
-      { name: "EPA Library", href: "/regulatory/epa" },
-      { name: "CPSC Library", href: "/regulatory/cpsc" },
-      { name: "FTC Library", href: "/regulatory/ftc" },
-      { name: "USDA Library", href: "/regulatory/usda" },
+      { name: "Violations Center", href: "/ai/violations", icon: AlertTriangle },
+      { name: "Language Review", href: "/ai/language", icon: Languages },
+      { name: "Recommended Fixes", href: "/ai/fixes", icon: Wrench },
+      { name: "Claim Reviews", href: "/ai/claims", icon: Megaphone },
+      { name: "Compliance Memory", href: "/ai/memory", icon: Brain },
+      { name: "Compliance Heatmaps", href: "/ai/heatmaps", icon: Grid3x3 },
+      { name: "FDA Library", href: "/regulatory/fda", icon: Scale },
+      { name: "EPA Library", href: "/regulatory/epa", icon: Scale },
+      { name: "CPSC Library", href: "/regulatory/cpsc", icon: Scale },
+      { name: "FTC Library", href: "/regulatory/ftc", icon: Scale },
+      { name: "USDA Library", href: "/regulatory/usda", icon: Scale },
       { name: "Internal SOP", href: "/regulatory/sop", icon: BookOpen },
       { name: "FDA Recalls", href: "/regulatory/recalls", icon: ShieldAlert },
       { name: "Regulatory Sources", href: "/regulatory/sources", icon: ShieldCheck },
@@ -100,64 +125,57 @@ const NAV: NavEntry[] = [
     ],
   },
   {
-    type: "group",
-    name: "AI Compliance",
-    icon: Sparkles,
+    id: "partners",
+    label: "Partners",
     items: [
-      { name: "Violations Center", href: "/ai/violations", icon: AlertTriangle },
-      { name: "Language Review", href: "/ai/language", icon: Languages },
-      { name: "Recommended Fixes", href: "/ai/fixes", icon: Wrench },
-      { name: "Compliance Memory", href: "/ai/memory", icon: Brain },
-      { name: "Compliance Heatmaps", href: "/ai/heatmaps", icon: Grid3x3 },
-      { name: "Claim Reviews", href: "/ai/claims", icon: Megaphone },
-    ],
-  },
-  {
-    type: "group",
-    name: "Suppliers",
-    icon: Building2,
-    items: [
-      { name: "Vendor Directory", href: "/suppliers" },
+      { name: "Vendor Directory", href: "/suppliers", icon: Building2 },
       { name: "Vendor Scorecards", href: "/suppliers/scorecards", icon: Trophy },
-      { name: "Supplier Portal", href: "/suppliers/portal" },
+      { name: "Supplier Portal", href: "/suppliers/portal", icon: Building2 },
     ],
   },
   {
-    type: "group",
-    name: "Reports",
-    icon: FileText,
+    id: "knowledge",
+    label: "Knowledge",
     items: [
-      { name: "Compliance Reports", href: "/reports" },
+      { name: "Resource Center", href: "/resources", icon: Library },
+      { name: "Policy Repository", href: "/resources/policies", icon: ScrollText },
+      { name: "SOP Documents", href: "/resources/sop", icon: FileText },
+      { name: "Approved Language", href: "/resources/glossary", icon: Languages },
+    ],
+  },
+  {
+    id: "analytics",
+    label: "Analytics",
+    items: [
+      { name: "Compliance Reports", href: "/reports", icon: FileText },
       { name: "Executive Reports", href: "/reports/executive", icon: Briefcase },
       { name: "Trend Analysis", href: "/reports/trends", icon: LineChart },
     ],
   },
   {
-    type: "group",
-    name: "Resources",
-    icon: BookOpen,
+    id: "team-management",
+    label: "Team Management",
+    // Manager-facing; collapsed by default for day-to-day specialists.
+    defaultOpen: false,
     items: [
-      { name: "Resource Center", href: "/resources", icon: Library },
-      { name: "Policy Repository", href: "/resources/policies", icon: ScrollText },
-      { name: "SOP Documents", href: "/resources/sop", icon: FileText },
-      { name: "Approved Language & Glossary", href: "/resources/glossary", icon: Languages },
+      { name: "Team Dashboard", href: "/operations/teams", icon: UsersRound },
+      { name: "Assignments", href: "/admin/queue", icon: ClipboardList },
+      { name: "Workload & SLA", href: "/operations/workload", icon: Gauge },
     ],
   },
   {
-    type: "group",
-    name: "Administration",
-    icon: Cog,
+    id: "administration",
+    label: "Administration",
+    // System administration; collapsed by default.
+    defaultOpen: false,
     items: [
       { name: "Admin Overview", href: "/admin/dashboard", icon: LayoutDashboard },
-      { name: "Review Queue", href: "/admin/queue", icon: ClipboardList },
       { name: "Activity Monitor", href: "/admin/activity", icon: Activity },
       { name: "Usage Analytics", href: "/admin/usage", icon: LineChart },
       { name: "Integrations", href: "/admin/integrations", icon: Plug },
       { name: "Policy Management", href: "/admin/policies", icon: ScrollText },
       { name: "User Management", href: "/operations/users", icon: Users },
-      { name: "Team Management", href: "/operations/teams", icon: UsersRound },
       { name: "Roles & Permissions", href: "/operations/roles", icon: ShieldCheck },
-      { name: "Workload & SLA", href: "/operations/workload", icon: Gauge },
       { name: "Audit Center", href: "/operations/audit", icon: History },
       { name: "Queue & Health", href: "/operations/system", icon: Activity },
       { name: "Settings", href: "/admin", icon: Settings },
@@ -171,82 +189,105 @@ function isItemActive(location: string, href: string): boolean {
   return location === href
 }
 
+// Persist which sections the user has explicitly opened/closed, so the layout
+// survives navigation and reloads. Stores only user overrides; untouched
+// sections fall back to their declared defaultOpen.
+const NAV_STATE_KEY = "compliance-nav-sections-v1"
+
+function loadSectionState(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(NAV_STATE_KEY)
+    const parsed = raw ? JSON.parse(raw) : null
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, boolean>) : {}
+  } catch {
+    return {}
+  }
+}
+
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const [location] = useLocation()
-  const [manual, setManual] = React.useState<Record<string, boolean>>({})
   const { has } = usePermissions()
+  const [overrides, setOverrides] = React.useState<Record<string, boolean>>(() => loadSectionState())
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(NAV_STATE_KEY, JSON.stringify(overrides))
+    } catch {
+      /* storage unavailable — non-fatal, state just won't persist */
+    }
+  }, [overrides])
 
   const canSee = (href: string) => {
     const perm = requiredPermFor(href)
     return perm === null || has(perm)
   }
 
-  // Hide nav entries the caller has no permission for; drop empty groups.
-  const visibleNav = React.useMemo<NavEntry[]>(() => {
-    return NAV.flatMap((entry): NavEntry[] => {
-      if (entry.type === "link") return canSee(entry.href) ? [entry] : []
-      const items = entry.items.filter((i) => canSee(i.href))
-      return items.length ? [{ ...entry, items }] : []
-    })
+  // Hide items the caller lacks permission for; drop sections left empty.
+  const visibleSections = React.useMemo(() => {
+    return SECTIONS.map((section) => ({
+      ...section,
+      items: section.items.filter((i) => canSee(i.href)),
+    })).filter((section) => section.items.length > 0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [has])
 
-  const groupHasActive = (g: NavGroup) => g.items.some((i) => isItemActive(location, i.href))
-  const isOpen = (g: NavGroup) => manual[g.name] ?? groupHasActive(g)
+  const toggle = (section: NavSection) =>
+    setOverrides((prev) => ({
+      ...prev,
+      [section.id]: !(prev[section.id] ?? section.defaultOpen ?? true),
+    }))
 
   return (
-    <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-      {visibleNav.map((entry) => {
-        if (entry.type === "link") {
-          const active = isItemActive(location, entry.href)
-          const Icon = entry.icon
-          return (
-            <Link
-              key={entry.name}
-              href={entry.href}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground",
-              )}
-            >
-              {Icon && <Icon className="w-5 h-5" />}
-              {entry.name}
-            </Link>
-          )
-        }
-        const open = isOpen(entry)
-        const GroupIcon = entry.icon
+    <nav className="flex-1 overflow-y-auto py-3 px-3">
+      {visibleSections.map((section, idx) => {
+        const sectionActive = section.items.some((i) => isItemActive(location, i.href))
+        // The section holding the active page is always open; otherwise honor the
+        // user's explicit choice, falling back to the section's sensible default.
+        const open = sectionActive || (overrides[section.id] ?? section.defaultOpen ?? true)
         return (
-          <div key={entry.name}>
+          <div key={section.id} className={cn(idx > 0 && "mt-1 border-t border-border/60 pt-1")}>
             <button
-              onClick={() => setManual((m) => ({ ...m, [entry.name]: !open }))}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors",
-                groupHasActive(entry) ? "text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground",
-              )}
+              type="button"
+              onClick={() => toggle(section)}
+              aria-expanded={open}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-left group hover:bg-accent/50 transition-colors"
             >
-              <GroupIcon className="w-5 h-5" />
-              <span className="flex-1 text-left">{entry.name}</span>
-              <ChevronDown className={cn("w-4 h-4 transition-transform", open && "rotate-180")} />
+              <span
+                className={cn(
+                  "flex-1 text-[11px] font-semibold uppercase tracking-wider",
+                  sectionActive ? "text-foreground/70" : "text-muted-foreground",
+                )}
+              >
+                {section.label}
+              </span>
+              {sectionActive && !open && <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-hidden />}
+              <ChevronDown
+                className={cn(
+                  "w-3.5 h-3.5 text-muted-foreground/70 transition-transform",
+                  !open && "-rotate-90",
+                )}
+                aria-hidden
+              />
             </button>
             {open && (
-              <div className="mt-0.5 mb-1 ml-4 pl-3 border-l border-border space-y-0.5">
-                {entry.items.map((item) => {
+              <div className="mt-0.5 mb-1 space-y-0.5">
+                {section.items.map((item) => {
                   const active = isItemActive(location, item.href)
-                  const ItemIcon = item.icon
+                  const Icon = item.icon
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={onNavigate}
                       className={cn(
-                        "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
-                        active ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                        "flex items-center gap-3 rounded-md border-l-2 pl-3 pr-3 py-2 text-sm transition-colors",
+                        active
+                          ? "bg-primary/10 border-primary text-primary font-medium"
+                          : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
                       )}
                     >
-                      {ItemIcon ? <ItemIcon className="w-4 h-4" /> : <span className="w-1.5 h-1.5 rounded-full bg-current opacity-40" />}
-                      {item.name}
+                      <Icon className={cn("w-4 h-4 shrink-0", active && "text-primary")} />
+                      <span className="truncate">{item.name}</span>
                     </Link>
                   )
                 })}
