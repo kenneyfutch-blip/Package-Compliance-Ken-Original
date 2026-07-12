@@ -526,6 +526,11 @@ function ApprovalBadge({ status }: { status: string }) {
 // ---------------------------------------------------------------------------
 // Findings
 // ---------------------------------------------------------------------------
+// Standing legal disclaimer surfaced on every AI assessment. Keep in sync with
+// STANDING_DISCLAIMER in the api-server analysis engine (artifacts/api-server ai.ts).
+const STANDING_DISCLAIMER =
+  "This review is an AI-assisted compliance assessment and should not be considered legal advice, regulatory approval, or a definitive compliance determination."
+
 function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: number | null; onSelect: (id: number | null) => void }) {
   const groups: [string, Violation[]][] = [
     ["Issues", pkg.violations.filter((v) => v.findingClass === "issue")],
@@ -540,6 +545,10 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
   }
   return (
     <div className="space-y-5">
+      <div className="flex gap-2 p-2.5 rounded-lg bg-muted/50 border border-border text-[11px] leading-relaxed text-muted-foreground">
+        <ShieldAlert className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+        <span>{STANDING_DISCLAIMER}</span>
+      </div>
       {groups.map(([label, items]) => items.length > 0 && (
         <div key={label} className="space-y-2">
           <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{label} ({items.length})</h4>
@@ -567,10 +576,18 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
                   <Badge variant="outline" className="text-[10px] shrink-0">{v.engine}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">{v.description}</p>
+                {v.evidence && (
+                  <div className="text-[11px] text-muted-foreground"><span className="font-semibold text-foreground/70">Evidence: </span>{v.evidence}</div>
+                )}
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
                   <Badge variant="outline" className={cn("text-[10px]", meta.badge)}>{v.severity}</Badge>
                   {v.confidence != null && <span className="text-[10px] text-muted-foreground">Confidence {v.confidence}%</span>}
                   {v.claimFlags?.map((f) => <Badge key={f} variant="outline" className="text-[10px] bg-primary/5 text-primary border-primary/20">{f}</Badge>)}
+                  {v.humanReviewRecommended && (
+                    <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600 border-amber-500/30">
+                      <ShieldAlert className="w-2.5 h-2.5 mr-1" />Human review
+                    </Badge>
+                  )}
                 </div>
                 {(isCorrection || fixNote) && (
                   <div className="mt-1 p-2 bg-accent/50 rounded border border-border text-xs">
@@ -582,6 +599,7 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
                   </div>
                 )}
                 {v.regulationRef && <div className="text-[10px] font-mono text-muted-foreground">Ref: <RegulationRef refText={v.regulationRef} /></div>}
+                {v.disclaimer && <div className="text-[10px] italic text-muted-foreground/80 pt-0.5">{v.disclaimer}</div>}
               </button>
             )
           })}

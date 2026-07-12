@@ -339,6 +339,7 @@ export const CreatePackageResponse = zod.object({
   "recommendation": zod.string().nullish(),
   "detectedText": zod.string().nullish(),
   "suggestedText": zod.string().nullish(),
+  "evidence": zod.string().nullish().describe('Concrete observed basis for the finding, distinct from description (the reasoning).'),
   "bbox": zod.union([zod.object({
   "x": zod.number(),
   "y": zod.number(),
@@ -349,6 +350,8 @@ export const CreatePackageResponse = zod.object({
   "confidence": zod.number().nullish(),
   "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
   "claimFlags": zod.array(zod.string()).optional(),
+  "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
+  "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -616,6 +619,7 @@ export const GetPackageResponse = zod.object({
   "recommendation": zod.string().nullish(),
   "detectedText": zod.string().nullish(),
   "suggestedText": zod.string().nullish(),
+  "evidence": zod.string().nullish().describe('Concrete observed basis for the finding, distinct from description (the reasoning).'),
   "bbox": zod.union([zod.object({
   "x": zod.number(),
   "y": zod.number(),
@@ -626,6 +630,8 @@ export const GetPackageResponse = zod.object({
   "confidence": zod.number().nullish(),
   "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
   "claimFlags": zod.array(zod.string()).optional(),
+  "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
+  "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -817,6 +823,7 @@ export const UpdatePackageResponse = zod.object({
   "recommendation": zod.string().nullish(),
   "detectedText": zod.string().nullish(),
   "suggestedText": zod.string().nullish(),
+  "evidence": zod.string().nullish().describe('Concrete observed basis for the finding, distinct from description (the reasoning).'),
   "bbox": zod.union([zod.object({
   "x": zod.number(),
   "y": zod.number(),
@@ -827,6 +834,8 @@ export const UpdatePackageResponse = zod.object({
   "confidence": zod.number().nullish(),
   "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
   "claimFlags": zod.array(zod.string()).optional(),
+  "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
+  "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -1020,6 +1029,7 @@ export const AnalyzePackageResponse = zod.object({
   "recommendation": zod.string().nullish(),
   "detectedText": zod.string().nullish(),
   "suggestedText": zod.string().nullish(),
+  "evidence": zod.string().nullish().describe('Concrete observed basis for the finding, distinct from description (the reasoning).'),
   "bbox": zod.union([zod.object({
   "x": zod.number(),
   "y": zod.number(),
@@ -1030,6 +1040,8 @@ export const AnalyzePackageResponse = zod.object({
   "confidence": zod.number().nullish(),
   "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
   "claimFlags": zod.array(zod.string()).optional(),
+  "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
+  "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -1389,6 +1401,7 @@ export const ReprocessPackageResponse = zod.object({
   "recommendation": zod.string().nullish(),
   "detectedText": zod.string().nullish(),
   "suggestedText": zod.string().nullish(),
+  "evidence": zod.string().nullish().describe('Concrete observed basis for the finding, distinct from description (the reasoning).'),
   "bbox": zod.union([zod.object({
   "x": zod.number(),
   "y": zod.number(),
@@ -1399,6 +1412,8 @@ export const ReprocessPackageResponse = zod.object({
   "confidence": zod.number().nullish(),
   "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
   "claimFlags": zod.array(zod.string()).optional(),
+  "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
+  "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -3334,6 +3349,7 @@ export const CreatePackageVersionResponse = zod.object({
   "recommendation": zod.string().nullish(),
   "detectedText": zod.string().nullish(),
   "suggestedText": zod.string().nullish(),
+  "evidence": zod.string().nullish().describe('Concrete observed basis for the finding, distinct from description (the reasoning).'),
   "bbox": zod.union([zod.object({
   "x": zod.number(),
   "y": zod.number(),
@@ -3344,6 +3360,8 @@ export const CreatePackageVersionResponse = zod.object({
   "confidence": zod.number().nullish(),
   "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
   "claimFlags": zod.array(zod.string()).optional(),
+  "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
+  "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),
@@ -3836,6 +3854,7 @@ export const CreateApprovalDecisionResponse = zod.object({
   "recommendation": zod.string().nullish(),
   "detectedText": zod.string().nullish(),
   "suggestedText": zod.string().nullish(),
+  "evidence": zod.string().nullish().describe('Concrete observed basis for the finding, distinct from description (the reasoning).'),
   "bbox": zod.union([zod.object({
   "x": zod.number(),
   "y": zod.number(),
@@ -3846,6 +3865,8 @@ export const CreateApprovalDecisionResponse = zod.object({
   "confidence": zod.number().nullish(),
   "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
   "claimFlags": zod.array(zod.string()).optional(),
+  "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
+  "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
   "createdAt": zod.coerce.date()
 })),

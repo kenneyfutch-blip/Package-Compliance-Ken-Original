@@ -22,6 +22,11 @@ export interface Violation {
   detectedText?: string | null;
   /** @nullable */
   suggestedText?: string | null;
+  /**
+     * Concrete observed basis for the finding, distinct from description (the reasoning).
+     * @nullable
+     */
+  evidence?: string | null;
   bbox?: Bbox | null;
   page?: number;
   /** @nullable */
@@ -29,6 +34,13 @@ export interface Violation {
   /** issue (red) | warning (yellow) | passed (green) | recommendation (purple) */
   findingClass?: string;
   claimFlags?: string[];
+  /** True when a human compliance reviewer should confirm before acting. */
+  humanReviewRecommended: boolean;
+  /**
+     * Optional per-finding caveat for high-risk / low-confidence findings.
+     * @nullable
+     */
+  disclaimer?: string | null;
   status: string;
   createdAt: Date;
 }

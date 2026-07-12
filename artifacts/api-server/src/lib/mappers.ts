@@ -169,6 +169,7 @@ export function mapViolation(v: ViolationRow) {
     recommendation: v.recommendation,
     detectedText: v.detectedText,
     suggestedText: v.suggestedText,
+    evidence: v.evidence,
     bbox: hasBbox
       ? { x: v.bboxX!, y: v.bboxY!, w: v.bboxW!, h: v.bboxH! }
       : null,
@@ -176,6 +177,8 @@ export function mapViolation(v: ViolationRow) {
     confidence: v.confidence,
     findingClass: v.findingClass,
     claimFlags: v.claimFlags ?? [],
+    humanReviewRecommended: v.humanReviewRecommended,
+    disclaimer: v.disclaimer,
     status: v.status,
     createdAt: iso(v.createdAt)!,
   };

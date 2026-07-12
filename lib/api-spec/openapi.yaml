@@ -4967,6 +4967,9 @@ components:
           type: ["string", "null"]
         suggestedText:
           type: ["string", "null"]
+        evidence:
+          type: ["string", "null"]
+          description: Concrete observed basis for the finding, distinct from description (the reasoning).
         bbox:
           oneOf:
             - $ref: "#/components/schemas/Bbox"
@@ -4982,6 +4985,12 @@ components:
           type: array
           items:
             type: string
+        humanReviewRecommended:
+          type: boolean
+          description: True when a human compliance reviewer should confirm before acting.
+        disclaimer:
+          type: ["string", "null"]
+          description: Optional per-finding caveat for high-risk / low-confidence findings.
         status:
           type: string
         createdAt:
@@ -4994,6 +5003,7 @@ components:
         - engine
         - title
         - description
+        - humanReviewRecommended
         - status
         - createdAt
 

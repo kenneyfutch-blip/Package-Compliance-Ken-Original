@@ -11,8 +11,21 @@ import { cachedAiCall } from "./cache/ai-cache";
 
 // Prompt-version constants: bump when a workload's prompt changes so cached
 // results produced by the previous prompt are no longer served (see ai-cache).
-const ANALYSIS_PROMPT_VERSION = 2;
+const ANALYSIS_PROMPT_VERSION = 3;
 const COPILOT_PROMPT_VERSION = 1;
+
+/**
+ * Standing legal disclaimer attached to every analysis result and surfaced in
+ * the review UI. Keep this wording in sync with the frontend copy that renders
+ * it (artifacts/compliance review workspace).
+ */
+export const STANDING_DISCLAIMER =
+  "This review is an AI-assisted compliance assessment and should not be considered legal advice, regulatory approval, or a definitive compliance determination.";
+
+/** Default per-finding caveat used when the model omits one on a finding that
+ * requires it (high-risk or low-confidence). */
+const FINDING_DISCLAIMER =
+  "AI-assisted assessment of a potential concern — confirm with a qualified compliance reviewer before acting; not a definitive determination.";
 
 export type FindingClass = "issue" | "warning" | "passed" | "recommendation";
 
@@ -25,10 +38,20 @@ export type AnalyzedViolation = {
   recommendation: string | null;
   detectedText: string | null;
   suggestedText: string | null;
+  /** The concrete observed basis for the finding — distinct from `description`
+   * (the reasoning). Quoted artwork copy, a missing-element observation, or the
+   * provided regulation/standard relied on. */
+  evidence: string | null;
   bbox: { x: number; y: number; w: number; h: number } | null;
   findingClass: FindingClass;
   confidence: number | null;
   claimFlags: string[];
+  /** True when a human compliance reviewer should confirm before acting
+   * (auto-set for high-risk or low-confidence findings). */
+  humanReviewRecommended: boolean;
+  /** Optional per-finding caveat, populated for high-risk / low-confidence
+   * findings; null otherwise. */
+  disclaimer: string | null;
   page: number;
 };
 
@@ -39,6 +62,8 @@ export type AnalysisResult = {
   complianceStatus: string;
   summary: string;
   complianceImpact: string;
+  /** Standing legal disclaimer for the whole assessment (STANDING_DISCLAIMER). */
+  disclaimer: string;
   ocr: OcrData;
   recommendations: string[];
   violations: AnalyzedViolation[];
@@ -151,7 +176,15 @@ CATEGORY EDGE CASES:
 
 ANTI-FABRICATION (CRITICAL): Never invent facts, regulation citations, CFR section numbers, EPA registration numbers, or claim text. Put a specific citation in regulationRef ONLY when it comes from the APPLICABLE REGULATIONS KNOWLEDGE BASE, the APPLICABLE eCFR REGULATIONS, or the INTERNAL COMPANY STANDARDS provided in the user message. If you know a requirement exists but no matching citation was provided, describe it generically and set regulationRef to null — do NOT guess a section number. detectedText must be copy that LITERALLY appears in the packaging artwork text — never paraphrase or invent it; use null when the finding is about a MISSING element. If the artwork text does not let you verify something, say so and lower confidence rather than asserting it.
 
-CONFIDENCE CALIBRATION & INPUT-QUALITY GATING: Calibrate "confidence" honestly — 90-100 = the offending or required text is explicitly present (or explicitly absent) AND a specific provided regulation/standard applies; 70-89 = clear issue but the citation is general or inferred from category; 50-69 = plausible but partly inferred; below 50 = speculative, in which case use findingClass "warning" (not "issue") and state what would confirm it. If the PACKAGING ARTWORK TEXT is empty, very short, garbled, or obviously incomplete (poor OCR), treat input quality as LOW: cap every confidence at 60, prefer "missing element" / "warning" framing over hard "issue" assertions, note the low input quality in the summary, and add a "recommendation" finding to re-capture higher-quality artwork text.
+CONSTRAINTS & PROHIBITIONS (absolute — these override every other instruction):
+- Never invent regulations, requirements, legal interpretations, or citations. Reference a regulation or standard ONLY when it appears in the APPLICABLE REGULATIONS KNOWLEDGE BASE, the APPLICABLE eCFR REGULATIONS, or the INTERNAL COMPANY STANDARDS provided below.
+- Never present an assumption, inference, or piece of general knowledge as an established fact.
+- Never create a finding without observed evidence — a specific piece of the provided artwork text, an observed missing mandatory element, or a specifically provided regulation/standard. No evidence means no finding.
+- When information needed for a determination is missing, incomplete, or unreadable, DO NOT infer or guess. Instead emit a finding with findingClass "recommendation" whose title begins "Additional Information Required", describing exactly what input is needed to complete the assessment.
+
+HEDGED PHRASING (required): Frame every issue/warning as a potential/possible concern for human review, never as a definitive legal verdict. Use wording like "potential ... concern", "possible ... issue", "may not comply", "recommend review/substantiation". Do NOT write settled conclusions such as "this violates", "is illegal", or "is non-compliant". Titles and descriptions must read as recommendations for a human reviewer, not adjudications.
+
+CONFIDENCE CALIBRATION & INPUT-QUALITY GATING: Calibrate "confidence" honestly — 90-100 = the offending or required text is explicitly present (or explicitly absent) AND a specific provided regulation/standard applies; 70-89 = clear issue but the citation is general or inferred from category; 50-69 = plausible but partly inferred; below 50 = speculative, in which case use findingClass "warning" (not "issue") and state what would confirm it. If the PACKAGING ARTWORK TEXT is empty, very short, garbled, or obviously incomplete (poor OCR), treat input quality as LOW: cap every confidence at 60, prefer "missing element" / "warning" framing over hard "issue" assertions, note the low input quality in the summary, and add a "recommendation" finding to re-capture higher-quality artwork text. CONFIDENCE CLASSIFICATION (also enforced downstream): a finding you are LESS THAN 75% confident of must use findingClass "warning" at most — never "issue"; a finding BELOW 50% confidence must be an informational item for human review (findingClass "recommendation", severity "informational") that states what would confirm it. Set humanReviewRecommended=true for any finding that is high-risk (critical or major) or below 75% confidence.
 
 RISK-SCORE RUBRIC — set riskScore consistently from the worst unresolved findings: 85-100 = one or more CRITICAL issues (safety/legal/mislabeling that could force a recall, customs hold, or regulatory action) -> complianceStatus "Failed"; 65-84 = one or more MAJOR issues (required disclosures or claims problems, likely rejection) -> "Failed" or "Needs Review"; 35-64 = only MINOR issues (formatting, minor copy) -> "Needs Review"; 10-34 = only warnings/recommendations, nothing actionable -> "Passed" or "Needs Review"; 0-9 = clean, all mandatory elements present and correct -> "Passed". Grade tracks the bands (A for 0-9, B for 10-34, C for 35-64, D for 65-84, F for 85-100). Keep grade, riskScore, and complianceStatus mutually consistent.
 
@@ -201,9 +234,12 @@ Perform:
    - title, description.
    - detectedText (the offending or relevant copy, or null if it is a missing element).
    - suggestedText (a corrected version, or null).
+   - evidence: the SPECIFIC observed basis for this finding — the exact artwork copy relied on, the concrete missing-element observation, or the provided regulation/standard text. DISTINCT from description (which is your reasoning). Never place invented text here; null only if there is genuinely nothing to cite (in which case you should not raise the finding).
    - recommendation, regulationRef (agency + rule code/section when possible).
    - confidence: integer 0-100 for how certain you are.
    - claimFlags: array; for marketing/regulatory claims list which review authorities must sign off, any of ["EPA","FDA","FTC","Legal"]; otherwise [].
+   - humanReviewRecommended: boolean — true when a human compliance reviewer should confirm this finding before action (always true for high-risk or confidence < 75).
+   - disclaimer: optional string — for high-risk or low-confidence findings, a one-line caveat that this is an AI-assisted assessment needing human/legal confirmation; otherwise null.
    - page: 0 (single-page artwork).
 4. Include at least 2 "passed" findings for mandatory elements that are correctly present, and 1-2 "recommendation" findings, in addition to the issues/warnings.
 5. For each finding, provide an approximate normalized bounding box {x,y,w,h} with values 0..1 for where on the artwork it appears (top for branding/claims, middle for ingredients, bottom for net weight/manufacturer). Spread boxes out; do not overlap them all.
@@ -213,7 +249,7 @@ Perform:
 9. complianceImpact: ONE sentence naming the concrete business/regulatory consequence of shipping this packaging as-is (e.g. "Recall and FDA misbranding exposure from a missing allergen declaration" or "Low impact — only minor formatting refinements needed").
 
 Respond with JSON of shape:
-{"category":string,"grade":string,"riskScore":number,"complianceStatus":string,"summary":string,"complianceImpact":string,"ocr":{"productName":string|null,"ingredients":string|null,"directions":string|null,"warnings":string|null,"claims":string[],"marketingCopy":string|null,"nutritionFacts":string|null,"allergenStatements":string|null,"netWeight":string|null,"countryOfOrigin":string|null,"manufacturerInfo":string|null,"expirationDate":string|null,"epaRegistrationNumbers":string|null,"hazardStatements":string|null},"recommendations":string[],"violations":[{"severity":string,"findingClass":string,"engine":string,"title":string,"description":string,"regulationRef":string|null,"recommendation":string|null,"detectedText":string|null,"suggestedText":string|null,"confidence":number,"claimFlags":string[],"page":number,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
+{"category":string,"grade":string,"riskScore":number,"complianceStatus":string,"summary":string,"complianceImpact":string,"ocr":{"productName":string|null,"ingredients":string|null,"directions":string|null,"warnings":string|null,"claims":string[],"marketingCopy":string|null,"nutritionFacts":string|null,"allergenStatements":string|null,"netWeight":string|null,"countryOfOrigin":string|null,"manufacturerInfo":string|null,"expirationDate":string|null,"epaRegistrationNumbers":string|null,"hazardStatements":string|null},"recommendations":string[],"violations":[{"severity":string,"findingClass":string,"engine":string,"title":string,"description":string,"regulationRef":string|null,"recommendation":string|null,"detectedText":string|null,"suggestedText":string|null,"evidence":string|null,"confidence":number,"claimFlags":string[],"humanReviewRecommended":boolean,"disclaimer":string|null,"page":number,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;
 
   const compute = async (): Promise<AnalysisResult> => {
     const { result, orchestration } = await runTiered<AnalysisResult>({
@@ -285,8 +321,55 @@ Respond with JSON of shape:
           typeof v?.confidence === "number"
             ? Math.max(0, Math.min(100, Math.round(v.confidence)))
             : null;
+
+        // Confidence-classification guardrail (enforced regardless of what the
+        // model returned): a low-confidence finding can never be asserted as a
+        // hard "issue". <75 caps an issue at "warning"; <50 becomes a
+        // non-blocking informational review item ("recommendation").
+        let effClass: FindingClass = findingClass;
+        let effSeverity = severity;
+        if (
+          (effClass === "issue" || effClass === "warning") &&
+          confidence != null
+        ) {
+          if (confidence < 50) {
+            effClass = "recommendation";
+            effSeverity = "informational";
+          } else if (confidence < 75 && effClass === "issue") {
+            effClass = "warning";
+          }
+        }
+
+        const highRisk = effSeverity === "critical" || effSeverity === "major";
+        const lowConfidence = confidence != null && confidence < 75;
+        const downgraded = effClass !== findingClass;
+        const humanReviewRecommended =
+          v?.humanReviewRecommended === true ||
+          highRisk ||
+          lowConfidence ||
+          downgraded;
+
+        const evidence =
+          typeof v?.evidence === "string" && v.evidence.trim()
+            ? v.evidence.trim().slice(0, 2000)
+            : null;
+
+        // A per-finding caveat is required for high-risk or low-confidence
+        // findings; prefer the model's wording, else fall back to a standard one.
+        const modelDisclaimer =
+          typeof v?.disclaimer === "string" && v.disclaimer.trim()
+            ? v.disclaimer.trim()
+            : null;
+        // Any high-risk or low-confidence finding carries a caveat — including
+        // ones downgraded to an informational "recommendation" by the <50 rule.
+        // "passed" checks (a present/correct element) are excluded.
+        const needsDisclaimer =
+          effClass !== "passed" && (highRisk || lowConfidence);
+        const disclaimer =
+          modelDisclaimer ?? (needsDisclaimer ? FINDING_DISCLAIMER : null);
+
         return {
-          severity,
+          severity: effSeverity,
           engine: String(v?.engine ?? "Internal"),
           title: String(v?.title ?? "Compliance issue"),
           description: String(v?.description ?? ""),
@@ -294,10 +377,13 @@ Respond with JSON of shape:
           recommendation: v?.recommendation ?? null,
           detectedText: v?.detectedText ?? null,
           suggestedText: v?.suggestedText ?? null,
+          evidence,
           bbox,
-          findingClass,
+          findingClass: effClass,
           confidence,
           claimFlags,
+          humanReviewRecommended,
+          disclaimer,
           page: Number.isInteger(v?.page) ? v.page : 0,
         };
       })
@@ -332,6 +418,7 @@ Respond with JSON of shape:
             : "Needs Review",
           summary: String(parsed?.summary ?? ""),
           complianceImpact: String(parsed?.complianceImpact ?? ""),
+          disclaimer: STANDING_DISCLAIMER,
           ocr,
           recommendations: Array.isArray(parsed?.recommendations)
             ? parsed.recommendations.map((r: any) => String(r))

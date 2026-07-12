@@ -232,6 +232,7 @@ export async function applyAnalysis(
           recommendation: v.recommendation,
           detectedText: v.detectedText,
           suggestedText: v.suggestedText,
+          evidence: v.evidence,
           bboxX: v.bbox?.x ?? null,
           bboxY: v.bbox?.y ?? null,
           bboxW: v.bbox?.w ?? null,
@@ -240,6 +241,8 @@ export async function applyAnalysis(
           confidence: v.confidence,
           findingClass: v.findingClass,
           claimFlags: v.claimFlags,
+          humanReviewRecommended: v.humanReviewRecommended,
+          disclaimer: v.disclaimer,
           status: "Open",
         })),
       )
