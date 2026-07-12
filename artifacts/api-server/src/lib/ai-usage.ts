@@ -89,6 +89,105 @@ function normalizeTokens(usage: unknown): {
 }
 
 // ---------------------------------------------------------------------------
+// Usage-write health signal
+// ---------------------------------------------------------------------------
+// Usage logging is fire-and-forget, so a failing telemetry write is otherwise
+// invisible (swallowed below the default log level). That means the AI cost /
+// usage dashboards can silently under-report or go stale with nobody noticing.
+// To give admins visibility WITHOUT ever blocking the AI path, every write
+// outcome updates a process-local health counter, and ongoing failures emit a
+// rate-limited warn-level log. This is a lightweight in-memory signal (it
+// resets on restart and is per-process); it is a health hint, not an audit
+// ledger.
+const WARN_INTERVAL_MS = 60_000;
+
+type WriteHealth = {
+  successes: number;
+  failures: number;
+  consecutiveFailures: number;
+  lastSuccessAt: number | null;
+  lastFailureAt: number | null;
+  lastFailureMessage: string | null;
+};
+
+const writeHealth: WriteHealth = {
+  successes: 0,
+  failures: 0,
+  consecutiveFailures: 0,
+  lastSuccessAt: null,
+  lastFailureAt: null,
+  lastFailureMessage: null,
+};
+
+let lastWarnAt = 0;
+let failuresSinceLastWarn = 0;
+
+function onWriteSuccess(): void {
+  writeHealth.successes += 1;
+  writeHealth.consecutiveFailures = 0;
+  writeHealth.lastSuccessAt = Date.now();
+}
+
+function onWriteFailure(err: unknown, workload: string): void {
+  writeHealth.failures += 1;
+  writeHealth.consecutiveFailures += 1;
+  writeHealth.lastFailureAt = Date.now();
+  writeHealth.lastFailureMessage =
+    err instanceof Error ? err.message : String(err);
+  failuresSinceLastWarn += 1;
+
+  // Keep full detail at debug for local dev.
+  logger.debug({ err, workload }, "ai usage log failed (non-fatal)");
+
+  // Escalate to warn (above the default level) at most once per interval so an
+  // ongoing telemetry outage is visible without flooding logs on every AI call.
+  const now = Date.now();
+  if (now - lastWarnAt >= WARN_INTERVAL_MS) {
+    logger.warn(
+      {
+        failuresSinceLastWarn,
+        totalFailures: writeHealth.failures,
+        consecutiveFailures: writeHealth.consecutiveFailures,
+        lastFailureMessage: writeHealth.lastFailureMessage,
+      },
+      "AI usage telemetry writes are failing — cost/usage dashboards may under-report",
+    );
+    lastWarnAt = now;
+    failuresSinceLastWarn = 0;
+  }
+}
+
+export type AiUsageWriteHealth = {
+  // True when the most recent write attempt succeeded (or none has run yet).
+  healthy: boolean;
+  successes: number;
+  failures: number;
+  consecutiveFailures: number;
+  lastSuccessAt: string | null;
+  lastFailureAt: string | null;
+  lastFailureMessage: string | null;
+};
+
+// Snapshot of usage-write health for the admin AI usage dashboard. Lets admins
+// tell "cost data looks low because telemetry isn't logging" apart from "usage
+// genuinely dropped".
+export function aiUsageWriteHealthSnapshot(): AiUsageWriteHealth {
+  return {
+    healthy: writeHealth.consecutiveFailures === 0,
+    successes: writeHealth.successes,
+    failures: writeHealth.failures,
+    consecutiveFailures: writeHealth.consecutiveFailures,
+    lastSuccessAt: writeHealth.lastSuccessAt
+      ? new Date(writeHealth.lastSuccessAt).toISOString()
+      : null,
+    lastFailureAt: writeHealth.lastFailureAt
+      ? new Date(writeHealth.lastFailureAt).toISOString()
+      : null,
+    lastFailureMessage: writeHealth.lastFailureMessage,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Usage writer
 // ---------------------------------------------------------------------------
 export type RecordAiUsageInput = {
@@ -130,36 +229,37 @@ export function recordAiUsage(input: RecordAiUsageInput): void {
       Math.round(input.totalTokens ?? promptTokens + completionTokens),
     );
 
-    void db
-      .insert(aiUsageTable)
-      .values({
-        requestId: randomUUID(),
-        organizationId,
-        userId,
-        workload: input.workload,
-        reviewType: input.reviewType ?? null,
-        model: input.model || "unknown",
-        tier: input.tier ?? null,
-        promptTokens,
-        completionTokens,
-        totalTokens,
-        costUsd: estimateCostUsd(input.model, promptTokens, completionTokens),
-        durationMs: Math.max(0, Math.round(input.durationMs || 0)),
-        success: input.success,
-        errorMessage: input.errorMessage ?? null,
-        riskScore: input.riskScore ?? null,
-        confidence: input.confidence ?? null,
-        escalated: input.escalated ?? false,
-      })
-      .catch((err) => {
-        logger.debug(
-          { err, workload: input.workload },
-          "ai usage log failed (non-fatal)",
-        );
-      });
+    const write = db.insert(aiUsageTable).values({
+      requestId: randomUUID(),
+      organizationId,
+      userId,
+      workload: input.workload,
+      reviewType: input.reviewType ?? null,
+      model: input.model || "unknown",
+      tier: input.tier ?? null,
+      promptTokens,
+      completionTokens,
+      totalTokens,
+      costUsd: estimateCostUsd(input.model, promptTokens, completionTokens),
+      durationMs: Math.max(0, Math.round(input.durationMs || 0)),
+      success: input.success,
+      errorMessage: input.errorMessage ?? null,
+      riskScore: input.riskScore ?? null,
+      confidence: input.confidence ?? null,
+      escalated: input.escalated ?? false,
+    });
+    // Record the write outcome for the health signal without awaiting: a
+    // resolved write bumps the success counter, a rejected one is swallowed and
+    // counted as a failure (which may emit a rate-limited warn).
+    void Promise.resolve(write).then(
+      () => onWriteSuccess(),
+      (err) => onWriteFailure(err, input.workload),
+    );
   } catch (err) {
-    // Defensive: never let telemetry disturb the caller.
-    logger.debug({ err }, "recordAiUsage threw (non-fatal)");
+    // Defensive: never let telemetry disturb the caller. A synchronous throw
+    // (e.g. driver blew up before the query was built) still counts as a failed
+    // write for the health signal.
+    onWriteFailure(err, input.workload);
   }
 }
 

@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { db } from "@workspace/db";
-import { recordAiUsage, trackDirectUsage } from "./ai-usage";
+import {
+  recordAiUsage,
+  trackDirectUsage,
+  aiUsageWriteHealthSnapshot,
+} from "./ai-usage";
 import { runTiered } from "./ai-orchestration";
 
 // ---------------------------------------------------------------------------
@@ -110,6 +114,48 @@ test("recordAiUsage swallows a rejected insert (no unhandled rejection)", async 
     // Let the rejected insert promise settle; the internal .catch must absorb it.
     await new Promise((r) => setTimeout(r, 0));
     assert.equal(state.rejections, 1);
+  } finally {
+    restoreDb();
+  }
+});
+
+test("aiUsageWriteHealthSnapshot reflects a failed write then recovers on success", async () => {
+  const before = aiUsageWriteHealthSnapshot();
+  installRejectingInsert();
+  try {
+    recordAiUsage({
+      workload: "ocr",
+      model: "gpt-5.4-mini",
+      promptTokens: 1,
+      completionTokens: 1,
+      durationMs: 5,
+      success: true,
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    const afterFail = aiUsageWriteHealthSnapshot();
+    assert.equal(afterFail.failures, before.failures + 1);
+    assert.equal(afterFail.healthy, false);
+    assert.ok(afterFail.consecutiveFailures >= 1);
+    assert.equal(afterFail.lastFailureMessage, "db unavailable");
+  } finally {
+    restoreDb();
+  }
+
+  // A subsequent successful write clears the unhealthy state.
+  installCapturingInsert();
+  try {
+    recordAiUsage({
+      workload: "ocr",
+      model: "gpt-5.4-mini",
+      promptTokens: 1,
+      completionTokens: 1,
+      durationMs: 5,
+      success: true,
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    const afterOk = aiUsageWriteHealthSnapshot();
+    assert.equal(afterOk.healthy, true);
+    assert.equal(afterOk.consecutiveFailures, 0);
   } finally {
     restoreDb();
   }

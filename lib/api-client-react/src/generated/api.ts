@@ -25,6 +25,7 @@ import type {
   AiProviderTestResult,
   AiProviderUpdate,
   AiUsageAnalytics,
+  AiUsageHealth,
   AiUsageRequest,
   Annotation,
   AnnotationInput,
@@ -900,6 +901,84 @@ export function useListAiUsageRequests<TData = Awaited<ReturnType<typeof listAiU
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListAiUsageRequestsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAiUsageHealthUrl = () => {
+
+
+
+
+  return `/api/ai-usage/health`
+}
+
+/**
+ * Lightweight in-memory health of the fire-and-forget AI usage logging pipeline. Because usage writes never block the AI response, a failing write is otherwise invisible and the cost/usage figures can silently under-report. Use this to tell "cost looks low because logging is failing" apart from "usage genuinely dropped". Counters are per-process and reset on restart.
+ * @summary AI usage telemetry write-health signal
+ */
+export const getAiUsageHealth = async ( options?: RequestInit): Promise<AiUsageHealth> => {
+
+  return customFetch<AiUsageHealth>(getGetAiUsageHealthUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAiUsageHealthQueryKey = () => {
+    return [
+    `/api/ai-usage/health`
+    ] as const;
+    }
+
+
+export const getGetAiUsageHealthQueryOptions = <TData = Awaited<ReturnType<typeof getAiUsageHealth>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiUsageHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAiUsageHealthQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiUsageHealth>>> = ({ signal }) => getAiUsageHealth({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAiUsageHealth>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAiUsageHealthQueryResult = NonNullable<Awaited<ReturnType<typeof getAiUsageHealth>>>
+export type GetAiUsageHealthQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AI usage telemetry write-health signal
+ */
+
+export function useGetAiUsageHealth<TData = Awaited<ReturnType<typeof getAiUsageHealth>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiUsageHealth>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAiUsageHealthQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

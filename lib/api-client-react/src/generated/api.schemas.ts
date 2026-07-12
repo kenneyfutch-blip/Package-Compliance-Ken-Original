@@ -559,6 +559,23 @@ export interface AiUsageAnalytics {
   byOperation: AiUsageOperationItem[];
 }
 
+export interface AiUsageHealth {
+  /** True when the most recent usage-write attempt succeeded (or none has run yet). */
+  healthy: boolean;
+  /** Total successful usage writes since this process started. */
+  successes: number;
+  /** Total failed usage writes since this process started. */
+  failures: number;
+  /** Number of failed writes since the last successful one. */
+  consecutiveFailures: number;
+  /** ISO timestamp of the last successful write, or null. */
+  lastSuccessAt: string | null;
+  /** ISO timestamp of the last failed write, or null. */
+  lastFailureAt: string | null;
+  /** Message from the most recent write failure, or null. */
+  lastFailureMessage: string | null;
+}
+
 export interface AiUsageRequest {
   id: number;
   requestId: string;

@@ -226,6 +226,20 @@ paths:
                 items:
                   $ref: "#/components/schemas/AiUsageRequest"
 
+  /ai-usage/health:
+    get:
+      operationId: getAiUsageHealth
+      tags: [ai-usage]
+      summary: AI usage telemetry write-health signal
+      description: Lightweight in-memory health of the fire-and-forget AI usage logging pipeline. Because usage writes never block the AI response, a failing write is otherwise invisible and the cost/usage figures can silently under-report. Use this to tell "cost looks low because logging is failing" apart from "usage genuinely dropped". Counters are per-process and reset on restart.
+      responses:
+        "200":
+          description: Telemetry write-health snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiUsageHealth"
+
   /violations:
     get:
       operationId: listViolations
@@ -4524,6 +4538,42 @@ components:
         - timeseries
         - byModel
         - byOperation
+
+    AiUsageHealth:
+      type: object
+      properties:
+        healthy:
+          type: boolean
+          description: True when the most recent usage-write attempt succeeded (or none has run yet).
+        successes:
+          type: integer
+          description: Total successful usage writes since this process started.
+        failures:
+          type: integer
+          description: Total failed usage writes since this process started.
+        consecutiveFailures:
+          type: integer
+          description: Number of failed writes since the last successful one.
+        lastSuccessAt:
+          type: string
+          nullable: true
+          description: ISO timestamp of the last successful write, or null.
+        lastFailureAt:
+          type: string
+          nullable: true
+          description: ISO timestamp of the last failed write, or null.
+        lastFailureMessage:
+          type: string
+          nullable: true
+          description: Message from the most recent write failure, or null.
+      required:
+        - healthy
+        - successes
+        - failures
+        - consecutiveFailures
+        - lastSuccessAt
+        - lastFailureAt
+        - lastFailureMessage
 
     AiUsageRequest:
       type: object

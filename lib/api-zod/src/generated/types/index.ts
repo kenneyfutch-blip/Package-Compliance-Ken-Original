@@ -13,6 +13,7 @@ export * from './aiProviderTiers';
 export * from './aiProviderUpdate';
 export * from './aiTierModel';
 export * from './aiUsageAnalytics';
+export * from './aiUsageHealth';
 export * from './aiUsageModelItem';
 export * from './aiUsageOperationItem';
 export * from './aiUsageRequest';

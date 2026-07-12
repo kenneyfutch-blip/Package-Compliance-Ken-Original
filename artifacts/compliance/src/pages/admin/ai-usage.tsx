@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import {
   useGetAiUsageAnalytics,
+  useGetAiUsageHealth,
+  getGetAiUsageHealthQueryKey,
   useListAiUsageRequests,
   exportAiUsage,
 } from "@workspace/api-client-react";
@@ -112,6 +114,15 @@ export default function AiUsageDashboard() {
   const { data: requests, isLoading: requestsLoading } = useListAiUsageRequests(
     { from, to, limit: 50 },
   );
+  // Poll telemetry write-health so admins can distinguish "cost looks low
+  // because logging is failing" from "usage genuinely dropped".
+  const { data: health } = useGetAiUsageHealth({
+    query: {
+      refetchInterval: 60_000,
+      queryKey: getGetAiUsageHealthQueryKey(),
+    },
+  });
+  const telemetryDegraded = !!health && !health.healthy && health.failures > 0;
 
   const summary = analytics?.summary;
 
@@ -181,6 +192,33 @@ export default function AiUsageDashboard() {
           </Button>
         </div>
       </div>
+
+      {telemetryDegraded && health ? (
+        <Card className="border-destructive/40 bg-destructive/5">
+          <CardContent className="p-4 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-semibold text-destructive">
+                AI usage telemetry writes are failing — figures below may be
+                under-reported
+              </p>
+              <p className="text-muted-foreground mt-1">
+                {health.consecutiveFailures} consecutive write
+                {health.consecutiveFailures === 1 ? "" : "s"} have failed
+                {health.lastFailureAt
+                  ? ` (last at ${new Date(health.lastFailureAt).toLocaleString()})`
+                  : ""}
+                . Recent AI activity may not be recorded, so spend and volume can
+                read lower than reality — this is a logging fault, not
+                necessarily a real drop in usage.
+                {health.lastFailureMessage
+                  ? ` Last error: ${health.lastFailureMessage}.`
+                  : ""}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-16">
