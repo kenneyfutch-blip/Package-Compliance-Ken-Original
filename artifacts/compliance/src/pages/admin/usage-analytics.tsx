@@ -9,7 +9,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, PieChart, Pie, Cell, Legend 
+  BarChart, Bar, PieChart, Pie, Cell 
 } from "recharts";
 import { Loader2, TrendingUp, PieChart as PieChartIcon, BarChart2, Briefcase } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -114,21 +114,43 @@ export default function UsageAnalytics() {
                 <CardTitle className="flex items-center gap-2"><PieChartIcon className="w-5 h-5 text-primary" /> Category Distribution</CardTitle>
                 <CardDescription>Review volume by product category.</CardDescription>
               </CardHeader>
-              <CardContent className="h-80">
+              <CardContent className="min-h-80">
                 {categories && categories.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={categories} dataKey="count" nameKey="label" cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={2}>
-                        {categories.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px", color: "hsl(var(--foreground))" }} />
-                      <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: "12px" }} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <div className="flex flex-col gap-4">
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie data={categories} dataKey="count" nameKey="label" cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={2}>
+                            {categories.map((_, index) => (
+                              <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px", color: "hsl(var(--foreground))" }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {/* Custom legend: hierarchical category paths are long, so each
+                        entry gets its own wrapping chip (color marker + truncated
+                        label with the full path on hover) instead of Recharts'
+                        fixed-height legend, which overlaps long labels. */}
+                    <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                      {categories.map((cat, index) => (
+                        <li key={`legend-${index}`} className="flex items-center gap-1.5 min-w-0 max-w-full">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                            aria-hidden
+                          />
+                          <span className="truncate text-muted-foreground" title={cat.label}>
+                            {cat.label}
+                          </span>
+                          <span className="shrink-0 font-medium tabular-nums text-foreground">{cat.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground bg-muted/20 rounded-lg">No category data available</div>
+                  <div className="flex h-72 items-center justify-center text-muted-foreground bg-muted/20 rounded-lg">No category data available</div>
                 )}
               </CardContent>
             </Card>
