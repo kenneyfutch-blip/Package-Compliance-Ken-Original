@@ -36,3 +36,4 @@
 - [openapi Package vs PackageDetail](openapi-package-schemas.md) — the two schemas duplicate full property lists (no $ref); a new package field must be added to BOTH or detail-page tsc fails.
 - [Clerk shadcn theme CSS](clerk-shadcn-theme-css.md) — @clerk/themes/shadcn.css is only an `@source` directive; import it unlayered (Tailwind v4 rejects nested @source); modal layering comes from cssLayerName + @layer order.
 - [Clerk path-routing with wouter](clerk-path-routing.md) — render UserProfile/SignIn as pages: path must include BASE_URL, wouter route needs `nest` for sub-routes, requiredPermFor leaves /account ungated.
+- [Vite PORT/BASE_PATH build blocker](vite-port-build-blocker.md) — web artifact vite.config must require PORT only for `serve`, not `build`; default BASE_PATH to '/' or the prod deploy build throws.
