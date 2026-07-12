@@ -5,6 +5,7 @@ import {
   ZoomIn, ZoomOut, RotateCw, Maximize, Minus, Plus,
   ChevronLeft, ChevronRight, Hand, MapPin, Square, Highlighter,
   Circle as CircleIcon, MoveUpRight, Strikethrough, Type, Eye, EyeOff, FileWarning,
+  Undo2, Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -53,6 +54,10 @@ type Props = {
   showHuman: boolean
   onToggleAi: () => void
   onToggleHuman: () => void
+  /** Revert the most recent markup the reviewer added this session. */
+  onUndo: () => void
+  canUndo: boolean
+  undoPending: boolean
 }
 
 const TOOLS: { tool: MarkupTool; icon: React.ElementType; label: string }[] = [
@@ -102,6 +107,7 @@ export function ProofViewer(props: Props) {
   const {
     fileUrl, fileType, pageCount, annotations, selectedId, activeTool, onToolChange,
     onSelect, onCreate, showAi, showHuman, onToggleAi, onToggleHuman,
+    onUndo, canUndo, undoPending,
   } = props
 
   const [zoom, setZoom] = React.useState(1)
@@ -209,6 +215,18 @@ export function ProofViewer(props: Props) {
             </Button>
           ))}
         </div>
+        <div className="h-6 w-px bg-border mx-1" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={onUndo}
+          disabled={!canUndo || undoPending}
+          title="Revert last change"
+          aria-label="Revert last change"
+        >
+          {undoPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Undo2 className="w-4 h-4" />}
+        </Button>
         <div className="h-6 w-px bg-border mx-1" />
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={zoomOut} title="Zoom out"><ZoomOut className="w-4 h-4" /></Button>
         <span className="text-xs font-mono w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>

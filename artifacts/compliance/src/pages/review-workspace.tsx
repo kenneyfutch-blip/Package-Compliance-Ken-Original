@@ -135,6 +135,10 @@ export default function ReviewWorkspace() {
   const [pendingPin, setPendingPin] = React.useState<AnnotationDraft | null>(null)
   const [pinText, setPinText] = React.useState("")
   const [pinPriority, setPinPriority] = React.useState("medium")
+  // Session undo stack: ids of markups this reviewer created, oldest→newest.
+  // Reverting deletes the most recent one that still exists.
+  const [undoStack, setUndoStack] = React.useState<number[]>([])
+  const deleteAnnotation = useDeleteAnnotation()
 
   React.useEffect(() => {
     if (pkg && activeVersionId == null) {
@@ -166,6 +170,24 @@ export default function ReviewWorkspace() {
       index: numbered.get(a.id) ?? 0,
     }))
 
+  // Newest still-existing markup this session — what "Revert last change"
+  // removes. Skips ids already deleted (e.g. via a marker's delete button).
+  const existingIds = new Set(pkg.annotations.map((a) => a.id))
+  const undoableId = [...undoStack].reverse().find((id) => existingIds.has(id)) ?? null
+  const handleUndo = () => {
+    if (undoableId == null) return
+    deleteAnnotation.mutate(
+      { id: undoableId },
+      {
+        onSuccess: () => {
+          invalidate()
+          setUndoStack((s) => s.filter((x) => x !== undoableId))
+          if (selectedId === undoableId) setSelectedId(null)
+        },
+      },
+    )
+  }
+
   const handleCreate = (draft: AnnotationDraft) => {
     if (draft.type === "pin" || draft.type === "text") {
       setPendingPin(draft)
@@ -183,7 +205,13 @@ export default function ReviewWorkspace() {
           priority: "medium",
         },
       },
-      { onSuccess: () => { invalidate(); setTool("hand") } },
+      {
+        onSuccess: (created) => {
+          invalidate()
+          setTool("hand")
+          if (created?.id != null) setUndoStack((s) => [...s, created.id])
+        },
+      },
     )
   }
 
@@ -199,7 +227,15 @@ export default function ReviewWorkspace() {
           text: pinText, priority: pinPriority, mentions: extractMentions(pinText),
         },
       },
-      { onSuccess: () => { invalidate(); setPendingPin(null); setPinText(""); setTool("hand") } },
+      {
+        onSuccess: (created) => {
+          invalidate()
+          setPendingPin(null)
+          setPinText("")
+          setTool("hand")
+          if (created?.id != null) setUndoStack((s) => [...s, created.id])
+        },
+      },
     )
   }
 
@@ -298,6 +334,9 @@ export default function ReviewWorkspace() {
             showHuman={showHuman}
             onToggleAi={() => setShowAi((v) => !v)}
             onToggleHuman={() => setShowHuman((v) => !v)}
+            onUndo={handleUndo}
+            canUndo={undoableId != null}
+            undoPending={deleteAnnotation.isPending}
           />
         </div>
 
