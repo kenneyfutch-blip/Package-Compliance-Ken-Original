@@ -5,6 +5,9 @@ import {
   recordAiUsage,
   trackDirectUsage,
   aiUsageWriteHealthSnapshot,
+  aiUsageWriteHealthFleet,
+  INSTANCE_ID,
+  type AiUsageWriteHealth,
 } from "./ai-usage";
 import { runTiered } from "./ai-orchestration";
 
@@ -259,6 +262,215 @@ test("runTiered rethrows the original model error and records a failure row", as
     assert.ok(failureRow, "a failure usage row should be recorded");
     assert.equal(failureRow!.errorMessage, "orchestrated model failure");
     assert.equal(failureRow!.workload, "copilot");
+  } finally {
+    restoreDb();
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Fleet-wide write-health aggregation (aiUsageWriteHealthFleet).
+// ---------------------------------------------------------------------------
+// The endpoint aggregates the shared health table across every recently-seen
+// API instance and overlays THIS process's live in-memory counters. These tests
+// stub db.select (same shared-singleton trick used above) to feed the aggregator
+// a controlled set of instance rows, and drive the local counters via
+// recordAiUsage so we can reason about the overlay. Because the local counters
+// are module-global and accumulate across the tests above, each test reads the
+// current local snapshot and asserts RELATIVE to it rather than absolute values.
+
+// Shape of a row as projected by aiUsageWriteHealthFleet's select. `updatedAt`
+// is carried only so the freshness stub can emulate the DB's WHERE clause; the
+// aggregator itself never reads it (it trusts the DB to have filtered).
+type HealthRow = {
+  instanceId: string;
+  successes: number;
+  failures: number;
+  consecutiveFailures: number;
+  lastSuccessAt: Date | null;
+  lastFailureAt: Date | null;
+  lastFailureMessage: string | null;
+  updatedAt?: Date;
+};
+
+// Select stub that returns exactly `rows` from `.from(...).where(...)`,
+// emulating a DB whose freshness WHERE has already been applied.
+function installFleetSelect(rows: HealthRow[]): void {
+  (db as unknown as DbLike).select = () => ({
+    from: () => ({
+      where: () => Promise.resolve(rows),
+    }),
+  });
+}
+
+// Mirrors INSTANCE_STALE_MS in ai-usage.ts. Used only by the freshness stub to
+// stand in for the DB-side `updatedAt >= cutoff` filter.
+const STALE_WINDOW_MS = 90_000;
+
+// Select stub that emulates the DB's freshness WHERE: only rows whose updatedAt
+// is within the staleness window are returned to the aggregator.
+function installFleetSelectWithFreshness(rows: HealthRow[]): void {
+  (db as unknown as DbLike).select = () => ({
+    from: () => ({
+      where: () => {
+        const cutoff = Date.now() - STALE_WINDOW_MS;
+        return Promise.resolve(
+          rows.filter((r) => (r.updatedAt?.getTime() ?? 0) >= cutoff),
+        );
+      },
+    }),
+  });
+}
+
+// Select stub whose call throws (e.g. DB unreachable), to exercise the
+// fail-safe fallback to the local snapshot.
+function installThrowingSelect(): void {
+  (db as unknown as DbLike).select = () => {
+    throw new Error("db select threw");
+  };
+}
+
+// Force THIS process's local write-health into a known-healthy state (a single
+// successful write clears consecutiveFailures) and return the resulting snapshot
+// so callers can assert relative to the live local counters.
+async function setLocalHealthy(): Promise<AiUsageWriteHealth> {
+  installCapturingInsert();
+  try {
+    recordAiUsage({
+      workload: "ocr",
+      model: "gpt-5.4-mini",
+      promptTokens: 1,
+      completionTokens: 1,
+      durationMs: 1,
+      success: true,
+    });
+    await new Promise((r) => setTimeout(r, 0));
+  } finally {
+    restoreDb();
+  }
+  return aiUsageWriteHealthSnapshot();
+}
+
+test("aiUsageWriteHealthFleet: one failing instance makes the whole fleet unhealthy and sums counts", async () => {
+  const local = await setLocalHealthy();
+  const failAt = new Date();
+  installFleetSelect([
+    {
+      instanceId: "instance-A",
+      successes: 5,
+      failures: 0,
+      consecutiveFailures: 0,
+      lastSuccessAt: new Date(failAt.getTime() - 1000),
+      lastFailureAt: null,
+      lastFailureMessage: null,
+    },
+    {
+      instanceId: "instance-B",
+      successes: 2,
+      failures: 3,
+      consecutiveFailures: 3,
+      lastSuccessAt: null,
+      lastFailureAt: failAt,
+      lastFailureMessage: "boom",
+    },
+  ]);
+  try {
+    const fleet = await aiUsageWriteHealthFleet();
+    // Any single failing instance turns the whole signal unhealthy, and the
+    // reported consecutiveFailures is the WORST across the fleet.
+    assert.equal(fleet.healthy, false);
+    assert.equal(fleet.consecutiveFailures, 3);
+    // successes/failures are summed across the two rows plus this process.
+    assert.equal(fleet.successes, local.successes + 5 + 2);
+    assert.equal(fleet.failures, local.failures + 0 + 3);
+    // instance-A, instance-B, and this process.
+    assert.equal(fleet.instanceCount, 3);
+    // Most-recent failure wins; instance-B's failure is the newest.
+    assert.equal(fleet.lastFailureMessage, "boom");
+    assert.equal(fleet.lastFailureAt, failAt.toISOString());
+  } finally {
+    restoreDb();
+  }
+});
+
+test("aiUsageWriteHealthFleet: instances past the freshness window are excluded", async () => {
+  const local = await setLocalHealthy();
+  const now = Date.now();
+  installFleetSelectWithFreshness([
+    {
+      instanceId: "instance-fresh",
+      successes: 4,
+      failures: 1,
+      consecutiveFailures: 0,
+      lastSuccessAt: new Date(now),
+      lastFailureAt: null,
+      lastFailureMessage: null,
+      updatedAt: new Date(now),
+    },
+    {
+      // Old heartbeat: this instance is gone and must not contribute.
+      instanceId: "instance-stale",
+      successes: 1000,
+      failures: 500,
+      consecutiveFailures: 9,
+      lastSuccessAt: null,
+      lastFailureAt: new Date(now),
+      lastFailureMessage: "stale-boom",
+      updatedAt: new Date(now - 200_000),
+    },
+  ]);
+  try {
+    const fleet = await aiUsageWriteHealthFleet();
+    // Only the fresh instance and this process contribute.
+    assert.equal(fleet.successes, local.successes + 4);
+    assert.equal(fleet.failures, local.failures + 1);
+    assert.equal(fleet.instanceCount, 2);
+    // The stale instance's unhealthy state (consecutiveFailures: 9) is dropped.
+    assert.equal(fleet.healthy, true);
+    assert.equal(fleet.consecutiveFailures, 0);
+    assert.notEqual(fleet.lastFailureMessage, "stale-boom");
+  } finally {
+    restoreDb();
+  }
+});
+
+test("aiUsageWriteHealthFleet: the responding process's live counters override its persisted row", async () => {
+  const local = await setLocalHealthy();
+  // A stale/lagging persisted row for THIS instance with wildly different
+  // counts. The live in-memory counters must win, and the row must NOT be
+  // double-counted as a separate instance.
+  installFleetSelect([
+    {
+      instanceId: INSTANCE_ID,
+      successes: 999_999,
+      failures: 888_888,
+      consecutiveFailures: 42,
+      lastSuccessAt: new Date(0),
+      lastFailureAt: new Date(0),
+      lastFailureMessage: "persisted-stale",
+    },
+  ]);
+  try {
+    const fleet = await aiUsageWriteHealthFleet();
+    // Live local counters win — persisted row is overwritten, not summed.
+    assert.equal(fleet.successes, local.successes);
+    assert.equal(fleet.failures, local.failures);
+    assert.equal(fleet.consecutiveFailures, local.consecutiveFailures);
+    // The persisted row and the live overlay collapse to a single instance.
+    assert.equal(fleet.instanceCount, 1);
+    // The stale row's consecutiveFailures: 42 is discarded, so we stay healthy.
+    assert.equal(fleet.healthy, true);
+  } finally {
+    restoreDb();
+  }
+});
+
+test("aiUsageWriteHealthFleet: a DB read failure falls back to the local snapshot", async () => {
+  const local = await setLocalHealthy();
+  installThrowingSelect();
+  try {
+    // The endpoint must never error just because the shared table is unreadable.
+    const fleet = await aiUsageWriteHealthFleet();
+    assert.deepEqual(fleet, local);
   } finally {
     restoreDb();
   }

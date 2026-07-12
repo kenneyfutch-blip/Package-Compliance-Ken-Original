@@ -110,7 +110,7 @@ const WARN_INTERVAL_MS = 60_000;
 
 // Per-process instance id: one row in the shared health table belongs to this
 // process. Restarts get a fresh id; the old row goes stale and is ignored.
-const INSTANCE_ID = `instance-${process.pid}-${randomUUID().slice(0, 8)}`;
+export const INSTANCE_ID = `instance-${process.pid}-${randomUUID().slice(0, 8)}`;
 
 // How often each instance flushes its local counters to the shared table.
 const HEALTH_FLUSH_INTERVAL_MS = 20_000;
