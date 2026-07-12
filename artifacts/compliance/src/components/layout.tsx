@@ -116,6 +116,7 @@ const SECTIONS: NavSection[] = [
   {
     id: "compliance",
     label: "Compliance",
+    defaultOpen: false,
     items: [
       { name: "Violations Center", href: "/ai/violations", icon: AlertTriangle },
       { name: "Language Review", href: "/ai/language", icon: Languages },
@@ -137,6 +138,7 @@ const SECTIONS: NavSection[] = [
   {
     id: "partners",
     label: "Partners",
+    defaultOpen: false,
     items: [
       { name: "Vendor Directory", href: "/suppliers", icon: Building2 },
       { name: "Vendor Scorecards", href: "/suppliers/scorecards", icon: Trophy },
@@ -146,6 +148,7 @@ const SECTIONS: NavSection[] = [
   {
     id: "knowledge",
     label: "Knowledge",
+    defaultOpen: false,
     items: [
       { name: "Resource Center", href: "/resources", icon: Library },
       { name: "Policy Repository", href: "/resources/policies", icon: ScrollText },
@@ -156,6 +159,7 @@ const SECTIONS: NavSection[] = [
   {
     id: "analytics",
     label: "Analytics",
+    defaultOpen: false,
     items: [
       { name: "Compliance Reports", href: "/reports", icon: FileText },
       { name: "Executive Reports", href: "/reports/executive", icon: Briefcase },
