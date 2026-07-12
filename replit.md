@@ -12,6 +12,7 @@ An AI-powered packaging compliance operating system: reviewers upload retail pro
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `npx tsx artifacts/api-server/src/seed.ts` — reseed the database (regulations, suppliers, users, notifications, and 6 AI-analyzed demo packages). Runs real OpenAI analysis; takes ~3 min.
 - Required env: `DATABASE_URL`; `AI_INTEGRATIONS_OPENAI_BASE_URL` + `AI_INTEGRATIONS_OPENAI_API_KEY` (OpenAI integration)
+- Optional env: `AI_ALERT_WEBHOOK_URL` — out-of-band webhook (Slack/PagerDuty/generic JSON POST) paged when AI cost logging breaks; `AI_ALERT_EMAIL_TO` — comma-separated admin recipients named in the alert payload. Unset ⇒ out-of-band alerting is a no-op (in-app notification still fires).
 
 ## Stack
 

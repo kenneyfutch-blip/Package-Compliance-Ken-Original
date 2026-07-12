@@ -10,6 +10,7 @@ import {
 import { and, eq, gte, inArray, isNotNull, lt } from "drizzle-orm";
 import { logger } from "./logger";
 import { ROLES } from "./rbac/permissions";
+import { isOutbandAlertConfigured, sendOutbandAlert } from "./ai-usage-outband";
 import type { AiTier } from "./ai-client";
 import type { AiWorkload } from "./ai-orchestration";
 
@@ -150,8 +151,10 @@ function onWriteSuccess(): void {
   writeHealth.successes += 1;
   writeHealth.consecutiveFailures = 0;
   writeHealth.lastSuccessAt = Date.now();
-  // A healthy write clears any outstanding "logging is failing" alert.
+  // A healthy write clears any outstanding "logging is failing" alert — both the
+  // in-app notification and the out-of-band webhook notice.
   maybeResolveAlert();
+  maybeResolveOutbandAlert();
 }
 
 function onWriteFailure(err: unknown, workload: string): void {
@@ -183,8 +186,10 @@ function onWriteFailure(err: unknown, workload: string): void {
   }
 
   // Proactively alert admins once telemetry has clearly broken (not just a
-  // single transient blip).
+  // single transient blip): an in-app notification for anyone signed in, and an
+  // out-of-band webhook notice for the off-hours case when nobody is.
   maybeFireAlert();
+  maybeFireOutbandAlert();
 }
 
 // ---------------------------------------------------------------------------
@@ -338,6 +343,90 @@ function maybeResolveAlert(): void {
       logger.debug(
         { err },
         "failed to auto-dismiss recovered AI usage telemetry alert",
+      );
+    }
+  })();
+}
+
+// ---------------------------------------------------------------------------
+// Out-of-band incident alerting (webhook)
+// ---------------------------------------------------------------------------
+// The in-app notification above requires a DB write — but the telemetry failure
+// is very often the DB itself being down, so that write may be exactly what's
+// broken. The out-of-band webhook (see ai-usage-outband.ts) is DB-independent
+// and closes the off-hours gap. It runs on its OWN incident state, decoupled
+// from the in-app alert, precisely so a failing DB (which keeps the in-app emit
+// retrying) can't spam the webhook: the webhook fires once per incident and
+// resolves once on recovery, regardless of whether the DB notification lands.
+//
+// Same invariants as maybeFireAlert: never awaited by the AI path, all work runs
+// in a detached, fully-guarded async task, and a failed send simply retries on
+// the next failed write.
+let outbandActive = false;
+let outbandInFlight = false;
+
+function maybeFireOutbandAlert(): void {
+  if (!isOutbandAlertConfigured()) return;
+  if (outbandActive || outbandInFlight) return;
+  if (writeHealth.consecutiveFailures < ALERT_THRESHOLD) return;
+  outbandInFlight = true;
+
+  const consecutiveFailures = writeHealth.consecutiveFailures;
+  const lastFailureMessage = writeHealth.lastFailureMessage;
+
+  void (async () => {
+    try {
+      await sendOutbandAlert({
+        status: "firing",
+        consecutiveFailures,
+        lastFailureMessage,
+        instanceId: INSTANCE_ID,
+      });
+      // Only mark the incident open once delivery succeeded, so a failed send is
+      // retried on the next write failure rather than silently suppressed.
+      outbandActive = true;
+    } catch (err) {
+      logger.debug(
+        { err },
+        "failed to deliver out-of-band AI usage alert (will retry on next failed write)",
+      );
+    } finally {
+      outbandInFlight = false;
+      // Reconcile the race where writes RECOVERED while this send was in flight:
+      // any onWriteSuccess during delivery saw outbandActive === false and
+      // no-op'd, so the freshly-opened incident would otherwise dangle. If the
+      // latest write has since succeeded, resolve immediately.
+      if (outbandActive && writeHealth.consecutiveFailures === 0) {
+        maybeResolveOutbandAlert();
+      }
+    }
+  })();
+}
+
+function maybeResolveOutbandAlert(): void {
+  // If a send is still in flight, defer: the send's finally reconciliation will
+  // resolve once outbandActive is set. Resolving here would no-op and lose the
+  // recovery signal.
+  if (outbandInFlight) return;
+  if (!outbandActive) return;
+  // Clear state synchronously so a rapid success/failure flap can't double-fire.
+  outbandActive = false;
+
+  const consecutiveFailures = writeHealth.consecutiveFailures;
+  const lastFailureMessage = writeHealth.lastFailureMessage;
+
+  void (async () => {
+    try {
+      await sendOutbandAlert({
+        status: "resolved",
+        consecutiveFailures,
+        lastFailureMessage,
+        instanceId: INSTANCE_ID,
+      });
+    } catch (err) {
+      logger.debug(
+        { err },
+        "failed to deliver out-of-band AI usage recovery notice",
       );
     }
   })();
