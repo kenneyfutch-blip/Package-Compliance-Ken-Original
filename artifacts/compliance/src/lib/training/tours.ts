@@ -87,6 +87,69 @@ export const TOURS: TourDef[] = [
     ],
   },
   {
+    id: "navigation-tour",
+    title: "Navigating the Platform",
+    description:
+      "A guided walk through the left navigation — every section in the sidebar and what lives inside it.",
+    estMinutes: 2,
+    steps: [
+      {
+        element: '[data-tour="sidebar"]',
+        title: "The navigation sidebar",
+        description:
+          "Everything in the platform is grouped into the labeled sections here. Sections expand and collapse to keep the list tidy — here's what each one holds.",
+      },
+      {
+        element: '[data-tour="nav-my-work"]',
+        title: "My Work",
+        description:
+          "Your personal hub: your dashboard, the reviews assigned to you, your tasks, and your notifications. Start your day here.",
+      },
+      {
+        element: '[data-tour="nav-home"]',
+        title: "Home",
+        description:
+          "The main compliance dashboard, plus the shortcut to create a new package from artwork.",
+      },
+      {
+        element: '[data-tour="nav-review-operations"]',
+        title: "Review Operations",
+        description:
+          "Work queues for getting through reviews quickly — the high-risk queue, your assigned reviews, bulk review, and fast review.",
+      },
+      {
+        element: '[data-tour="nav-products"]',
+        title: "Products",
+        description:
+          "Every package, organized by status: all packages, active reviews, approved, rejected, and archived.",
+      },
+      {
+        element: '[data-tour="nav-compliance"]',
+        title: "Compliance",
+        description:
+          "The heart of the platform: the violations center, claim and language reviews, recommended fixes, compliance intelligence, and the regulatory hub.",
+      },
+      {
+        element: '[data-tour="nav-partners"]',
+        title: "Partners",
+        description:
+          "Everything supplier-facing: the vendor directory, vendor scorecards, and the supplier portal.",
+      },
+      {
+        element: '[data-tour="nav-knowledge"]',
+        title: "Knowledge",
+        description:
+          "Your reference library: the resource center, policy repository, SOP documents, and approved language.",
+      },
+      {
+        element: '[data-tour="nav-training"]',
+        title: "Training & Help",
+        description:
+          "Where you are now — guides, walkthroughs, the Compliance Academy, FAQs, and Contact Support. Open to everyone.",
+      },
+    ],
+  },
+  {
     id: "getting-help",
     title: "Getting Help",
     description:

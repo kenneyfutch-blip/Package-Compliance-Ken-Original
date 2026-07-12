@@ -526,6 +526,7 @@ function NavContent({
         return (
           <div
             key={section.id}
+            data-tour={`nav-${section.id}`}
             className={cn(
               idx > 0 && !isMyWork && "mt-3 border-t border-border/60 pt-3",
               isMyWork && "mt-3 rounded-lg bg-muted/60 px-1 py-1.5",
