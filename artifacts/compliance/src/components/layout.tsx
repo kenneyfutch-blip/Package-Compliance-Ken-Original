@@ -230,6 +230,11 @@ const SECTIONS: NavSection[] = [
   },
 ]
 
+// Sections that live in the TOP navigation bar (as click-to-open dropdowns)
+// instead of the left sidebar. The left sidebar renders every OTHER section.
+// The mobile sheet still renders all sections so nothing is unreachable there.
+const TOP_SECTION_IDS = new Set(["analytics", "team-management", "administration"])
+
 // Flat lookup of every nav item by href, so starred favorites (stored as bare
 // hrefs) can be rendered with their proper label and icon anywhere. First
 // occurrence wins: an href reused as a shortcut in a later section (e.g. "/"
@@ -405,7 +410,13 @@ function NavGroupBlock({
   )
 }
 
-function NavContent({ onNavigate }: { onNavigate?: () => void }) {
+function NavContent({
+  onNavigate,
+  excludeSectionIds,
+}: {
+  onNavigate?: () => void
+  excludeSectionIds?: Set<string>
+}) {
   const [location] = useLocation()
   const { has } = usePermissions()
   const favoriteItems = useFavoriteItems()
@@ -434,9 +445,11 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           isGroup(e) ? { ...e, items: e.items.filter((i) => canSee(i.href)) } : e,
         )
         .filter((e) => (isGroup(e) ? e.items.length > 0 : canSee(e.href))),
-    })).filter((section) => flattenEntries(section.items).length > 0)
+    }))
+      .filter((section) => !excludeSectionIds?.has(section.id))
+      .filter((section) => flattenEntries(section.items).length > 0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [has])
+  }, [has, excludeSectionIds])
 
   const toggle = (section: NavSection) =>
     setOverrides((prev) => ({
@@ -675,6 +688,74 @@ function FavoritesMenu() {
   )
 }
 
+// Top-level section navigation (desktop only). The manager/admin-facing
+// sections (Analytics, Team Management, Administration) render here as
+// click-to-open dropdowns of their items, rather than in the left sidebar.
+// Permission-filtered per item; a section with no visible items is hidden.
+function TopNavMenus() {
+  const [location, navigate] = useLocation()
+  const { has } = usePermissions()
+
+  const sections = React.useMemo(() => {
+    const canSee = (href: string) => {
+      const perm = requiredPermFor(href)
+      return perm === null || has(perm)
+    }
+    return SECTIONS.filter((s) => TOP_SECTION_IDS.has(s.id))
+      .map((s) => ({
+        id: s.id,
+        label: s.label,
+        items: flattenEntries(s.items).filter((i) => canSee(i.href)),
+      }))
+      .filter((s) => s.items.length > 0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [has])
+
+  if (sections.length === 0) return null
+
+  return (
+    <nav className="hidden md:flex items-center gap-1" aria-label="Sections">
+      {sections.map((section) => {
+        const active = section.items.some((i) => isItemActive(location, i.href))
+        return (
+          <DropdownMenu key={section.id}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn("gap-1.5", active && "text-primary font-medium")}
+              >
+                {section.label}
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-60">
+              <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {section.items.map((item) => {
+                const Icon = item.icon
+                return (
+                  <DropdownMenuItem
+                    key={item.href}
+                    onSelect={() => navigate(item.href)}
+                    className={cn(
+                      "gap-2 cursor-pointer",
+                      isItemActive(location, item.href) && "text-primary font-medium",
+                    )}
+                  >
+                    <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{item.name}</span>
+                  </DropdownMenuItem>
+                )
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )
+      })}
+    </nav>
+  )
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme()
   const [, navigate] = useLocation()
@@ -697,7 +778,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="h-16 flex items-center px-6 border-b border-border bg-card">
           <Brand />
         </div>
-        <NavContent />
+        <NavContent excludeSectionIds={TOP_SECTION_IDS} />
         <UserBlock />
       </aside>
 
@@ -732,6 +813,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 className="w-full h-9 bg-accent/50 border border-border rounded-md pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary transition-all"
               />
             </form>
+            <TopNavMenus />
           </div>
           <div className="flex items-center gap-2">
             <Link href="/upload">
