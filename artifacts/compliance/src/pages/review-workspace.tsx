@@ -167,6 +167,33 @@ export default function ReviewWorkspace() {
     }
   }, [pkg, activeVersionId])
 
+  // Delete/Backspace removes the selected reviewer markup (box, line, etc.) —
+  // as long as focus isn't in a text field and the selection isn't an AI
+  // finding (those are managed from the Findings panel, not freely deleted).
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Delete" && e.key !== "Backspace") return
+      if (selectedId == null || !pkg) return
+      const el = document.activeElement as HTMLElement | null
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return
+      const target = pkg.annotations.find((x) => x.id === selectedId)
+      if (!target || target.source === "ai") return
+      e.preventDefault()
+      deleteAnnotation.mutate(
+        { id: selectedId },
+        {
+          onSuccess: () => {
+            invalidate()
+            setUndoStack((s) => s.filter((x) => x !== selectedId))
+            setSelectedId(null)
+          },
+        },
+      )
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [selectedId, pkg, deleteAnnotation])
+
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-8rem)] items-center justify-center">
@@ -230,7 +257,11 @@ export default function ReviewWorkspace() {
         onSuccess: (created) => {
           invalidate()
           setTool("hand")
-          if (created?.id != null) setUndoStack((s) => [...s, created.id])
+          if (created?.id != null) {
+            setUndoStack((s) => [...s, created.id])
+            // Select the new markup so its delete/duplicate bar shows at once.
+            setSelectedId(created.id)
+          }
         },
       },
     )
