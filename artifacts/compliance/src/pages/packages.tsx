@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Search, Loader2, ArrowRight, Clock, PackageX } from "lucide-react"
-import { gradeBorder, gradeColor, riskBand } from "@/lib/compliance"
+import { gradeColor, riskBand } from "@/lib/compliance"
 
 interface Props {
   title: string
@@ -79,7 +79,7 @@ export default function PackagesView({
               <Card
                 key={pkg.id}
                 className="flex flex-col hover-elevate transition-all border-t-4"
-                style={{ borderTopColor: gradeBorder(pkg.grade) }}
+                style={{ borderTopColor: band.border }}
               >
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">

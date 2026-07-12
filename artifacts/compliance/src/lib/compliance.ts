@@ -101,9 +101,11 @@ export function pointsToGrade(pts: number): string {
   return "F"
 }
 
-export function riskBand(score?: number | null): { label: string; badge: BadgeVariant } {
+export function riskBand(
+  score?: number | null,
+): { label: string; badge: BadgeVariant; border: string } {
   const s = score ?? 0
-  if (s >= 70) return { label: "High", badge: "destructive" }
-  if (s >= 40) return { label: "Medium", badge: "warning" }
-  return { label: "Low", badge: "success" }
+  if (s >= 70) return { label: "High", badge: "destructive", border: "hsl(var(--destructive))" }
+  if (s >= 40) return { label: "Medium", badge: "warning", border: "hsl(var(--warning))" }
+  return { label: "Low", badge: "success", border: "hsl(var(--success))" }
 }
