@@ -6,6 +6,8 @@
 // pre-built openFDA `search` expression (built with the helpers below). Higher
 // level dataset/intelligence helpers live in sibling files.
 
+import { logger } from "../logger";
+
 const BASE_URL = "https://api.fda.gov";
 
 export class FdaNotConfiguredError extends Error {
@@ -85,6 +87,42 @@ async function fetchWithTimeout(url: string): Promise<globalThis.Response> {
   }
 }
 
+// openFDA does not require an API key — a key only raises the rate limits. So a
+// missing OR invalid key must never dark-out the feature. Once openFDA rejects
+// the configured key with a 403 (API_KEY_INVALID), we remember that for the rest
+// of the process and fall back to keyless requests instead of failing every call.
+let apiKeyRejected = false;
+
+// Perform an openFDA GET against a URL that does NOT yet include api_key. When a
+// key is configured (and not already known-bad) it is appended; on a 403 the key
+// is dropped and the request is retried keyless.
+async function fetchOpenFda(urlNoKey: string): Promise<globalThis.Response> {
+  const apiKey = process.env.OPENFDA_API_KEY;
+  if (apiKey && !apiKeyRejected) {
+    const sep = urlNoKey.includes("?") ? "&" : "?";
+    const resp = await fetchWithTimeout(
+      `${urlNoKey}${sep}api_key=${encodeURIComponent(apiKey)}`,
+    );
+    if (resp.status !== 403) return resp;
+    // A 403 is only treated as a bad-key signal when openFDA actually reports an
+    // invalid key — other 403s (e.g. IP-based blocks) must NOT disable keyed
+    // mode. We buffer the body so a non-key 403 still flows to the caller intact.
+    const body = await resp.text().catch(() => "");
+    if (!/API_KEY_INVALID/i.test(body)) {
+      return new Response(body, {
+        status: resp.status,
+        statusText: resp.statusText,
+      });
+    }
+    apiKeyRejected = true;
+    logger.warn(
+      "openFDA rejected OPENFDA_API_KEY (403 API_KEY_INVALID); falling back to keyless requests. Set a valid key at https://open.fda.gov/apis/authentication/ for higher rate limits.",
+    );
+    return fetchWithTimeout(urlNoKey);
+  }
+  return fetchWithTimeout(urlNoKey);
+}
+
 interface CacheEntry {
   expires: number;
   value: FdaResult<unknown>;
@@ -122,11 +160,7 @@ export function clearFdaCache(): void {
 export async function pingFda(): Promise<boolean> {
   if (!isFdaConfigured()) return false;
   try {
-    const resp = await fetchWithTimeout(
-      `${BASE_URL}/food/enforcement.json?api_key=${encodeURIComponent(
-        process.env.OPENFDA_API_KEY!,
-      )}&limit=1`,
-    );
+    const resp = await fetchOpenFda(`${BASE_URL}/food/enforcement.json?limit=1`);
     // A 404 (zero matches) still proves the service is reachable.
     return resp.ok || resp.status === 404;
   } catch {
@@ -150,10 +184,9 @@ export async function fdaFetch<T = unknown>({
   sort,
   count,
 }: FdaQuery): Promise<FdaResult<T>> {
-  const apiKey = process.env.OPENFDA_API_KEY;
-  if (!apiKey) throw new FdaNotConfiguredError();
+  if (!isFdaConfigured()) throw new FdaNotConfiguredError();
 
-  const params: string[] = [`api_key=${encodeURIComponent(apiKey)}`];
+  const params: string[] = [];
 
   if (count) {
     params.push(`count=${encodeURIComponent(count)}`);
@@ -173,7 +206,7 @@ export async function fdaFetch<T = unknown>({
 
   let resp: globalThis.Response;
   try {
-    resp = await fetchWithTimeout(url);
+    resp = await fetchOpenFda(url);
   } catch (err) {
     throw new FdaUnavailableError(
       `openFDA request errored: ${(err as Error).message}`,
