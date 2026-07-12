@@ -107,8 +107,21 @@ export async function requireAuth(
       };
       cache.set(userId, entry);
     } catch (err) {
+      // A failure here means we could not *reach* Clerk to look the user up —
+      // it does NOT mean the caller is unauthenticated. Returning 401 would
+      // surface a transient upstream hiccup as a forced logout mid-work, which
+      // is exactly the enterprise-stability failure we want to avoid. Return a
+      // retryable 503 instead so the client (React Query retries by default)
+      // transparently recovers without tearing down the session. Genuine
+      // "no session" cases are already handled by the 401 above.
       req.log?.error({ err }, "Failed to load Clerk user for domain gate");
-      res.status(401).json({ error: "Unauthorized" });
+      res
+        .status(503)
+        .set("Retry-After", "2")
+        .json({
+          error:
+            "Could not verify your session right now. Please retry in a moment.",
+        });
       return;
     }
   }

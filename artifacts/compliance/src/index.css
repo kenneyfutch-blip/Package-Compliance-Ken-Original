@@ -3,7 +3,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
 
 @import 'tailwindcss';
-@import '@clerk/themes/shadcn.css' layer(clerk);
+/* Registers Clerk's shadcn theme JS as a Tailwind content source so the theme's
+   utility classes get generated. This file is ONLY an `@source` directive (no
+   style rules), so it must NOT be wrapped in `layer(...)` — Tailwind v4 rejects
+   a nested `@source` and fails the whole stylesheet. Clerk modal layering is
+   handled by `cssLayerName: "clerk"` + the `@layer` order declared above. */
+@import '@clerk/themes/shadcn.css';
 @import 'tw-animate-css';
 @plugin "@tailwindcss/typography";
 
