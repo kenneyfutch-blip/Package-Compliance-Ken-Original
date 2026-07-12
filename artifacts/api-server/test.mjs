@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { rm, glob } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { build as esbuild } from "esbuild";
+import esbuildPluginPino from "esbuild-plugin-pino";
 
 // Node's native TypeScript loader cannot resolve the extension-less relative
 // imports emitted inside generated workspace packages (e.g. @workspace/api-zod),
@@ -36,8 +37,16 @@ async function main() {
     outExtension: { ".js": ".mjs" },
     logLevel: "warning",
     external: ["*.node", "pg-native"],
+    // pino relies on worker threads for transports; mirror build.mjs so tests
+    // that import the logger don't crash on the un-bundled transport worker.
+    plugins: [esbuildPluginPino({ transports: ["pino-pretty"] })],
     banner: {
-      js: `import { createRequire as __cr } from 'node:module';\nglobalThis.require = __cr(import.meta.url);`,
+      js: `import { createRequire as __bannerCrReq } from 'node:module';
+import __bannerPath from 'node:path';
+import __bannerUrl from 'node:url';
+globalThis.require = __bannerCrReq(import.meta.url);
+globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
+globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);`,
     },
   });
 
