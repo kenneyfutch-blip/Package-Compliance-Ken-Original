@@ -514,6 +514,73 @@ export interface DistributionItem {
   count: number;
 }
 
+export interface AiUsageSummary {
+  totalRequests: number;
+  successCount: number;
+  errorCount: number;
+  escalationCount: number;
+  totalTokens: number;
+  totalCostUsd: number;
+  avgDurationMs: number;
+  successRate: number;
+  errorRate: number;
+  escalationRate: number;
+}
+
+export interface AiUsageTimePoint {
+  date: string;
+  requests: number;
+  tokens: number;
+  costUsd: number;
+}
+
+export interface AiUsageModelItem {
+  model: string;
+  tier: string;
+  requests: number;
+  tokens: number;
+  costUsd: number;
+}
+
+export interface AiUsageOperationItem {
+  operation: string;
+  requests: number;
+  tokens: number;
+  costUsd: number;
+  escalations: number;
+}
+
+export interface AiUsageAnalytics {
+  from: string;
+  to: string;
+  summary: AiUsageSummary;
+  timeseries: AiUsageTimePoint[];
+  byModel: AiUsageModelItem[];
+  byOperation: AiUsageOperationItem[];
+}
+
+export interface AiUsageRequest {
+  id: number;
+  requestId: string;
+  userId?: number | null;
+  userName?: string | null;
+  workload: string;
+  reviewType?: string | null;
+  model: string;
+  tier?: string | null;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  costUsd: number;
+  durationMs: number;
+  success: boolean;
+  errorMessage?: string | null;
+  riskScore?: number | null;
+  confidence?: number | null;
+  escalated: boolean;
+  createdAt: string;
+}
+
 export interface VendorPerformanceItem {
   vendor: string;
   complianceScore: number;
@@ -2212,6 +2279,33 @@ export interface SystemHealth {
   pendingJobs: number;
   stalledJobs: number;
 }
+
+export type GetAiUsageAnalyticsParams = {
+/**
+ * Inclusive start day (YYYY-MM-DD). Defaults to 29 days before `to`.
+ */
+from?: string;
+/**
+ * Inclusive end day (YYYY-MM-DD). Defaults to today (UTC).
+ */
+to?: string;
+};
+
+export type ListAiUsageRequestsParams = {
+/**
+ * Inclusive start day (YYYY-MM-DD).
+ */
+from?: string;
+/**
+ * Inclusive end day (YYYY-MM-DD).
+ */
+to?: string;
+/**
+ * Max rows to return (clamped server-side).
+ */
+limit?: number;
+offset?: number;
+};
 
 export type ListViolationsParams = {
 search?: string;

@@ -42,6 +42,8 @@ tags:
     description: Internal Policy & Standards Engine — company-specific standards that participate in reviews with equal authority to government regulations
   - name: sop-documents
     description: SOP document management — uploaded standard-operating-procedure files with version history and comparison
+  - name: ai-usage
+    description: AI usage analytics & cost dashboard — per-request spend, volume, model/tier mix, escalation frequency, and success/error rates
 paths:
   /healthz:
     get:
@@ -129,6 +131,73 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/VendorPerformanceItem"
+
+  /ai-usage/analytics:
+    get:
+      operationId: getAiUsageAnalytics
+      tags: [ai-usage]
+      summary: AI usage & cost analytics for a date range
+      description: Org-scoped AI spend, volume, model/tier mix, per-operation breakdown, escalation frequency and success/error rates over a date range (defaults to the last 30 days).
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Inclusive start day (YYYY-MM-DD). Defaults to 29 days before `to`.
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Inclusive end day (YYYY-MM-DD). Defaults to today (UTC).
+      responses:
+        "200":
+          description: AI usage analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiUsageAnalytics"
+
+  /ai-usage/requests:
+    get:
+      operationId: listAiUsageRequests
+      tags: [ai-usage]
+      summary: Recent AI requests (paginated)
+      description: Org-scoped, date-filtered list of individual AI requests, newest first. Bounded via limit/offset.
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Inclusive start day (YYYY-MM-DD).
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Inclusive end day (YYYY-MM-DD).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Max rows to return (clamped server-side).
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: AI request rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiUsageRequest"
 
   /violations:
     get:
@@ -4235,6 +4304,189 @@ components:
       required:
         - label
         - count
+
+    AiUsageSummary:
+      type: object
+      properties:
+        totalRequests:
+          type: integer
+        successCount:
+          type: integer
+        errorCount:
+          type: integer
+        escalationCount:
+          type: integer
+        totalTokens:
+          type: integer
+        totalCostUsd:
+          type: number
+        avgDurationMs:
+          type: integer
+        successRate:
+          type: integer
+        errorRate:
+          type: integer
+        escalationRate:
+          type: integer
+      required:
+        - totalRequests
+        - successCount
+        - errorCount
+        - escalationCount
+        - totalTokens
+        - totalCostUsd
+        - avgDurationMs
+        - successRate
+        - errorRate
+        - escalationRate
+
+    AiUsageTimePoint:
+      type: object
+      properties:
+        date:
+          type: string
+        requests:
+          type: integer
+        tokens:
+          type: number
+        costUsd:
+          type: number
+      required:
+        - date
+        - requests
+        - tokens
+        - costUsd
+
+    AiUsageModelItem:
+      type: object
+      properties:
+        model:
+          type: string
+        tier:
+          type: string
+        requests:
+          type: integer
+        tokens:
+          type: number
+        costUsd:
+          type: number
+      required:
+        - model
+        - tier
+        - requests
+        - tokens
+        - costUsd
+
+    AiUsageOperationItem:
+      type: object
+      properties:
+        operation:
+          type: string
+        requests:
+          type: integer
+        tokens:
+          type: number
+        costUsd:
+          type: number
+        escalations:
+          type: integer
+      required:
+        - operation
+        - requests
+        - tokens
+        - costUsd
+        - escalations
+
+    AiUsageAnalytics:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        summary:
+          $ref: "#/components/schemas/AiUsageSummary"
+        timeseries:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiUsageTimePoint"
+        byModel:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiUsageModelItem"
+        byOperation:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiUsageOperationItem"
+      required:
+        - from
+        - to
+        - summary
+        - timeseries
+        - byModel
+        - byOperation
+
+    AiUsageRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+        requestId:
+          type: string
+        userId:
+          type: integer
+          nullable: true
+        userName:
+          type: string
+          nullable: true
+        workload:
+          type: string
+        reviewType:
+          type: string
+          nullable: true
+        model:
+          type: string
+        tier:
+          type: string
+          nullable: true
+        promptTokens:
+          type: integer
+        completionTokens:
+          type: integer
+        totalTokens:
+          type: integer
+        costUsd:
+          type: number
+        durationMs:
+          type: integer
+        success:
+          type: boolean
+        errorMessage:
+          type: string
+          nullable: true
+        riskScore:
+          type: number
+          nullable: true
+        confidence:
+          type: number
+          nullable: true
+        escalated:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - requestId
+        - workload
+        - model
+        - promptTokens
+        - completionTokens
+        - totalTokens
+        - costUsd
+        - durationMs
+        - success
+        - escalated
+        - createdAt
 
     VendorPerformanceItem:
       type: object

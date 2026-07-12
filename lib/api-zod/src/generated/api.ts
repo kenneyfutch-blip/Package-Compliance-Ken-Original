@@ -81,6 +81,88 @@ export const GetVendorPerformanceResponse = zod.array(GetVendorPerformanceRespon
 
 
 /**
+ * Org-scoped AI spend, volume, model/tier mix, per-operation breakdown, escalation frequency and success/error rates over a date range (defaults to the last 30 days).
+ * @summary AI usage & cost analytics for a date range
+ */
+export const GetAiUsageAnalyticsQueryParams = zod.object({
+  "from": zod.coerce.string().optional().describe('Inclusive start day (YYYY-MM-DD). Defaults to 29 days before `to`.'),
+  "to": zod.coerce.string().optional().describe('Inclusive end day (YYYY-MM-DD). Defaults to today (UTC).')
+})
+
+export const GetAiUsageAnalyticsResponse = zod.object({
+  "from": zod.string(),
+  "to": zod.string(),
+  "summary": zod.object({
+  "totalRequests": zod.number(),
+  "successCount": zod.number(),
+  "errorCount": zod.number(),
+  "escalationCount": zod.number(),
+  "totalTokens": zod.number(),
+  "totalCostUsd": zod.number(),
+  "avgDurationMs": zod.number(),
+  "successRate": zod.number(),
+  "errorRate": zod.number(),
+  "escalationRate": zod.number()
+}),
+  "timeseries": zod.array(zod.object({
+  "date": zod.string(),
+  "requests": zod.number(),
+  "tokens": zod.number(),
+  "costUsd": zod.number()
+})),
+  "byModel": zod.array(zod.object({
+  "model": zod.string(),
+  "tier": zod.string(),
+  "requests": zod.number(),
+  "tokens": zod.number(),
+  "costUsd": zod.number()
+})),
+  "byOperation": zod.array(zod.object({
+  "operation": zod.string(),
+  "requests": zod.number(),
+  "tokens": zod.number(),
+  "costUsd": zod.number(),
+  "escalations": zod.number()
+}))
+})
+
+
+/**
+ * Org-scoped, date-filtered list of individual AI requests, newest first. Bounded via limit/offset.
+ * @summary Recent AI requests (paginated)
+ */
+export const ListAiUsageRequestsQueryParams = zod.object({
+  "from": zod.coerce.string().optional().describe('Inclusive start day (YYYY-MM-DD).'),
+  "to": zod.coerce.string().optional().describe('Inclusive end day (YYYY-MM-DD).'),
+  "limit": zod.coerce.number().optional().describe('Max rows to return (clamped server-side).'),
+  "offset": zod.coerce.number().optional()
+})
+
+export const ListAiUsageRequestsResponseItem = zod.object({
+  "id": zod.number(),
+  "requestId": zod.string(),
+  "userId": zod.number().nullish(),
+  "userName": zod.string().nullish(),
+  "workload": zod.string(),
+  "reviewType": zod.string().nullish(),
+  "model": zod.string(),
+  "tier": zod.string().nullish(),
+  "promptTokens": zod.number(),
+  "completionTokens": zod.number(),
+  "totalTokens": zod.number(),
+  "costUsd": zod.number(),
+  "durationMs": zod.number(),
+  "success": zod.boolean(),
+  "errorMessage": zod.string().nullish(),
+  "riskScore": zod.number().nullish(),
+  "confidence": zod.number().nullish(),
+  "escalated": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const ListAiUsageRequestsResponse = zod.array(ListAiUsageRequestsResponseItem)
+
+
+/**
  * @summary List compliance violations across all packages with filters
  */
 export const ListViolationsQueryParams = zod.object({

@@ -7,6 +7,7 @@ import type {
 import {
   runTiered,
   readUsage,
+  WORKLOAD_LABELS,
   type AiOrchestration,
 } from "./ai-orchestration";
 import { cachedAiCall } from "./cache/ai-cache";
@@ -153,6 +154,12 @@ Respond with JSON of shape:
   const compute = async (): Promise<LanguageReviewResult> => {
     const { result, orchestration } = await runTiered<LanguageReviewResult>({
     workload: "language_review",
+    context: {
+      organizationId: pkg.organizationId,
+      reviewType: WORKLOAD_LABELS.language_review,
+    },
+    riskScoreOf: (r) =>
+      typeof r.score === "number" ? Math.max(0, Math.min(100, 100 - r.score)) : null,
     assess: (r) => {
       const risky = r.score < 70;
       return {

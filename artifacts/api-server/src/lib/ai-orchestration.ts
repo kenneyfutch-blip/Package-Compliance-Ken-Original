@@ -1,6 +1,7 @@
 import type OpenAI from "openai";
 import { resolveAiClientForTier, type AiTier } from "./ai-client";
 import { logger } from "./logger";
+import { recordAiUsage } from "./ai-usage";
 
 // The AI operations the orchestrator routes. Each maps to an initial tier and
 // whether it may escalate to a stronger tier on low confidence / high risk.
@@ -122,6 +123,16 @@ export async function runTiered<T>(opts: {
     tier: AiTier;
   }) => Promise<TierAttempt<T>>;
   assess: (result: T) => TierAssessment;
+  // Optional attribution + telemetry hooks for usage/cost logging. organizationId
+  // is authoritative when the caller knows it (from the domain object); userId
+  // falls back to the request's AsyncLocalStorage identity.
+  context?: {
+    organizationId?: number | null;
+    userId?: number | null;
+    reviewType?: string | null;
+  };
+  // Extract a 0-100 compliance risk score from the final result, if meaningful.
+  riskScoreOf?: (result: T) => number | null;
 }): Promise<{ result: T; orchestration: AiOrchestration }> {
   const { workload } = opts;
   const initialTier = WORKLOAD_INITIAL_TIER[workload];
@@ -135,78 +146,116 @@ export async function runTiered<T>(opts: {
   let finalResult!: T;
   let finalModel = "";
   let finalConfidence: number | null = null;
+  const overallStart = Date.now();
 
-  while (true) {
-    const resolved = await resolveAiClientForTier(tier);
-    const start = Date.now();
-    const attempt = await opts.run({
-      client: resolved.client,
-      model: resolved.model,
-      tier,
-    });
-    const durationMs = Date.now() - start;
-    calls.push({
-      tier,
-      codename: resolved.codename,
-      model: resolved.model,
-      promptTokens: attempt.usage.promptTokens,
-      completionTokens: attempt.usage.completionTokens,
-      totalTokens: attempt.usage.totalTokens,
-      durationMs,
-    });
+  try {
+    while (true) {
+      const resolved = await resolveAiClientForTier(tier);
+      const start = Date.now();
+      const attempt = await opts.run({
+        client: resolved.client,
+        model: resolved.model,
+        tier,
+      });
+      const durationMs = Date.now() - start;
+      calls.push({
+        tier,
+        codename: resolved.codename,
+        model: resolved.model,
+        promptTokens: attempt.usage.promptTokens,
+        completionTokens: attempt.usage.completionTokens,
+        totalTokens: attempt.usage.totalTokens,
+        durationMs,
+      });
 
-    const assessment = opts.assess(attempt.result);
-    finalResult = attempt.result;
-    finalModel = resolved.model;
-    finalConfidence = assessment.confidence;
+      const assessment = opts.assess(attempt.result);
+      finalResult = attempt.result;
+      finalModel = resolved.model;
+      finalConfidence = assessment.confidence;
 
-    const belowConfidence =
-      assessment.confidence != null &&
-      assessment.confidence < CONFIDENCE_ESCALATION_THRESHOLD;
-    const shouldEscalate =
-      canEscalate &&
-      escalations < MAX_ESCALATIONS &&
-      (belowConfidence || assessment.risky);
-    const target = shouldEscalate ? nextTier(tier) : null;
+      const belowConfidence =
+        assessment.confidence != null &&
+        assessment.confidence < CONFIDENCE_ESCALATION_THRESHOLD;
+      const shouldEscalate =
+        canEscalate &&
+        escalations < MAX_ESCALATIONS &&
+        (belowConfidence || assessment.risky);
+      const target = shouldEscalate ? nextTier(tier) : null;
 
-    if (!target) break;
+      if (!target) break;
 
-    escalations += 1;
-    escalated = true;
-    escalationReason =
-      assessment.reason ??
-      (belowConfidence
-        ? `Confidence ${assessment.confidence}% below ${CONFIDENCE_ESCALATION_THRESHOLD}% threshold`
-        : "High-risk result");
-    tier = target;
-  }
+      escalations += 1;
+      escalated = true;
+      escalationReason =
+        assessment.reason ??
+        (belowConfidence
+          ? `Confidence ${assessment.confidence}% below ${CONFIDENCE_ESCALATION_THRESHOLD}% threshold`
+          : "High-risk result");
+      tier = target;
+    }
 
-  const orchestration: AiOrchestration = {
-    workload,
-    initialTier,
-    finalTier: tier,
-    finalModel,
-    escalated,
-    escalationReason,
-    confidence: finalConfidence,
-    totalTokens: calls.reduce((a, c) => a + c.totalTokens, 0),
-    totalDurationMs: calls.reduce((a, c) => a + c.durationMs, 0),
-    calls,
-  };
-
-  logger.info(
-    {
+    const orchestration: AiOrchestration = {
       workload,
       initialTier,
-      finalTier: orchestration.finalTier,
+      finalTier: tier,
       finalModel,
       escalated,
       escalationReason,
       confidence: finalConfidence,
-      totalTokens: orchestration.totalTokens,
-    },
-    "AI orchestration",
-  );
+      totalTokens: calls.reduce((a, c) => a + c.totalTokens, 0),
+      totalDurationMs: calls.reduce((a, c) => a + c.durationMs, 0),
+      calls,
+    };
 
-  return { result: finalResult, orchestration };
+    logger.info(
+      {
+        workload,
+        initialTier,
+        finalTier: orchestration.finalTier,
+        finalModel,
+        escalated,
+        escalationReason,
+        confidence: finalConfidence,
+        totalTokens: orchestration.totalTokens,
+      },
+      "AI orchestration",
+    );
+
+    // Fire-and-forget usage row (real model calls only; cache hits never reach
+    // here). Never awaited — logging must not slow or fail the AI response.
+    recordAiUsage({
+      workload,
+      model: finalModel,
+      tier: orchestration.finalTier,
+      promptTokens: calls.reduce((a, c) => a + c.promptTokens, 0),
+      completionTokens: calls.reduce((a, c) => a + c.completionTokens, 0),
+      totalTokens: orchestration.totalTokens,
+      durationMs: orchestration.totalDurationMs,
+      success: true,
+      escalated,
+      confidence: finalConfidence,
+      riskScore: opts.riskScoreOf ? opts.riskScoreOf(finalResult) : null,
+      reviewType: opts.context?.reviewType ?? null,
+      organizationId: opts.context?.organizationId ?? null,
+      userId: opts.context?.userId ?? null,
+    });
+
+    return { result: finalResult, orchestration };
+  } catch (err) {
+    recordAiUsage({
+      workload,
+      model: finalModel || "unknown",
+      tier,
+      promptTokens: calls.reduce((a, c) => a + c.promptTokens, 0),
+      completionTokens: calls.reduce((a, c) => a + c.completionTokens, 0),
+      durationMs: Date.now() - overallStart,
+      success: false,
+      errorMessage: err instanceof Error ? err.message : String(err),
+      escalated,
+      reviewType: opts.context?.reviewType ?? null,
+      organizationId: opts.context?.organizationId ?? null,
+      userId: opts.context?.userId ?? null,
+    });
+    throw err;
+  }
 }

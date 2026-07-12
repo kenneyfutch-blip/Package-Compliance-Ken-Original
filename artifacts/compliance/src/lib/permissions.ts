@@ -43,6 +43,7 @@ export function requiredPermFor(path: string): string | null {
   if (p === "/admin/queue") return "users:read"
   if (p === "/admin/activity") return "audit:read"
   if (p === "/admin/usage") return "dashboard:read"
+  if (p === "/admin/ai-usage") return "dashboard:read"
   if (p === "/admin/integrations") return "ai_providers:read"
   if (p === "/admin") return "users:read"
   if (p === "/notifications") return "notifications:read"

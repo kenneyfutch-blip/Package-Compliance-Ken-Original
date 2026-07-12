@@ -24,3 +24,4 @@ export * from "./ecfr";
 export * from "./policies";
 export * from "./policy_versions";
 export * from "./sop_documents";
+export * from "./ai_usage";

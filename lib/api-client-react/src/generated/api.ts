@@ -24,6 +24,8 @@ import type {
   AiProviderInput,
   AiProviderTestResult,
   AiProviderUpdate,
+  AiUsageAnalytics,
+  AiUsageRequest,
   Annotation,
   AnnotationInput,
   AnnotationUpdate,
@@ -59,6 +61,7 @@ import type {
   FdaIntelligence,
   FdaRecallResponse,
   FdaStatus,
+  GetAiUsageAnalyticsParams,
   GetEcfrIntelligenceParams,
   GetFdaIntelligenceParams,
   GlossaryEntry,
@@ -71,6 +74,7 @@ import type {
   LanguageQualityStats,
   LanguageReviewDetail,
   LanguageReviewSummary,
+  ListAiUsageRequestsParams,
   ListAuditEventsParams,
   ListFdaRecallsParams,
   ListGlossaryEntriesParams,
@@ -639,6 +643,176 @@ export function useGetVendorPerformance<TData = Awaited<ReturnType<typeof getVen
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetVendorPerformanceQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAiUsageAnalyticsUrl = (params?: GetAiUsageAnalyticsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/ai-usage/analytics?${stringifiedParams}` : `/api/ai-usage/analytics`
+}
+
+/**
+ * Org-scoped AI spend, volume, model/tier mix, per-operation breakdown, escalation frequency and success/error rates over a date range (defaults to the last 30 days).
+ * @summary AI usage & cost analytics for a date range
+ */
+export const getAiUsageAnalytics = async (params?: GetAiUsageAnalyticsParams, options?: RequestInit): Promise<AiUsageAnalytics> => {
+
+  return customFetch<AiUsageAnalytics>(getGetAiUsageAnalyticsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAiUsageAnalyticsQueryKey = (params?: GetAiUsageAnalyticsParams,) => {
+    return [
+    `/api/ai-usage/analytics`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAiUsageAnalyticsQueryOptions = <TData = Awaited<ReturnType<typeof getAiUsageAnalytics>>, TError = ErrorType<unknown>>(params?: GetAiUsageAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiUsageAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAiUsageAnalyticsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiUsageAnalytics>>> = ({ signal }) => getAiUsageAnalytics(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAiUsageAnalytics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAiUsageAnalyticsQueryResult = NonNullable<Awaited<ReturnType<typeof getAiUsageAnalytics>>>
+export type GetAiUsageAnalyticsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AI usage & cost analytics for a date range
+ */
+
+export function useGetAiUsageAnalytics<TData = Awaited<ReturnType<typeof getAiUsageAnalytics>>, TError = ErrorType<unknown>>(
+ params?: GetAiUsageAnalyticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiUsageAnalytics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAiUsageAnalyticsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAiUsageRequestsUrl = (params?: ListAiUsageRequestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/ai-usage/requests?${stringifiedParams}` : `/api/ai-usage/requests`
+}
+
+/**
+ * Org-scoped, date-filtered list of individual AI requests, newest first. Bounded via limit/offset.
+ * @summary Recent AI requests (paginated)
+ */
+export const listAiUsageRequests = async (params?: ListAiUsageRequestsParams, options?: RequestInit): Promise<AiUsageRequest[]> => {
+
+  return customFetch<AiUsageRequest[]>(getListAiUsageRequestsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAiUsageRequestsQueryKey = (params?: ListAiUsageRequestsParams,) => {
+    return [
+    `/api/ai-usage/requests`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAiUsageRequestsQueryOptions = <TData = Awaited<ReturnType<typeof listAiUsageRequests>>, TError = ErrorType<unknown>>(params?: ListAiUsageRequestsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiUsageRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAiUsageRequestsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAiUsageRequests>>> = ({ signal }) => listAiUsageRequests(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAiUsageRequests>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAiUsageRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listAiUsageRequests>>>
+export type ListAiUsageRequestsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Recent AI requests (paginated)
+ */
+
+export function useListAiUsageRequests<TData = Awaited<ReturnType<typeof listAiUsageRequests>>, TError = ErrorType<unknown>>(
+ params?: ListAiUsageRequestsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAiUsageRequests>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAiUsageRequestsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

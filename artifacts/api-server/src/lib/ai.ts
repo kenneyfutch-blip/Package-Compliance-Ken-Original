@@ -3,8 +3,10 @@ import { resolveAiClientForTier } from "./ai-client";
 import {
   runTiered,
   readUsage,
+  WORKLOAD_LABELS,
   type AiOrchestration,
 } from "./ai-orchestration";
+import { trackDirectUsage } from "./ai-usage";
 import { cachedAiCall } from "./cache/ai-cache";
 
 // Prompt-version constants: bump when a workload's prompt changes so cached
@@ -192,6 +194,12 @@ Respond with JSON of shape:
   const compute = async (): Promise<AnalysisResult> => {
     const { result, orchestration } = await runTiered<AnalysisResult>({
     workload: "packaging_analysis",
+    context: {
+      organizationId: pkg.organizationId,
+      reviewType: WORKLOAD_LABELS.packaging_analysis,
+    },
+    riskScoreOf: (r) =>
+      typeof r.riskScore === "number" ? r.riskScore : null,
     assess: (r) => {
       const confs = r.violations
         .map((v) => v.confidence)
@@ -333,23 +341,27 @@ export async function extractTextFromImage(
 
   const system = `You are a precise OCR engine for retail product packaging artwork. Transcribe ALL text visible in the image verbatim — brand names, product names, ingredient lists, warnings, directions, nutrition facts, net weight, marketing claims, country of origin, manufacturer info, barcodes labels, and any fine print. Preserve the reading order roughly top-to-bottom, left-to-right. Keep original spelling exactly as printed, including any misspellings (do NOT correct them). Do not add commentary, headings, or explanations. If no text is legible, respond with an empty string. Do not use emojis.`;
 
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: system },
-      {
-        role: "user",
-        content: [
+  const response = await trackDirectUsage(
+    { workload: "ocr", model, tier: "fast", reviewType: WORKLOAD_LABELS.ocr },
+    () =>
+      client.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: system },
           {
-            type: "text",
-            text: "Transcribe every piece of text on this packaging artwork, verbatim.",
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Transcribe every piece of text on this packaging artwork, verbatim.",
+              },
+              { type: "image_url", image_url: { url: imageDataUrl } },
+            ],
           },
-          { type: "image_url", image_url: { url: imageDataUrl } },
         ],
-      },
-    ],
-    max_completion_tokens: 4096,
-  });
+        max_completion_tokens: 4096,
+      }),
+  );
 
   return response.choices[0]?.message?.content?.trim() ?? "";
 }
@@ -390,24 +402,33 @@ Rules:
 
   let parsed: any = {};
   try {
-    const response = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: system },
-        {
-          role: "user",
-          content: [
+    const response = await trackDirectUsage(
+      {
+        workload: "field_extraction",
+        model,
+        tier: "fast",
+        reviewType: WORKLOAD_LABELS.field_extraction,
+      },
+      () =>
+        client.chat.completions.create({
+          model,
+          messages: [
+            { role: "system", content: system },
             {
-              type: "text",
-              text: "Extract the structured package metadata fields from this packaging artwork. Leave any field you cannot confidently read as an empty string.",
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "Extract the structured package metadata fields from this packaging artwork. Leave any field you cannot confidently read as an empty string.",
+                },
+                { type: "image_url", image_url: { url: imageDataUrl } },
+              ],
             },
-            { type: "image_url", image_url: { url: imageDataUrl } },
           ],
-        },
-      ],
-      response_format: { type: "json_object" },
-      max_completion_tokens: 1024,
-    });
+          response_format: { type: "json_object" },
+          max_completion_tokens: 1024,
+        }),
+    );
     parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
   } catch {
     parsed = {};
@@ -480,15 +501,25 @@ Answer the question using the context above. Cite the specific regulations you r
     keyParts: [system, user],
     compute: async () => {
       const { client, model } = await resolveAiClientForTier("standard");
-      const response = await client.chat.completions.create({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        response_format: { type: "json_object" },
-        max_completion_tokens: 2048,
-      });
+      const response = await trackDirectUsage(
+        {
+          workload: "copilot",
+          model,
+          tier: "standard",
+          reviewType: WORKLOAD_LABELS.copilot,
+          organizationId: pkg.organizationId,
+        },
+        () =>
+          client.chat.completions.create({
+            model,
+            messages: [
+              { role: "system", content: system },
+              { role: "user", content: user },
+            ],
+            response_format: { type: "json_object" },
+            max_completion_tokens: 2048,
+          }),
+      );
 
       const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
       return {
@@ -562,15 +593,24 @@ Focus on compliance-significant changes (claims, warnings, ingredients, regulato
 Respond with JSON: {"summary":string,"changes":[{"changeType":string,"category":string,"field":string|null,"before":string|null,"after":string|null,"note":string|null}]}`;
 
   const { client, model } = await resolveAiClientForTier("fast");
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: system },
-      { role: "user", content: user },
-    ],
-    response_format: { type: "json_object" },
-    max_completion_tokens: 3072,
-  });
+  const response = await trackDirectUsage(
+    {
+      workload: "version_compare",
+      model,
+      tier: "fast",
+      reviewType: WORKLOAD_LABELS.version_compare,
+    },
+    () =>
+      client.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 3072,
+      }),
+  );
 
   const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
   const changes: ComparedChange[] = Array.isArray(parsed?.changes)

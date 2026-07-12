@@ -25,6 +25,7 @@ import policiesRouter from "./policies";
 import sopDocumentsRouter from "./sop-documents";
 import glossaryRouter from "./glossary";
 import resourcesRouter from "./resources";
+import usageRouter from "./usage";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -57,5 +58,6 @@ router.use(policiesRouter);
 router.use(sopDocumentsRouter);
 router.use(glossaryRouter);
 router.use(resourcesRouter);
+router.use(usageRouter);
 
 export default router;

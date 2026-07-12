@@ -3,6 +3,7 @@ import { getAuth, clerkClient } from "@clerk/express";
 import { provisionUser, loadTestContextForEmail } from "../lib/rbac/provision";
 import { setAuthContext } from "../lib/rbac/context";
 import { loadTestIdentity } from "../lib/loadtest";
+import { runWithAiUsageContext } from "../lib/ai-usage";
 
 // Access is restricted to Dollar Tree associates. Enforced here on the server so
 // the restriction holds in production regardless of any client-side checks.
@@ -62,7 +63,13 @@ export async function requireAuth(
       authed.userEmail = ctx.email;
       authed.userName = ctx.name;
       setAuthContext(req, ctx);
-      next();
+      // Carry tenant + user identity for the downstream handler chain so AI
+      // usage logging can attribute requests without threading identity through
+      // every AI call signature.
+      runWithAiUsageContext(
+        { organizationId: ctx.organizationId, userId: ctx.userId },
+        () => next(),
+      );
       return;
     } catch (err) {
       req.log?.error({ err }, "Load-test auth hook failed");
@@ -124,14 +131,19 @@ export async function requireAuth(
 
   // Provision the caller into the database and resolve their organization, role,
   // and effective permissions for downstream authorization + tenant scoping.
+  let authCtx;
   try {
-    const ctx = await provisionUser(userId, entry.email, entry.name);
-    setAuthContext(req, ctx);
+    authCtx = await provisionUser(userId, entry.email, entry.name);
+    setAuthContext(req, authCtx);
   } catch (err) {
     req.log?.error({ err }, "Failed to provision user");
     res.status(500).json({ error: "Failed to establish user session" });
     return;
   }
 
-  next();
+  // Carry tenant + user identity for the downstream handler chain (see above).
+  runWithAiUsageContext(
+    { organizationId: authCtx.organizationId, userId: authCtx.userId },
+    () => next(),
+  );
 }
