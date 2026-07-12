@@ -372,7 +372,7 @@ export default function ReviewWorkspace() {
               <TabsContent value="copilot" className="m-0 p-4 h-full"><CopilotPanel packageId={packageId} pkg={pkg} /></TabsContent>
               <TabsContent value="compare" className="m-0 p-4"><ComparePanel pkg={pkg} packageId={packageId} /></TabsContent>
               <TabsContent value="language" className="m-0 p-4"><LanguageReviewTab detail={languageReview} onRun={handleRunLanguage} isRunning={runLanguage.isPending} /></TabsContent>
-              <TabsContent value="document" className="m-0 p-4"><DocumentAiTab packageId={packageId} /></TabsContent>
+              <TabsContent value="document" className="m-0 p-4 h-full"><DocumentAiTab packageId={packageId} /></TabsContent>
             </div>
           </Tabs>
 

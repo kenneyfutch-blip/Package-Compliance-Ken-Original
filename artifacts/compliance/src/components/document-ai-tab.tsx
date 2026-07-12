@@ -64,7 +64,7 @@ export function DocumentAiTab({ packageId }: { packageId: number }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5 h-full">
       {/* Engine header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -171,11 +171,11 @@ export function DocumentAiTab({ packageId }: { packageId: number }) {
 
           {/* Cached OCR text */}
           {extraction.text && (
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+            <div className="flex-1 min-h-0 flex flex-col">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5 shrink-0">
                 <Settings2 className="w-3.5 h-3.5" /> Extracted Text (cached)
               </h4>
-              <pre className="text-xs whitespace-pre-wrap font-mono bg-muted/40 border border-border rounded-lg p-3 max-h-72 overflow-y-auto">
+              <pre className="text-xs whitespace-pre-wrap font-mono bg-muted/40 border border-border rounded-lg p-3 flex-1 min-h-0 overflow-y-auto">
                 {extraction.text}
               </pre>
             </div>
