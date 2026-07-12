@@ -377,9 +377,11 @@ function NavRow({
 }
 
 // A collapsible sub-group inside a section (e.g. "Reviews & Findings" under
-// Compliance). Defaults open; force-opens when it contains the active page so
-// the current location is never hidden. Open/closed state is persisted by the
-// parent via the shared overrides map, keyed "<sectionId>:<groupLabel>".
+// Compliance). Defaults open. An explicit user toggle always wins — even when
+// the group contains the active page — so a group can never get "stuck open";
+// in that collapsed-but-active case a dot marker flags the hidden location.
+// Open/closed state is persisted by the parent via the shared overrides map,
+// keyed "<sectionId>:<groupLabel>".
 function NavGroupBlock({
   group,
   location,
@@ -394,7 +396,7 @@ function NavGroupBlock({
   onNavigate?: () => void
 }) {
   const groupActive = group.items.some((i) => isItemActive(location, i.href))
-  const isOpen = groupActive || (open ?? true)
+  const isOpen = open ?? true
   return (
     <div className="mt-1">
       <button
