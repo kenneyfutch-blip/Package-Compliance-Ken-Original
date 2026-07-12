@@ -335,7 +335,7 @@ function NavRow({
     <div
       className={cn(
         "group/navrow flex items-center rounded-md border-l-2 transition-colors",
-        active ? "bg-primary/10 border-primary" : "border-transparent hover:bg-accent",
+        active ? "bg-muted border-muted-foreground/50" : "border-transparent hover:bg-accent",
       )}
     >
       <Link
@@ -344,11 +344,11 @@ function NavRow({
         className={cn(
           "flex min-w-0 flex-1 items-center gap-3 pl-3 pr-1 py-2.5 text-sm",
           active
-            ? "text-primary font-medium"
+            ? "text-foreground font-semibold"
             : "text-foreground group-hover/navrow:text-foreground",
         )}
       >
-        <Icon className={cn("w-4 h-4 shrink-0", active && "text-primary")} />
+        <Icon className={cn("w-4 h-4 shrink-0", active && "text-foreground")} />
         <span className="truncate">{item.name}</span>
       </Link>
       <button
