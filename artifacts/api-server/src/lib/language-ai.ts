@@ -1,4 +1,9 @@
-import type { Regulation, PackageRow, ClaimReviewFlags } from "@workspace/db";
+import type {
+  Regulation,
+  PackageRow,
+  ClaimReviewFlags,
+  GlossaryEntryRow,
+} from "@workspace/db";
 import {
   runTiered,
   readUsage,
@@ -84,11 +89,24 @@ function clampUnit(n: unknown, fallback: number): number {
 export async function analyzeLanguage(
   pkg: PackageRow,
   regulations: Regulation[],
+  approvedLanguage: GlossaryEntryRow[] = [],
 ): Promise<LanguageReviewResult> {
   const regContext = regulations
     .map(
       (r) =>
         `- [${r.agency} ${r.ruleCode}] ${r.title} (${r.category})${r.section ? ` §${r.section}` : ""}: ${r.summary}`,
+    )
+    .join("\n");
+
+  // The organization's editable Approved Language & Glossary library. These are
+  // authoritative reference entries — required statements, pre-approved claims,
+  // allergen/warning phrasings, defined terms, and prohibited wording — that the
+  // engine must reason against so it flags deviations from approved wording and
+  // suggests the exact approved value.
+  const glossaryContext = approvedLanguage
+    .map(
+      (g) =>
+        `- [${g.category}] "${g.term}" => "${g.approvedValue}"${g.regulatoryReference ? ` (ref: ${g.regulatoryReference})` : ""}${g.notes ? ` — ${g.notes}` : ""}`,
     )
     .join("\n");
 
@@ -124,6 +142,10 @@ ${pkg.extractedText ?? "(no artwork text provided; infer typical requirements fo
 
 APPLICABLE REGULATIONS KNOWLEDGE BASE:
 ${regContext || "(none provided; rely on standard US packaging regulations)"}
+
+ORGANIZATION APPROVED LANGUAGE & GLOSSARY:
+${glossaryContext || "(none provided)"}
+When packaging copy conflicts with an approved value above, flag it and set suggestedText to the exact approved value. Treat "Required Statement" entries as mandatory (flag as Regulatory when missing), "Prohibited Language" as never allowed, and "Defined Term"/"Approved Claim"/"Brand Language" entries as the authoritative wording. Cite the entry's regulatory reference when present.
 
 Respond with JSON of shape:
 {"score":number,"confidence":number,"summary":string,"findings":[{"issueType":string,"severity":string,"originalText":string|null,"suggestedText":string|null,"reason":string|null,"regulationReference":string|null,"confidenceScore":number,"claimRiskScore":number|null,"reviewFlags":{"fda":boolean,"epa":boolean,"ftc":boolean,"legal":boolean}|null,"bbox":{"x":number,"y":number,"w":number,"h":number}|null}]}`;

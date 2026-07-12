@@ -1,8 +1,14 @@
 import * as React from "react"
-import type { LanguageReviewDetail } from "@workspace/api-client-react"
+import {
+  useListGlossaryEntries,
+  getListGlossaryEntriesQueryKey,
+  type LanguageReviewDetail,
+  type GlossaryEntry,
+} from "@workspace/api-client-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
 import {
   Languages,
   Loader2,
@@ -10,8 +16,85 @@ import {
   BookOpen,
   History,
   X,
+  Search,
+  ChevronDown,
+  ShieldCheck,
 } from "lucide-react"
+import { usePermissions } from "@/lib/access"
 import { cn } from "@/lib/utils"
+
+// Reviewer-facing lookup so approved wording is reachable without leaving the
+// review. Reads the same active glossary entries the AI engine reasons against.
+function ApprovedLanguageLookup() {
+  const { has } = usePermissions()
+  const [open, setOpen] = React.useState(false)
+  const [q, setQ] = React.useState("")
+
+  const params = q.trim().length >= 2 ? { search: q.trim() } : {}
+  const { data: entries = [], isLoading } = useListGlossaryEntries(params, {
+    query: { enabled: open, queryKey: getListGlossaryEntriesQueryKey(params) },
+  })
+
+  if (!has("glossary:read")) return null
+
+  return (
+    <div className="rounded-lg border border-border bg-card">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left"
+      >
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          <BookOpen className="h-4 w-4 text-primary" /> Approved language reference
+        </span>
+        <ChevronDown
+          className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")}
+        />
+      </button>
+      {open && (
+        <div className="space-y-3 border-t border-border p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Look up an approved term or claim…"
+              className="h-10 pl-9"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          {isLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : entries.length === 0 ? (
+            <p className="py-2 text-center text-xs text-muted-foreground">
+              {q.trim().length >= 2
+                ? "No approved-language entries match."
+                : "No approved-language entries yet."}
+            </p>
+          ) : (
+            <ul className="max-h-64 space-y-2 overflow-y-auto">
+              {(entries as GlossaryEntry[]).slice(0, 30).map((e) => (
+                <li key={e.id} className="rounded-md border border-border bg-background p-2.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">{e.term}</span>
+                    <Badge variant="outline" className="text-[10px]">{e.category}</Badge>
+                  </div>
+                  <p className="mt-1 text-xs text-foreground/80">{e.approvedValue}</p>
+                  {e.regulatoryReference && (
+                    <p className="mt-1 flex items-center gap-1 font-mono text-[11px] text-muted-foreground">
+                      <ShieldCheck className="h-3 w-3" /> {e.regulatoryReference}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function scoreColor(score: number | null | undefined): string {
   if (score == null) return "text-muted-foreground"
@@ -116,6 +199,8 @@ export function LanguageReviewTab({
       {review?.summary && (
         <p className="text-sm text-foreground/80 bg-accent/40 border border-border rounded-lg p-3">{review.summary}</p>
       )}
+
+      <ApprovedLanguageLookup />
 
       {review && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">

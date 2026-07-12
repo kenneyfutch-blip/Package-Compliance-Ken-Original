@@ -168,6 +168,7 @@ export default function ResourceCenter() {
       { key: "regulation", label: "Regulations" },
       { key: "internal_sop", label: "Internal SOPs" },
       { key: "policy", label: "Policies" },
+      { key: "glossary", label: "Glossary" },
     ]
     return base
   }, [])

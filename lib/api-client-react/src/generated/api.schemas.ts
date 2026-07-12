@@ -99,6 +99,46 @@ export interface PolicyVersion {
   createdAt: string;
 }
 
+export interface GlossaryEntry {
+  id: number;
+  term: string;
+  approvedValue: string;
+  category: string;
+  status: string;
+  notes?: string | null;
+  regulatoryReference?: string | null;
+  createdBy?: string | null;
+  updatedBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GlossaryEntryInput {
+  term: string;
+  approvedValue: string;
+  category?: string | null;
+  status?: string | null;
+  notes?: string | null;
+  regulatoryReference?: string | null;
+}
+
+export interface GlossaryEntryUpdate {
+  term?: string;
+  approvedValue?: string;
+  category?: string;
+  status?: string;
+  notes?: string | null;
+  regulatoryReference?: string | null;
+}
+
+export interface GlossaryHistoryEvent {
+  id: number;
+  actor: string;
+  action: string;
+  detail?: string | null;
+  createdAt: string;
+}
+
 export interface SopDocument {
   id: number;
   title: string;
@@ -2241,6 +2281,15 @@ limit?: number;
 export type ListSopDocumentsParams = {
 search?: string;
 category?: string;
+status?: string;
+};
+
+export type ListGlossaryEntriesParams = {
+search?: string;
+category?: string;
+/**
+ * active (default), retired, or all.
+ */
 status?: string;
 };
 

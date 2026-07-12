@@ -5,6 +5,7 @@ import {
   regulationsTable,
   languageReviewsTable,
   languageFindingsTable,
+  glossaryEntriesTable,
   type PackageRow,
   type LanguageFindingRow,
 } from "@workspace/db";
@@ -95,6 +96,21 @@ function mapReview(row: typeof languageReviewsTable.$inferSelect) {
 
 async function loadRegulations() {
   return db.select().from(regulationsTable);
+}
+
+// The org's active Approved Language & Glossary entries, fed to the review engine
+// so it reasons against authoritative wording (required statements, approved
+// claims, defined terms, prohibited language).
+async function loadApprovedLanguage(organizationId: number) {
+  return db
+    .select()
+    .from(glossaryEntriesTable)
+    .where(
+      and(
+        eq(glossaryEntriesTable.organizationId, organizationId),
+        eq(glossaryEntriesTable.status, "active"),
+      ),
+    );
 }
 
 // Count how many times each suggested fix has previously been approved across
@@ -314,8 +330,11 @@ router.post(
       return;
     }
     try {
-      const regulations = await loadRegulations();
-      const result = await analyzeLanguage(pkg, regulations);
+      const [regulations, approvedLanguage] = await Promise.all([
+        loadRegulations(),
+        loadApprovedLanguage(orgId(req)),
+      ]);
+      const result = await analyzeLanguage(pkg, regulations, approvedLanguage);
       await persistReview(req, pkg, result, orgId(req));
     } catch (err) {
       logger.error({ err }, "Language review failed");
@@ -349,10 +368,13 @@ router.post(
 
     let processed = 0;
     let failed = 0;
-    const regulations = await loadRegulations();
+    const [regulations, approvedLanguage] = await Promise.all([
+      loadRegulations(),
+      loadApprovedLanguage(orgId(req)),
+    ]);
     for (const pkg of pkgs) {
       try {
-        const result = await analyzeLanguage(pkg, regulations);
+        const result = await analyzeLanguage(pkg, regulations, approvedLanguage);
         await persistReview(req, pkg, result, orgId(req));
         processed += 1;
       } catch (err) {

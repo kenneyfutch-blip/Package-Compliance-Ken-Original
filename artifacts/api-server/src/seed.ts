@@ -25,6 +25,7 @@ import {
   userPermissionsTable,
   teamsTable,
   teamMembersTable,
+  glossaryEntriesTable,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { analyzePackaging } from "./lib/ai";
@@ -154,6 +155,7 @@ async function clearAll() {
   await db.delete(violationsTable);
   await db.delete(reportsTable);
   await db.delete(auditEventsTable);
+  await db.delete(glossaryEntriesTable);
   await db.delete(packagesTable);
   await db.delete(regulationsTable);
   await db.delete(suppliersTable);
@@ -499,6 +501,67 @@ async function main() {
     .insert(regulationsTable)
     .values(regulations)
     .returning();
+
+  // Approved Language & Glossary library — the wording reviewers must reuse and
+  // that the AI language review reasons against.
+  await db.insert(glossaryEntriesTable).values(
+    [
+      {
+        term: "Contains: Soy",
+        approvedValue:
+          "Contains: Soy. (Use exact FALCPA \"Contains\" statement immediately after the ingredient list.)",
+        category: "Required Statement",
+        regulatoryReference: "FDA 21 CFR 101 (FALCPA)",
+        notes: "Mandatory when soy is present. Do not paraphrase.",
+      },
+      {
+        term: "May contain traces of tree nuts",
+        approvedValue: "May contain tree nuts.",
+        category: "Allergen & Warning",
+        regulatoryReference: "FDA FALCPA advisory labeling",
+        notes: "Use only advisory phrasing; never substitute for a required Contains statement.",
+      },
+      {
+        term: "Non-GMO",
+        approvedValue:
+          "Made with non-GMO ingredients (not verified by a third party unless the Non-GMO Project seal is present).",
+        category: "Approved Claim",
+        regulatoryReference: "USDA BE / FTC Green Guides",
+        notes: "Only use the seal when certification is on file.",
+      },
+      {
+        term: "All natural",
+        approvedValue:
+          "Avoid \"all natural.\" Use specific, substantiated descriptors (e.g. \"no artificial colors\").",
+        category: "Prohibited Language",
+        regulatoryReference: "FTC / FDA policy on \"natural\"",
+        notes: "\"Natural\" is not defined by the FDA and invites challenge.",
+      },
+      {
+        term: "Net Wt",
+        approvedValue:
+          "Net Wt (both US customary and metric, e.g. \"Net Wt 12 oz (340 g)\").",
+        category: "Required Statement",
+        regulatoryReference: "FPLA 21 CFR 101.105",
+        notes: "Place in the bottom 30% of the principal display panel.",
+      },
+      {
+        term: "Best if used by",
+        approvedValue:
+          "BEST IF USED BY [date] — preferred quality date phrasing for non-perishable foods.",
+        category: "Defined Term",
+        regulatoryReference: "FDA date labeling guidance",
+        notes: "Reserve \"USE BY\" for safety-sensitive items.",
+      },
+      {
+        term: "Company voice — sustainability",
+        approvedValue:
+          "Thoughtfully sourced, responsibly packaged. (Approved brand phrasing for eco messaging.)",
+        category: "Brand Language",
+        notes: "Use in place of unqualified \"eco-friendly\" or \"green\" claims.",
+      },
+    ].map((g) => ({ ...g, organizationId: orgId, status: "active", createdBy: "System", updatedBy: "System" })),
+  );
   await db.insert(notificationsTable).values(
     notifications.map((n) => ({ ...n, organizationId: orgId })),
   );

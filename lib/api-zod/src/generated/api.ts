@@ -4846,6 +4846,128 @@ export const CompareSopDocumentVersionsResponse = zod.object({
 
 
 /**
+ * @summary List approved-language and glossary entries
+ */
+export const ListGlossaryEntriesQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "category": zod.coerce.string().optional(),
+  "status": zod.coerce.string().optional().describe('active (default), retired, or all.')
+})
+
+export const ListGlossaryEntriesResponseItem = zod.object({
+  "id": zod.number(),
+  "term": zod.string(),
+  "approvedValue": zod.string(),
+  "category": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "regulatoryReference": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+export const ListGlossaryEntriesResponse = zod.array(ListGlossaryEntriesResponseItem)
+
+
+/**
+ * @summary Create an approved-language or glossary entry
+ */
+export const CreateGlossaryEntryBody = zod.object({
+  "term": zod.string(),
+  "approvedValue": zod.string(),
+  "category": zod.string().nullish(),
+  "status": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "regulatoryReference": zod.string().nullish()
+})
+
+export const CreateGlossaryEntryResponse = zod.object({
+  "id": zod.number(),
+  "term": zod.string(),
+  "approvedValue": zod.string(),
+  "category": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "regulatoryReference": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get a single glossary entry
+ */
+export const GetGlossaryEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetGlossaryEntryResponse = zod.object({
+  "id": zod.number(),
+  "term": zod.string(),
+  "approvedValue": zod.string(),
+  "category": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "regulatoryReference": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Update, retire, or restore a glossary entry
+ */
+export const UpdateGlossaryEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateGlossaryEntryBody = zod.object({
+  "term": zod.string().optional(),
+  "approvedValue": zod.string().optional(),
+  "category": zod.string().optional(),
+  "status": zod.string().optional(),
+  "notes": zod.string().nullish(),
+  "regulatoryReference": zod.string().nullish()
+})
+
+export const UpdateGlossaryEntryResponse = zod.object({
+  "id": zod.number(),
+  "term": zod.string(),
+  "approvedValue": zod.string(),
+  "category": zod.string(),
+  "status": zod.string(),
+  "notes": zod.string().nullish(),
+  "regulatoryReference": zod.string().nullish(),
+  "createdBy": zod.string().nullish(),
+  "updatedBy": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Audit history for a glossary entry (who changed what and when)
+ */
+export const ListGlossaryEntryHistoryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListGlossaryEntryHistoryResponseItem = zod.object({
+  "id": zod.number(),
+  "actor": zod.string(),
+  "action": zod.string(),
+  "detail": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListGlossaryEntryHistoryResponse = zod.array(ListGlossaryEntryHistoryResponseItem)
+
+
+/**
  * @summary Aggregate counts for every reference resource type in the Resource Center
  */
 export const GetResourceOverviewResponse = zod.object({

@@ -61,6 +61,10 @@ import type {
   FdaStatus,
   GetEcfrIntelligenceParams,
   GetFdaIntelligenceParams,
+  GlossaryEntry,
+  GlossaryEntryInput,
+  GlossaryEntryUpdate,
+  GlossaryHistoryEvent,
   HealthStatus,
   LanguageFinding,
   LanguageFindingWithPackage,
@@ -69,6 +73,7 @@ import type {
   LanguageReviewSummary,
   ListAuditEventsParams,
   ListFdaRecallsParams,
+  ListGlossaryEntriesParams,
   ListLanguageFindingsParams,
   ListLanguageReviewsParams,
   ListPackagesParams,
@@ -8782,6 +8787,387 @@ export function useCompareSopDocumentVersions<TData = Awaited<ReturnType<typeof 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getCompareSopDocumentVersionsQueryOptions(id,versionA,versionB,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListGlossaryEntriesUrl = (params?: ListGlossaryEntriesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/glossary?${stringifiedParams}` : `/api/glossary`
+}
+
+/**
+ * @summary List approved-language and glossary entries
+ */
+export const listGlossaryEntries = async (params?: ListGlossaryEntriesParams, options?: RequestInit): Promise<GlossaryEntry[]> => {
+
+  return customFetch<GlossaryEntry[]>(getListGlossaryEntriesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGlossaryEntriesQueryKey = (params?: ListGlossaryEntriesParams,) => {
+    return [
+    `/api/glossary`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListGlossaryEntriesQueryOptions = <TData = Awaited<ReturnType<typeof listGlossaryEntries>>, TError = ErrorType<unknown>>(params?: ListGlossaryEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGlossaryEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGlossaryEntriesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGlossaryEntries>>> = ({ signal }) => listGlossaryEntries(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGlossaryEntries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGlossaryEntriesQueryResult = NonNullable<Awaited<ReturnType<typeof listGlossaryEntries>>>
+export type ListGlossaryEntriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List approved-language and glossary entries
+ */
+
+export function useListGlossaryEntries<TData = Awaited<ReturnType<typeof listGlossaryEntries>>, TError = ErrorType<unknown>>(
+ params?: ListGlossaryEntriesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGlossaryEntries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGlossaryEntriesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateGlossaryEntryUrl = () => {
+
+
+
+
+  return `/api/glossary`
+}
+
+/**
+ * @summary Create an approved-language or glossary entry
+ */
+export const createGlossaryEntry = async (glossaryEntryInput: GlossaryEntryInput, options?: RequestInit): Promise<GlossaryEntry> => {
+
+  return customFetch<GlossaryEntry>(getCreateGlossaryEntryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(glossaryEntryInput)
+  }
+);}
+
+
+
+
+
+export const getCreateGlossaryEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGlossaryEntry>>, TError,{data: BodyType<GlossaryEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createGlossaryEntry>>, TError,{data: BodyType<GlossaryEntryInput>}, TContext> => {
+
+const mutationKey = ['createGlossaryEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createGlossaryEntry>>, {data: BodyType<GlossaryEntryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createGlossaryEntry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateGlossaryEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createGlossaryEntry>>>
+    export type CreateGlossaryEntryMutationBody = BodyType<GlossaryEntryInput>
+    export type CreateGlossaryEntryMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create an approved-language or glossary entry
+ */
+export const useCreateGlossaryEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createGlossaryEntry>>, TError,{data: BodyType<GlossaryEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createGlossaryEntry>>,
+        TError,
+        {data: BodyType<GlossaryEntryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateGlossaryEntryMutationOptions(options));
+    }
+
+export const getGetGlossaryEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/glossary/${id}`
+}
+
+/**
+ * @summary Get a single glossary entry
+ */
+export const getGlossaryEntry = async (id: number, options?: RequestInit): Promise<GlossaryEntry> => {
+
+  return customFetch<GlossaryEntry>(getGetGlossaryEntryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGlossaryEntryQueryKey = (id: number,) => {
+    return [
+    `/api/glossary/${id}`
+    ] as const;
+    }
+
+
+export const getGetGlossaryEntryQueryOptions = <TData = Awaited<ReturnType<typeof getGlossaryEntry>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGlossaryEntry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGlossaryEntryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGlossaryEntry>>> = ({ signal }) => getGlossaryEntry(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGlossaryEntry>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGlossaryEntryQueryResult = NonNullable<Awaited<ReturnType<typeof getGlossaryEntry>>>
+export type GetGlossaryEntryQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get a single glossary entry
+ */
+
+export function useGetGlossaryEntry<TData = Awaited<ReturnType<typeof getGlossaryEntry>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGlossaryEntry>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGlossaryEntryQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateGlossaryEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/glossary/${id}`
+}
+
+/**
+ * @summary Update, retire, or restore a glossary entry
+ */
+export const updateGlossaryEntry = async (id: number,
+    glossaryEntryUpdate: GlossaryEntryUpdate, options?: RequestInit): Promise<GlossaryEntry> => {
+
+  return customFetch<GlossaryEntry>(getUpdateGlossaryEntryUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(glossaryEntryUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateGlossaryEntryMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGlossaryEntry>>, TError,{id: number;data: BodyType<GlossaryEntryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateGlossaryEntry>>, TError,{id: number;data: BodyType<GlossaryEntryUpdate>}, TContext> => {
+
+const mutationKey = ['updateGlossaryEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateGlossaryEntry>>, {id: number;data: BodyType<GlossaryEntryUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateGlossaryEntry(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateGlossaryEntryMutationResult = NonNullable<Awaited<ReturnType<typeof updateGlossaryEntry>>>
+    export type UpdateGlossaryEntryMutationBody = BodyType<GlossaryEntryUpdate>
+    export type UpdateGlossaryEntryMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Update, retire, or restore a glossary entry
+ */
+export const useUpdateGlossaryEntry = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateGlossaryEntry>>, TError,{id: number;data: BodyType<GlossaryEntryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateGlossaryEntry>>,
+        TError,
+        {id: number;data: BodyType<GlossaryEntryUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateGlossaryEntryMutationOptions(options));
+    }
+
+export const getListGlossaryEntryHistoryUrl = (id: number,) => {
+
+
+
+
+  return `/api/glossary/${id}/history`
+}
+
+/**
+ * @summary Audit history for a glossary entry (who changed what and when)
+ */
+export const listGlossaryEntryHistory = async (id: number, options?: RequestInit): Promise<GlossaryHistoryEvent[]> => {
+
+  return customFetch<GlossaryHistoryEvent[]>(getListGlossaryEntryHistoryUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListGlossaryEntryHistoryQueryKey = (id: number,) => {
+    return [
+    `/api/glossary/${id}/history`
+    ] as const;
+    }
+
+
+export const getListGlossaryEntryHistoryQueryOptions = <TData = Awaited<ReturnType<typeof listGlossaryEntryHistory>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGlossaryEntryHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListGlossaryEntryHistoryQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listGlossaryEntryHistory>>> = ({ signal }) => listGlossaryEntryHistory(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listGlossaryEntryHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListGlossaryEntryHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof listGlossaryEntryHistory>>>
+export type ListGlossaryEntryHistoryQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Audit history for a glossary entry (who changed what and when)
+ */
+
+export function useListGlossaryEntryHistory<TData = Awaited<ReturnType<typeof listGlossaryEntryHistory>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listGlossaryEntryHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListGlossaryEntryHistoryQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

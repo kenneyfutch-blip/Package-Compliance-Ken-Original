@@ -1,5 +1,11 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, regulationsTable, policiesTable, sopDocumentsTable } from "@workspace/db";
+import {
+  db,
+  regulationsTable,
+  policiesTable,
+  sopDocumentsTable,
+  glossaryEntriesTable,
+} from "@workspace/db";
 import { and, eq, or, ilike, sql, type SQL } from "drizzle-orm";
 import { orgId, hasPermission, requireAnyPermission } from "../lib/rbac/context";
 
@@ -18,7 +24,8 @@ const router: IRouter = Router();
 
 // Reserved section keys whose data model does not exist yet. Their search/count
 // wiring is present so the follow-on features drop in without re-plumbing.
-type ReservedType = "glossary";
+// Every reference resource type now has a real data model; nothing is reserved.
+type ReservedType = never;
 
 function sopHref(id: number): string {
   return `/resources/sop?doc=${id}`;
@@ -45,14 +52,19 @@ function policyHref(id: number): string {
   return `/resources/policies?policy=${id}`;
 }
 
+function glossaryHref(id: number): string {
+  return `/resources/glossary?entry=${id}`;
+}
+
 // GET /resources/overview — aggregate counts for every resource group plus the
 // per-agency breakdown that drives the regulatory-library cards on the hub.
 router.get(
   "/resources/overview",
-  requireAnyPermission("regulations:read", "policies:read"),
+  requireAnyPermission("regulations:read", "policies:read", "glossary:read"),
   async (req: Request, res: Response): Promise<void> => {
     const canRegulations = hasPermission(req, "regulations:read");
     const canPolicies = hasPermission(req, "policies:read");
+    const canGlossary = hasPermission(req, "glossary:read");
 
     let regulatoryCount = 0;
     let internalSopCount = 0;
@@ -99,6 +111,20 @@ router.get(
       sopDocumentCount = sopRow?.count ?? 0;
     }
 
+    let glossaryCount = 0;
+    if (canGlossary) {
+      const [row] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(glossaryEntriesTable)
+        .where(
+          and(
+            eq(glossaryEntriesTable.organizationId, orgId(req)),
+            eq(glossaryEntriesTable.status, "active"),
+          ),
+        );
+      glossaryCount = row?.count ?? 0;
+    }
+
     const groups = [
       {
         type: "regulation",
@@ -138,9 +164,9 @@ router.get(
         type: "glossary",
         label: "Approved Language & Glossary",
         description: "Pre-approved compliance language and a searchable glossary.",
-        count: 0,
+        count: glossaryCount,
         href: "/resources/glossary",
-        available: false,
+        available: canGlossary,
       },
     ];
 
@@ -182,7 +208,7 @@ interface SearchResult {
 // GET /resources/search — one query, ranked results across every resource type.
 router.get(
   "/resources/search",
-  requireAnyPermission("regulations:read", "policies:read"),
+  requireAnyPermission("regulations:read", "policies:read", "glossary:read"),
   async (req: Request, res: Response): Promise<void> => {
     const qRaw = req.query["q"];
     const q = typeof qRaw === "string" ? qRaw.trim() : "";
@@ -210,6 +236,7 @@ router.get(
 
     const canRegulations = hasPermission(req, "regulations:read");
     const canPolicies = hasPermission(req, "policies:read");
+    const canGlossary = hasPermission(req, "glossary:read");
 
     // Regulations power BOTH the external regulatory libraries and the internal
     // SOP library — one table, split by agency into two result types.
@@ -317,10 +344,44 @@ router.get(
       }
     }
 
-    // Reserved types (glossary): the data model does not exist yet. The wiring is
-    // intentionally present so the follow-on feature only needs to add its query
-    // here — until then it contributes no results.
-    const reserved: ReservedType[] = ["glossary"];
+    // Approved Language & Glossary entries (org scoped, active only).
+    if (canGlossary && wants("glossary")) {
+      const glossaryRows = await db
+        .select()
+        .from(glossaryEntriesTable)
+        .where(
+          and(
+            eq(glossaryEntriesTable.organizationId, orgId(req)),
+            eq(glossaryEntriesTable.status, "active"),
+            or(
+              ilike(glossaryEntriesTable.term, term),
+              ilike(glossaryEntriesTable.approvedValue, term),
+              ilike(glossaryEntriesTable.notes, term),
+              ilike(glossaryEntriesTable.category, term),
+              ilike(glossaryEntriesTable.regulatoryReference, term),
+            ) as SQL,
+          ),
+        )
+        .limit(limit);
+      for (const g of glossaryRows) {
+        results.push({
+          type: "glossary",
+          typeLabel: "Approved Language",
+          refId: String(g.id),
+          title: g.term,
+          subtitle: g.category,
+          description: g.approvedValue,
+          category: g.category,
+          source: g.regulatoryReference ?? null,
+          badge: g.regulatoryReference ?? null,
+          href: glossaryHref(g.id),
+          similarity: null,
+        });
+      }
+    }
+
+    // No reserved resource types remain — every type has a real data model above.
+    const reserved: ReservedType[] = [];
     for (const _t of reserved) {
       if (!wants(_t)) continue;
       // No-op: no records to search yet.
