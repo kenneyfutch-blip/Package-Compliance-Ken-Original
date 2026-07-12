@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Router, type IRouter, type Request, type Response } from "express";
@@ -53,7 +54,8 @@ import {
   hasPermission,
   orgId,
 } from "../lib/rbac/context";
-import { packageConds, canAccessPackage } from "../lib/rbac/scope";
+import { packageConds, canAccessPackage, canAccessObjectOwner } from "../lib/rbac/scope";
+import { resolveObjectOwner } from "./storage";
 import type { PackageRow } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -141,8 +143,20 @@ router.post(
       res.status(400).json({ error: parsed.error.message });
       return;
     }
+    const data = parsed.data;
     const pkg = await loadOwnedPackage(req, res, id);
     if (!pkg) return;
+    // Validate every caller-supplied storage reference before it is persisted.
+    // A stored fileUrl later drives hashing, proof export, and the object-serving
+    // owner lookup, so it must be (a) safe-shaped — no traversal — and (b) not a
+    // forged pointer to another tenant's object.
+    for (const url of [data.fileUrl, data.previewUrl]) {
+      const refErr = await referenceError(req, url);
+      if (refErr) {
+        res.status(400).json({ error: refErr });
+        return;
+      }
+    }
     await ensureInitialVersion(pkg);
     const existing = await db
       .select()
@@ -150,8 +164,11 @@ router.post(
       .where(eq(packageVersionsTable.packageId, id))
       .orderBy(desc(packageVersionsTable.versionNumber));
     const nextNumber = (existing[0]?.versionNumber ?? 0) + 1;
-    const data = parsed.data;
     const fileType = data.fileType ?? inferFileType(data.fileUrl);
+    const versionFileUrl = data.fileUrl ?? pkg.artworkUrl;
+    // Capture a content hash of the stored artwork so this version's exact bytes
+    // can be integrity-verified later as compliance evidence (best-effort).
+    const fileHash = await hashFileAtUrl(versionFileUrl);
 
     // The new version becomes current.
     await db
@@ -165,10 +182,11 @@ router.post(
         packageId: id,
         versionNumber: nextNumber,
         label: data.label ?? `Version ${nextNumber}`,
-        fileUrl: data.fileUrl ?? pkg.artworkUrl,
+        fileUrl: versionFileUrl,
         fileName: data.fileName ?? null,
         fileType,
         previewUrl: data.previewUrl ?? null,
+        fileHash,
         pageCount:
           data.pageCount ??
           (await detectPageCount(data.fileUrl ?? pkg.artworkUrl, fileType)),
@@ -652,6 +670,153 @@ async function loadArtworkBytes(
     return null;
   }
 }
+
+// A stored artwork reference is only ever an object-storage path (/objects/...)
+// or a seed asset under the compliance app's public /artwork/ dir. Reject
+// anything else — absolute filesystem paths, scheme URLs, backslashes, or any
+// "../" traversal — so a caller-supplied fileUrl can never point hashing or
+// serving at an arbitrary file. Enforced at write time (version create) and
+// re-checked before any byte read.
+export function isSafeStoredFileUrl(url: string): boolean {
+  if (url.includes("..") || url.includes("\\") || url.includes("\0")) {
+    return false;
+  }
+  return /^\/objects\/[A-Za-z0-9._\-/]+$/.test(url) ||
+    /^\/artwork\/[A-Za-z0-9._\-/]+$/.test(url);
+}
+
+// Load the raw bytes behind a stored, already-shape-validated file reference —
+// an object-storage path or a seed file under the compliance public dir.
+// Returns null when unavailable. Only used for best-effort content hashing;
+// private downloads go through /storage/objects/* which enforces owner ACL.
+async function loadFileBytes(url: string | null): Promise<Uint8Array | null> {
+  if (!url || !isSafeStoredFileUrl(url)) return null;
+  try {
+    if (url.startsWith("/objects/")) {
+      const file = await objectStorage.getObjectEntityFile(url);
+      const response = await objectStorage.downloadObject(file);
+      return new Uint8Array(await response.arrayBuffer());
+    }
+    // Seed artwork under /artwork/. Canonicalize and fail closed if the
+    // resolved path escapes the public directory (defense in depth).
+    const filePath = path.resolve(COMPLIANCE_PUBLIC, url.replace(/^\//, ""));
+    if (filePath !== COMPLIANCE_PUBLIC && !filePath.startsWith(COMPLIANCE_PUBLIC + path.sep)) {
+      return null;
+    }
+    const bytes = await readFile(filePath);
+    return new Uint8Array(bytes);
+  } catch (err) {
+    logger.warn({ err, url }, "Could not load file bytes");
+    return null;
+  }
+}
+
+// Authorize a caller-supplied storage reference at write time. Returns an error
+// string to reject with, or null when the reference is safe to persist. Rejects
+// unsafe-shaped URLs and object paths that already belong to a record outside
+// the caller's org/supplier scope (prevents binding another tenant's object).
+async function referenceError(
+  req: Request,
+  url: string | null | undefined,
+): Promise<string | null> {
+  if (!url) return null;
+  if (!isSafeStoredFileUrl(url)) return "Invalid file reference.";
+  if (url.startsWith("/objects/")) {
+    const owner = await resolveObjectOwner(url);
+    if (owner && !canAccessObjectOwner(req, owner)) {
+      return "Invalid file reference.";
+    }
+  }
+  return null;
+}
+
+// Best-effort SHA-256 (hex) of the file behind a stored reference. Never throws:
+// hashing is evidence-capture, not a gate on the upload succeeding.
+async function hashFileAtUrl(url: string | null): Promise<string | null> {
+  const bytes = await loadFileBytes(url);
+  if (!bytes) return null;
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+// POST /packages/:id/versions/:versionId/restore
+// Restore a previous version by appending a NEW version that copies the chosen
+// version's artwork and metadata, then marking it current. Append-only: no
+// historical row is ever mutated or deleted.
+router.post(
+  "/packages/:id/versions/:versionId/restore",
+  requirePermission("proofs:write"),
+  async (req: Request, res: Response): Promise<void> => {
+    const id = reqId(req.params["id"]);
+    const versionId = reqId(req.params["versionId"]);
+    const pkg = await loadOwnedPackage(req, res, id);
+    if (!pkg) return;
+    const rows = await db
+      .select()
+      .from(packageVersionsTable)
+      .where(eq(packageVersionsTable.packageId, id))
+      .orderBy(desc(packageVersionsTable.versionNumber));
+    const target = rows.find((v) => v.id === versionId);
+    if (!target) {
+      res.status(404).json({ error: "Version not found" });
+      return;
+    }
+    if (target.isCurrent) {
+      res
+        .status(400)
+        .json({ error: "That version is already the current version." });
+      return;
+    }
+    const nextNumber = (rows[0]?.versionNumber ?? 0) + 1;
+
+    await db
+      .update(packageVersionsTable)
+      .set({ isCurrent: false })
+      .where(eq(packageVersionsTable.packageId, id));
+
+    const [version] = await db
+      .insert(packageVersionsTable)
+      .values({
+        packageId: id,
+        versionNumber: nextNumber,
+        label: `Restore of V${target.versionNumber}`,
+        fileUrl: target.fileUrl,
+        fileName: target.fileName,
+        fileType: target.fileType,
+        previewUrl: target.previewUrl,
+        fileHash: target.fileHash,
+        pageCount: target.pageCount,
+        extractedText: target.extractedText,
+        notes: `Restored from Version ${target.versionNumber}`,
+        isCurrent: true,
+        createdBy: currentUser(req).name,
+      })
+      .returning();
+
+    await db
+      .update(packagesTable)
+      .set({
+        artworkUrl: target.fileUrl ?? pkg.artworkUrl,
+        ...(target.extractedText
+          ? { extractedText: target.extractedText }
+          : {}),
+        approvalStatus: "Pending",
+      })
+      .where(eq(packagesTable.id, id));
+
+    await db.insert(auditEventsTable).values({
+      packageId: id,
+      actor: currentUser(req).name,
+      action: "Version restored",
+      detail: `Version ${target.versionNumber} restored as ${version!.label} (V${nextNumber}).`,
+    });
+
+    const [finalPkg] = await db
+      .select()
+      .from(packagesTable)
+      .where(eq(packagesTable.id, id));
+    res.json(await buildDetail(finalPkg!));
+  },
+);
 
 // POST /packages/:id/proof-export
 router.post(

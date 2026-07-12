@@ -21,6 +21,10 @@ export const packageVersionsTable = pgTable("package_versions", {
   fileType: text("file_type"),
   // Optional attached PDF/PNG export used to preview AI/INDD source files.
   previewUrl: text("preview_url"),
+  // SHA-256 (hex) of the stored file bytes, captured at upload/restore time so
+  // the exact artwork behind a version can be integrity-verified as compliance
+  // evidence. Null for legacy/seed versions created before hashing existed.
+  fileHash: text("file_hash"),
   pageCount: integer("page_count").notNull().default(1),
   extractedText: text("extracted_text"),
   notes: text("notes"),

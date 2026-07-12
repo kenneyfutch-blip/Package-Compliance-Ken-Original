@@ -80,7 +80,7 @@ function validateUpload(
  * as the rest of the app. Returns null when no record references the path;
  * callers treat that as "not found" and deny access (deny-by-default).
  */
-async function resolveObjectOwner(
+export async function resolveObjectOwner(
   objectPath: string,
 ): Promise<ObjectOwner | null> {
   // Proof/version artwork (current file or attached preview) -> owning package.

@@ -1057,6 +1057,8 @@ export interface PackageVersion {
   fileType?: string | null;
   /** @nullable */
   previewUrl?: string | null;
+  /** @nullable */
+  fileHash?: string | null;
   pageCount: number;
   /** @nullable */
   extractedText?: string | null;

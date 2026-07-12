@@ -8,7 +8,7 @@ import {
   useAskCopilot, useExportProof, useComparePackageVersions, getComparePackageVersionsQueryKey,
   useGetLanguageReview, useRunLanguageReview, getGetLanguageReviewQueryKey,
   useGetClaimsAnalysis, useRunClaimsAnalysis, getGetClaimsAnalysisQueryKey,
-  useCreatePackageVersion, useExtractArtworkText,
+  useCreatePackageVersion, useExtractArtworkText, useRestorePackageVersion,
   useGetPackageAssignment, getGetPackageAssignmentQueryKey,
   type PackageDetail, type Annotation as ApiAnnotation, type Violation as ApiViolation,
   type ReviewTask as ApiReviewTask, type Citation,
@@ -27,7 +27,7 @@ import {
   ArrowLeft, BrainCircuit, CheckCircle, Loader2, Send, ShieldCheck, ShieldAlert,
   MessageSquarePlus, Trash2, CheckCheck, CornerDownRight, ClipboardList, Plus,
   FileDown, GitCompareArrows, Sparkles, ChevronDown, XCircle, AlertOctagon, ScrollText,
-  Gavel, Bot, User as UserIcon, FilePlus,
+  Gavel, Bot, User as UserIcon, FilePlus, Download, RotateCcw,
 } from "lucide-react"
 import { useUpload } from "@workspace/object-storage-web"
 import { ProofViewer, type ViewerAnnotation, type AnnotationDraft } from "@/components/proof-viewer"
@@ -36,7 +36,7 @@ import { FdaIntelligenceTab } from "@/components/fda-intelligence-tab"
 import { EcfrRegulationsTab } from "@/components/ecfr-regulations-tab"
 import {
   type MarkupTool, findingClassMeta, priorityMeta, REVIEWERS,
-  extractMentions, relativeTime, HUMAN_MARKUP_COLOR, fileTypeFromName,
+  extractMentions, relativeTime, HUMAN_MARKUP_COLOR, fileTypeFromName, servingUrl,
 } from "@/lib/proof-utils"
 import { cn } from "@/lib/utils"
 import { hasDistinctFix } from "@/lib/compliance"
@@ -87,6 +87,7 @@ export default function ReviewWorkspace() {
   const packageId = Number(id)
   const qc = useQueryClient()
   const invalidate = () => qc.invalidateQueries({ queryKey: getGetPackageQueryKey(packageId) })
+  const { toast: pageToast } = useToast()
 
   const { data: pkg, isLoading } = useGetPackage(packageId, {
     query: { enabled: !!packageId, queryKey: getGetPackageQueryKey(packageId) },
@@ -95,6 +96,7 @@ export default function ReviewWorkspace() {
   const analyze = useAnalyzePackage()
   const createAnnotation = useCreateAnnotation()
   const exportProof = useExportProof()
+  const restoreVersion = useRestorePackageVersion()
   const runLanguage = useRunLanguageReview()
   const { data: languageReview } = useGetLanguageReview(packageId, {
     query: { enabled: !!packageId, queryKey: getGetLanguageReviewQueryKey(packageId) },
@@ -347,6 +349,33 @@ export default function ReviewWorkspace() {
                 ))}
               </SelectContent>
             </Select>
+          )}
+          {activeVersion?.fileUrl && servingUrl(activeVersion.fileUrl) && (
+            <Button asChild variant="outline" className="gap-2 h-9" title="Download this version's file">
+              <a href={servingUrl(activeVersion.fileUrl)!} download={activeVersion.fileName ?? true}>
+                <Download className="w-4 h-4" /> Download
+              </a>
+            </Button>
+          )}
+          {canAddVersion && activeVersion && !activeVersion.isCurrent && (
+            <Button variant="outline" className="gap-2 h-9" disabled={restoreVersion.isPending}
+              title="Restore this version as the new current version"
+              onClick={() => restoreVersion.mutate(
+                { id: packageId, versionId: activeVersion.id },
+                {
+                  onSuccess: (detail) => {
+                    if (detail?.currentVersionId != null) setActiveVersionId(detail.currentVersionId)
+                    invalidate()
+                    pageToast({ title: "Version restored", description: `Version ${activeVersion.versionNumber} is now current.` })
+                  },
+                  onError: (err) => pageToast({
+                    variant: "destructive", title: "Couldn't restore version",
+                    description: err instanceof Error ? err.message : "Please retry.",
+                  }),
+                },
+              )}>
+              {restoreVersion.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />} Restore
+            </Button>
           )}
           {canAddVersion && (
             <AddVersionButton packageId={packageId} onAdded={(vid) => { setActiveVersionId(vid); invalidate() }} />

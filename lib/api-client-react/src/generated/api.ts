@@ -6178,6 +6178,79 @@ export const useCreatePackageVersion = <TError = ErrorType<unknown>,
       return useMutation(getCreatePackageVersionMutationOptions(options));
     }
 
+export const getRestorePackageVersionUrl = (id: number,
+    versionId: number,) => {
+
+
+
+
+  return `/api/packages/${id}/versions/${versionId}/restore`
+}
+
+/**
+ * @summary Restore a previous version as a new current version (append-only)
+ */
+export const restorePackageVersion = async (id: number,
+    versionId: number, options?: RequestInit): Promise<PackageDetail> => {
+
+  return customFetch<PackageDetail>(getRestorePackageVersionUrl(id,versionId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestorePackageVersionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restorePackageVersion>>, TError,{id: number;versionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restorePackageVersion>>, TError,{id: number;versionId: number}, TContext> => {
+
+const mutationKey = ['restorePackageVersion'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restorePackageVersion>>, {id: number;versionId: number}> = (props) => {
+          const {id,versionId} = props ?? {};
+
+          return  restorePackageVersion(id,versionId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestorePackageVersionMutationResult = NonNullable<Awaited<ReturnType<typeof restorePackageVersion>>>
+
+    export type RestorePackageVersionMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Restore a previous version as a new current version (append-only)
+ */
+export const useRestorePackageVersion = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restorePackageVersion>>, TError,{id: number;versionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restorePackageVersion>>,
+        TError,
+        {id: number;versionId: number},
+        TContext
+      > => {
+      return useMutation(getRestorePackageVersionMutationOptions(options));
+    }
+
 export const getComparePackageVersionsUrl = (id: number,
     versionA: number,
     versionB: number,) => {

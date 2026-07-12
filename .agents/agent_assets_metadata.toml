@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "a9ALekulAHO_q0clsWFtD"
+uri = "file://docs/compliance-audit-report.md"
+type = "text"
+title = "Packaging Version Control & Compliance Audit — Hardening Report"

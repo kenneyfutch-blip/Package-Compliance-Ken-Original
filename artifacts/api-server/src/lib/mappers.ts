@@ -194,6 +194,7 @@ export function mapPackageVersion(v: PackageVersionRow) {
     fileName: v.fileName,
     fileType: v.fileType,
     previewUrl: v.previewUrl,
+    fileHash: v.fileHash,
     pageCount: v.pageCount,
     extractedText: v.extractedText,
     notes: v.notes,
