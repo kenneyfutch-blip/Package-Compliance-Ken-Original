@@ -5,7 +5,7 @@ import {
   ZoomIn, ZoomOut, RotateCw, Maximize, Minus, Plus,
   ChevronLeft, ChevronRight, Hand, MapPin, Square, Highlighter,
   Circle as CircleIcon, MoveUpRight, Strikethrough, Type, Eye, EyeOff, FileWarning,
-  Undo2, Loader2,
+  Undo2, Loader2, Copy, Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -50,6 +50,9 @@ type Props = {
   onToolChange: (tool: MarkupTool) => void
   onSelect: (id: number | null) => void
   onCreate: (draft: AnnotationDraft) => void
+  /** Quick actions on the currently selected reviewer markup. */
+  onDeleteSelected?: () => void
+  onDuplicateSelected?: () => void
   showAi: boolean
   showHuman: boolean
   onToggleAi: () => void
@@ -106,7 +109,8 @@ function PdfPage({ fileUrl, page, onRendered }: { fileUrl: string; page: number;
 export function ProofViewer(props: Props) {
   const {
     fileUrl, fileType, pageCount, annotations, selectedId, activeTool, onToolChange,
-    onSelect, onCreate, showAi, showHuman, onToggleAi, onToggleHuman,
+    onSelect, onCreate, onDeleteSelected, onDuplicateSelected,
+    showAi, showHuman, onToggleAi, onToggleHuman,
     onUndo, canUndo, undoPending,
   } = props
 
@@ -196,6 +200,12 @@ export function ProofViewer(props: Props) {
 
   const pageAnnotations = annotations.filter((a) => (a.page ?? 0) === page)
     .filter((a) => (a.source === "ai" ? showAi : showHuman))
+
+  // Quick-action bar targets the selected reviewer markup only (AI findings are
+  // managed via the Findings panel, not freely deleted/duplicated on canvas).
+  const selectedMarkup = activeTool === "hand"
+    ? pageAnnotations.find((a) => a.id === selectedId && a.source !== "ai")
+    : undefined
 
   return (
     <div className="flex flex-col h-full bg-accent/30 rounded-xl border border-border overflow-hidden">
@@ -298,6 +308,14 @@ export function ProofViewer(props: Props) {
                   <Marker key={a.id} a={a} selected={a.id === selectedId} onSelect={onSelect} interactive={activeTool === "hand"} />
                 ))}
                 {drag && <DragPreview tool={activeTool} drag={drag} />}
+                {!drag && selectedMarkup && (onDeleteSelected || onDuplicateSelected) && (
+                  <SelectionActions
+                    a={selectedMarkup}
+                    zoom={zoom}
+                    onDuplicate={onDuplicateSelected}
+                    onDelete={onDeleteSelected}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -374,6 +392,65 @@ function Marker({ a, selected, onSelect, interactive }: { a: ViewerAnnotation; s
     pointerEvents: interactive ? "auto" : "none",
   }
   return <button type="button" onClick={click} style={shapeStyle} title={a.text ?? ""} />
+}
+
+// Floating quick-action bar anchored just above the selected reviewer markup.
+// Counter-scaled by 1/zoom so it stays a constant on-screen size at any zoom.
+function SelectionActions({
+  a, zoom, onDuplicate, onDelete,
+}: {
+  a: ViewerAnnotation
+  zoom: number
+  onDuplicate?: () => void
+  onDelete?: () => void
+}) {
+  let ax = a.x ?? 0
+  let ay = a.y ?? 0
+  if (a.type === "arrow" || a.type === "strikethrough") {
+    ax = Math.min(a.x ?? 0, (a.x ?? 0) + (a.w ?? 0))
+    ay = Math.min(a.y ?? 0, (a.y ?? 0) + (a.h ?? 0))
+  }
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation()
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: `${ax * 100}%`,
+        bottom: `${(1 - ay) * 100}%`,
+        transform: `scale(${1 / zoom})`,
+        transformOrigin: "left bottom",
+        marginBottom: 8,
+        zIndex: 30,
+        pointerEvents: "auto",
+      }}
+      onPointerDown={stop}
+      onClick={stop}
+      className="flex items-center gap-0.5 rounded-md border border-border bg-card p-0.5 shadow-lg"
+    >
+      {onDuplicate && (
+        <button
+          type="button"
+          title="Duplicate"
+          aria-label="Duplicate markup"
+          onClick={(e) => { stop(e); onDuplicate() }}
+          className="flex h-7 w-7 items-center justify-center rounded hover:bg-accent"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </button>
+      )}
+      {onDelete && (
+        <button
+          type="button"
+          title="Delete"
+          aria-label="Delete markup"
+          onClick={(e) => { stop(e); onDelete() }}
+          className="flex h-7 w-7 items-center justify-center rounded text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </div>
+  )
 }
 
 function DragPreview({ tool, drag }: { tool: MarkupTool; drag: { x: number; y: number; cx: number; cy: number } }) {

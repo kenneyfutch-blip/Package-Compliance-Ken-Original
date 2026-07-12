@@ -234,6 +234,60 @@ export default function ReviewWorkspace() {
     )
   }
 
+  // Delete the selected reviewer markup from the canvas quick-action bar.
+  const handleDeleteSelected = () => {
+    if (selectedId == null) return
+    const target = pkg.annotations.find((x) => x.id === selectedId)
+    if (target?.source === "ai") return
+    deleteAnnotation.mutate(
+      { id: selectedId },
+      {
+        onSuccess: () => {
+          invalidate()
+          setUndoStack((s) => s.filter((x) => x !== selectedId))
+          setSelectedId(null)
+        },
+      },
+    )
+  }
+
+  // Duplicate the selected reviewer markup, offset slightly so the copy is
+  // visible, and select the new copy. AI findings are not duplicable.
+  const handleDuplicateSelected = () => {
+    if (selectedId == null) return
+    const a = pkg.annotations.find((x) => x.id === selectedId)
+    if (!a || a.source === "ai") return
+    const clamp = (n: number) => Math.max(0, Math.min(1, n))
+    const OFFSET = 0.02
+    createAnnotation.mutate(
+      {
+        id: packageId,
+        data: {
+          type: a.type,
+          versionId: activeVersion?.id,
+          page: a.page,
+          x: clamp((a.x ?? 0) + OFFSET),
+          y: clamp((a.y ?? 0) + OFFSET),
+          w: a.w ?? undefined,
+          h: a.h ?? undefined,
+          color: a.color ?? HUMAN_MARKUP_COLOR,
+          text: a.text ?? undefined,
+          priority: "medium",
+          mentions: a.text ? extractMentions(a.text) : undefined,
+        },
+      },
+      {
+        onSuccess: (created) => {
+          invalidate()
+          if (created?.id != null) {
+            setUndoStack((s) => [...s, created.id])
+            setSelectedId(created.id)
+          }
+        },
+      },
+    )
+  }
+
   const savePin = () => {
     if (!pendingPin) return
     createAnnotation.mutate(
@@ -351,6 +405,8 @@ export default function ReviewWorkspace() {
             onToolChange={setTool}
             onSelect={setSelectedId}
             onCreate={handleCreate}
+            onDeleteSelected={handleDeleteSelected}
+            onDuplicateSelected={handleDuplicateSelected}
             showAi={showAi}
             showHuman={showHuman}
             onToggleAi={() => setShowAi((v) => !v)}
