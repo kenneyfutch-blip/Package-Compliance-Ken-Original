@@ -14,6 +14,7 @@ import { shadcn } from "@clerk/themes"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Shell } from "@/components/layout"
 import { PermissionProvider, usePermissions, NoAccess } from "@/lib/access"
+import { FavoritesProvider } from "@/lib/favorites"
 import { PresenceProvider } from "@/lib/presence"
 import { requiredPermFor } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
@@ -326,9 +327,11 @@ function ProtectedArea() {
       <Show when="signed-in">
         <DomainGate>
           <PermissionProvider>
-            <PresenceProvider>
-              <AppRoutes />
-            </PresenceProvider>
+            <FavoritesProvider>
+              <PresenceProvider>
+                <AppRoutes />
+              </PresenceProvider>
+            </FavoritesProvider>
           </PermissionProvider>
         </DomainGate>
       </Show>

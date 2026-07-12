@@ -42,11 +42,21 @@ import {
   Plug,
   ScrollText,
   Library,
+  Star,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useListNotifications } from "@workspace/api-client-react"
 import { usePermissions } from "@/lib/access"
+import { useFavorites } from "@/lib/favorites"
 import { requiredPermFor } from "@/lib/permissions"
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> }
@@ -183,6 +193,31 @@ const SECTIONS: NavSection[] = [
   },
 ]
 
+// Flat lookup of every nav item by href, so starred favorites (stored as bare
+// hrefs) can be rendered with their proper label and icon anywhere.
+const ALL_ITEMS: Record<string, NavItem> = Object.fromEntries(
+  SECTIONS.flatMap((s) => s.items.map((i) => [i.href, i] as const)),
+)
+
+// Resolve the user's starred hrefs to nav items — preserving star order and
+// dropping any the user can't access (permission) or that no longer exist.
+function useFavoriteItems(): NavItem[] {
+  const { favorites } = useFavorites()
+  const { has } = usePermissions()
+  return React.useMemo(
+    () =>
+      favorites
+        .map((href) => ALL_ITEMS[href])
+        .filter((it): it is NavItem => Boolean(it))
+        .filter((it) => {
+          const perm = requiredPermFor(it.href)
+          return perm === null || has(perm)
+        }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [favorites, has],
+  )
+}
+
 function isItemActive(location: string, href: string): boolean {
   if (href === "/") return location === "/"
   if (href === "/reviews") return location === "/reviews" || location.startsWith("/reviews/")
@@ -204,9 +239,70 @@ function loadSectionState(): Record<string, boolean> {
   }
 }
 
+// A single sidebar row: the tool link plus a star toggle (revealed on hover,
+// always shown once starred). The star is a sibling of the Link — never nested
+// inside the anchor — so it stays valid, clickable markup.
+function NavRow({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: NavItem
+  active: boolean
+  onNavigate?: () => void
+}) {
+  const { isFavorite, toggle } = useFavorites()
+  const fav = isFavorite(item.href)
+  const Icon = item.icon
+  return (
+    <div
+      className={cn(
+        "group/navrow flex items-center rounded-md border-l-2 transition-colors",
+        active ? "bg-primary/10 border-primary" : "border-transparent hover:bg-accent",
+      )}
+    >
+      <Link
+        href={item.href}
+        onClick={onNavigate}
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-3 pl-3 pr-1 py-2 text-sm",
+          active
+            ? "text-primary font-medium"
+            : "text-muted-foreground group-hover/navrow:text-foreground",
+        )}
+      >
+        <Icon className={cn("w-4 h-4 shrink-0", active && "text-primary")} />
+        <span className="truncate">{item.name}</span>
+      </Link>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          toggle(item.href)
+        }}
+        aria-pressed={fav}
+        aria-label={
+          fav ? `Remove ${item.name} from favorites` : `Add ${item.name} to favorites`
+        }
+        title={fav ? "Remove from favorites" : "Add to favorites"}
+        className={cn(
+          "mr-1.5 shrink-0 rounded p-1 transition-opacity",
+          fav
+            ? "text-amber-500 opacity-100"
+            : "text-muted-foreground opacity-0 hover:text-amber-500 focus-visible:opacity-100 group-hover/navrow:opacity-100",
+        )}
+      >
+        <Star className={cn("w-3.5 h-3.5", fav && "fill-amber-500")} />
+      </button>
+    </div>
+  )
+}
+
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const [location] = useLocation()
   const { has } = usePermissions()
+  const favoriteItems = useFavoriteItems()
   const [overrides, setOverrides] = React.useState<Record<string, boolean>>(() => loadSectionState())
 
   React.useEffect(() => {
@@ -239,6 +335,26 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav className="flex-1 overflow-y-auto py-3 px-3">
+      {favoriteItems.length > 0 && (
+        <div className="mb-1 border-b border-border/60 pb-1">
+          <div className="flex items-center gap-2 px-3 py-2">
+            <Star className="w-3.5 h-3.5 shrink-0 text-amber-500 fill-amber-500" aria-hidden />
+            <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Favorites
+            </span>
+          </div>
+          <div className="mt-0.5 mb-1 space-y-0.5">
+            {favoriteItems.map((item) => (
+              <NavRow
+                key={`fav-${item.href}`}
+                item={item}
+                active={isItemActive(location, item.href)}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </div>
+        </div>
+      )}
       {visibleSections.map((section, idx) => {
         const sectionActive = section.items.some((i) => isItemActive(location, i.href))
         // The section holding the active page is always open; otherwise honor the
@@ -271,26 +387,14 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             </button>
             {open && (
               <div className="mt-0.5 mb-1 space-y-0.5">
-                {section.items.map((item) => {
-                  const active = isItemActive(location, item.href)
-                  const Icon = item.icon
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onNavigate}
-                      className={cn(
-                        "flex items-center gap-3 rounded-md border-l-2 pl-3 pr-3 py-2 text-sm transition-colors",
-                        active
-                          ? "bg-primary/10 border-primary text-primary font-medium"
-                          : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground",
-                      )}
-                    >
-                      <Icon className={cn("w-4 h-4 shrink-0", active && "text-primary")} />
-                      <span className="truncate">{item.name}</span>
-                    </Link>
-                  )
-                })}
+                {section.items.map((item) => (
+                  <NavRow
+                    key={item.href}
+                    item={item}
+                    active={isItemActive(location, item.href)}
+                    onNavigate={onNavigate}
+                  />
+                ))}
               </div>
             )}
           </div>
@@ -328,6 +432,46 @@ function UserBlock() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Quick-access favorites menu for the top navigation — jump to any starred tool
+// from anywhere in the app.
+function FavoritesMenu() {
+  const [, navigate] = useLocation()
+  const favoriteItems = useFavoriteItems()
+  const hasFavorites = favoriteItems.length > 0
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" title="Favorite tools" aria-label="Favorite tools">
+          <Star className={cn("w-5 h-5", hasFavorites && "text-amber-500 fill-amber-500")} />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuLabel>Favorite tools</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {hasFavorites ? (
+          favoriteItems.map((item) => {
+            const Icon = item.icon
+            return (
+              <DropdownMenuItem
+                key={item.href}
+                onSelect={() => navigate(item.href)}
+                className="gap-2 cursor-pointer"
+              >
+                <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
+                <span className="truncate">{item.name}</span>
+              </DropdownMenuItem>
+            )
+          })
+        ) : (
+          <p className="px-2 py-3 text-xs text-muted-foreground">
+            Hover any tool in the sidebar and tap its star to pin it here for quick access.
+          </p>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -396,6 +540,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 New Package
               </Button>
             </Link>
+            <FavoritesMenu />
             <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle theme">
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </Button>
