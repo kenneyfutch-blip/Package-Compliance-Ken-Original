@@ -169,12 +169,12 @@ const SECTIONS: NavSection[] = [
         group: "Regulatory Hub",
         items: [
           { name: "Regulatory Library", href: "/regulations", icon: Scale },
+          { name: "Internal SOP", href: "/regulatory/sop", icon: BookOpen },
           { name: "Regulatory Sources", href: "/regulatory/sources", icon: ShieldCheck },
           { name: "Regulatory Updates", href: "/regulatory-updates", icon: Radio },
           { name: "FDA Recalls", href: "/regulatory/recalls", icon: ShieldAlert },
         ],
       },
-      { name: "Internal SOP", href: "/regulatory/sop", icon: BookOpen },
     ],
   },
   {
