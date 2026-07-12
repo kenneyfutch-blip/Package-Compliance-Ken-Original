@@ -275,7 +275,7 @@ function NavRow({
         href={item.href}
         onClick={onNavigate}
         className={cn(
-          "flex min-w-0 flex-1 items-center gap-3 pl-3 pr-1 py-2 text-sm",
+          "flex min-w-0 flex-1 items-center gap-3 pl-3 pr-1 py-2.5 text-sm",
           active
             ? "text-primary font-medium"
             : "text-foreground group-hover/navrow:text-foreground",
@@ -344,16 +344,16 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
     }))
 
   return (
-    <nav className="flex-1 overflow-y-auto py-3 px-3">
+    <nav className="flex-1 overflow-y-auto py-4 px-3">
       {favoriteItems.length > 0 && (
-        <div className="mb-1 border-b border-border/60 pb-1">
+        <div className="mb-3 border-b border-border/60 pb-3">
           <div className="flex items-center gap-2 px-3 py-2">
             <Star className="w-3.5 h-3.5 shrink-0 text-amber-500 fill-amber-500" aria-hidden />
             <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-foreground/80">
               Favorites
             </span>
           </div>
-          <div className="mt-0.5 mb-1 space-y-0.5">
+          <div className="mt-1 mb-1 space-y-1">
             {favoriteItems.map((item) => (
               <NavRow
                 key={`fav-${item.href}`}
@@ -377,8 +377,8 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           <div
             key={section.id}
             className={cn(
-              idx > 0 && !isMyWork && "mt-1 border-t border-border/60 pt-1",
-              isMyWork && "mt-1 rounded-lg bg-muted/60 px-1 py-1",
+              idx > 0 && !isMyWork && "mt-3 border-t border-border/60 pt-3",
+              isMyWork && "mt-3 rounded-lg bg-muted/60 px-1 py-1.5",
             )}
           >
             <button
@@ -405,7 +405,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
               />
             </button>
             {open && (
-              <div className="mt-0.5 mb-1 space-y-0.5">
+              <div className="mt-1 mb-1 space-y-1">
                 {section.items.map((item) => (
                   <NavRow
                     key={item.href}

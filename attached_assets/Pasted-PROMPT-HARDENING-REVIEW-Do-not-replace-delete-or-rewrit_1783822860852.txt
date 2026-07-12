@@ -1,0 +1,183 @@
+PROMPT HARDENING REVIEW
+
+Do not replace, delete, or rewrite the current Package Review AI prompt.
+
+Instead, perform a comprehensive audit of the existing prompt and determine whether it is sufficiently robust for enterprise-grade packaging compliance analysis.
+
+Your objective is to improve compliance accuracy, reduce hallucinations, increase reliability, and ensure consistent outputs.
+
+Evaluate the existing prompt against the following requirements:
+
+1. ROLE DEFINITION
+
+Verify the AI clearly understands:
+- Its purpose
+- Its responsibilities
+- What it should analyze
+- What it should not do
+
+2. HALLUCINATION PROTECTION
+
+Verify the prompt explicitly instructs the AI:
+
+- Never invent regulations
+- Never invent compliance requirements
+- Never invent legal interpretations
+- Never present assumptions as facts
+- Never create violations where evidence is unavailable
+- Never guess missing information
+- Never provide legal conclusions
+
+If information is missing, the AI should return:
+
+"Unable to Assess"
+
+or
+
+"Additional Information Required"
+
+instead of guessing.
+
+3. EVIDENCE-BASED FINDINGS
+
+Verify every issue requires:
+
+- Observed Fact
+- Supporting Evidence
+- Reasoning
+- Compliance Concern
+- Recommendation
+
+The AI should separate:
+
+WHAT IT DETECTED
+
+from
+
+WHAT IT BELIEVES THE RISK MAY BE
+
+4. CONFIDENCE SCORING
+
+Verify that all findings include confidence scoring.
+
+Recommended ranges:
+
+90-100 = Strong Evidence
+
+75-89 = Likely Concern
+
+50-74 = Potential Review Item
+
+Below 50 = Insufficient Evidence
+
+Findings below 75 confidence should not be classified as violations.
+
+5. REGULATORY INTELLIGENCE
+
+Verify the AI can assess:
+
+- FDA Labeling
+- FDA Allergen Requirements
+- FTC Marketing Claims
+- FTC Green Guides
+- USDA Organic Claims
+- Retail Packaging Requirements
+- Consumer Safety Warnings
+
+The AI should identify the regulatory framework being referenced.
+
+6. CLAIM ANALYSIS
+
+Verify the prompt teaches the AI how to evaluate:
+
+- Natural
+- Organic
+- Healthy
+- Sustainable
+- Eco-Friendly
+- Recyclable
+- Compostable
+- Non-GMO
+- Gluten-Free
+- Sugar-Free
+
+The AI should flag substantiation risks when appropriate.
+
+7. UNCERTAINTY MANAGEMENT
+
+Verify the AI explains uncertainty.
+
+Example:
+
+Known Information:
+...
+
+Unknown Information:
+...
+
+Additional Information Needed:
+...
+
+Do not allow the AI to convert uncertainty into certainty.
+
+8. HIGH-RISK FINDINGS
+
+Verify that high-risk findings require:
+
+- Strong supporting evidence
+- High confidence
+- Human review recommendation
+
+If confidence is low, the AI should require human review.
+
+9. OUTPUT QUALITY
+
+Verify outputs include:
+
+- Risk Score
+- Confidence Score
+- Severity
+- Category
+- Explanation
+- Evidence
+- Recommendation
+- Human Review Indicator
+
+10. LEGAL RISK CONTROL
+
+Verify the prompt prevents:
+
+"This package violates FDA regulations."
+
+and prefers:
+
+"This may present a potential FDA labeling concern and should be reviewed."
+
+11. FINAL DISCLAIMER
+
+Verify the AI clearly states:
+
+This review is an AI-assisted compliance assessment and should not be considered legal advice, regulatory approval, or a definitive compliance determination.
+
+FINAL DELIVERABLE
+
+Provide:
+
+- Overall Prompt Score /100
+- Hallucination Protection Score /100
+- Compliance Coverage Score /100
+- Legal Risk Protection Score /100
+- Enterprise Readiness Score /100
+
+Then provide:
+
+1. Findings
+2. Risks
+3. Missing Instructions
+4. Recommended Additions
+
+Only recommend additions that improve reliability and compliance accuracy.
+
+Do not modify the implementation automatically.
+Do not overwrite the existing prompt.
+Do not remove existing functionality.
