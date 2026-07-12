@@ -813,7 +813,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden flex-col md:flex-row">
       {/* Desktop Sidebar */}
-      <aside data-tour="sidebar" className="dark hidden md:flex flex-col w-64 border-r border-border bg-card text-foreground">
+      <aside data-tour="sidebar" className="hidden md:flex flex-col w-64 border-r border-border bg-card">
         <div className="h-16 flex items-center px-4 border-b border-border bg-card">
           <Brand />
         </div>
@@ -823,7 +823,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="dark h-16 border-b border-border bg-card text-foreground flex items-center justify-between px-4 sm:px-6 shrink-0 z-10">
+        <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 sm:px-6 shrink-0 z-10">
           <div data-tour="global-search" className="flex items-center gap-3 flex-1">
             {/* Mobile menu */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -832,7 +832,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   <Menu className="w-5 h-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="dark w-72 p-0 flex flex-col bg-card text-foreground">
+              <SheetContent side="left" className="w-72 p-0 flex flex-col">
                 <SheetTitle className="sr-only">Navigation</SheetTitle>
                 <div className="h-16 flex items-center px-6 border-b border-border">
                   <Brand />
