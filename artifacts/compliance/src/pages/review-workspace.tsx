@@ -43,6 +43,7 @@ import { LanguageReviewTab } from "@/components/language-review-tab"
 import { DocumentAiTab } from "@/components/document-ai-tab"
 import { ReviewOwnership } from "@/components/review-ownership"
 import { ReviewLockBanner, useReviewLock } from "@/components/presence-indicators"
+import { useToast } from "@/hooks/use-toast"
 import { AssignmentDialog } from "@/components/assignment-dialog"
 import { usePermissions } from "@/lib/access"
 import { usePresence } from "@/lib/presence"
@@ -114,7 +115,10 @@ export default function ReviewWorkspace() {
 
   // Live presence + advisory review lock. Internal reviewers only — supplier
   // users never participate in review-ownership/presence.
-  const { me } = usePermissions()
+  const { me, has } = usePermissions()
+  // Adding a version hits an endpoint gated by proofs:write. Only show the
+  // control to users who can actually complete it, so it never fails silently.
+  const canAddVersion = has("proofs:write")
   const presenceEnabled = !!me && me.roleKey !== "supplier_user" && !!packageId
   const { setFocus, clearFocus } = usePresence()
   const { lock, isMine } = useReviewLock(packageId, {
@@ -275,7 +279,9 @@ export default function ReviewWorkspace() {
               </SelectContent>
             </Select>
           )}
-          <AddVersionButton packageId={packageId} onAdded={(vid) => { setActiveVersionId(vid); invalidate() }} />
+          {canAddVersion && (
+            <AddVersionButton packageId={packageId} onAdded={(vid) => { setActiveVersionId(vid); invalidate() }} />
+          )}
           <Button variant="outline" className="gap-2 h-9" onClick={() => setAssignOpen(true)}>
             <UserCog className="w-4 h-4" /> Assign
           </Button>
@@ -783,10 +789,15 @@ function CopilotPanel({ packageId, pkg }: { packageId: number; pkg: Pkg }) {
 function AddVersionButton({ packageId, onAdded }: { packageId: number; onAdded: (versionId: number) => void }) {
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [error, setError] = React.useState<string | null>(null)
+  const { toast } = useToast()
   // Surface the hook's friendly upload error via onError so we don't read a
-  // stale error value from an earlier render inside the click handler.
+  // stale error value from an earlier render inside the click handler. Also
+  // raise a toast so the failure can't go unnoticed in tiny helper text.
   const { uploadFile, isUploading, progress: uploadProgress } = useUpload({
-    onError: (e) => setError(e.message),
+    onError: (e) => {
+      setError(e.message)
+      toast({ variant: "destructive", title: "Upload failed", description: e.message })
+    },
   })
   const extractText = useExtractArtworkText()
   const createVersion = useCreatePackageVersion()
@@ -819,8 +830,11 @@ function AddVersionButton({ packageId, onAdded }: { packageId: number; onAdded: 
         },
       })
       if (detail.currentVersionId != null) onAdded(detail.currentVersionId)
+      toast({ title: "Version added", description: `${file.name} is now the current version.` })
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add version.")
+      const msg = err instanceof Error ? err.message : "Could not add version."
+      setError(msg)
+      toast({ variant: "destructive", title: "Couldn't add version", description: msg })
     } finally {
       if (inputRef.current) inputRef.current.value = ""
     }
