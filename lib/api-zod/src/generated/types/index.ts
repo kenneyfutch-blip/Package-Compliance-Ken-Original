@@ -69,6 +69,7 @@ export * from './ecfrSyncFailure';
 export * from './ecfrSyncResult';
 export * from './ecfrTitleCount';
 export * from './errorEnvelope';
+export * from './exportAiUsageParams';
 export * from './extractedComponent';
 export * from './extractedComponentSource';
 export * from './extractionBbox';

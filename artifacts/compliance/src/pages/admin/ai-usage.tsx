@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import {
   useGetAiUsageAnalytics,
   useListAiUsageRequests,
+  exportAiUsage,
 } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
 import {
   Card,
   CardContent,
@@ -44,6 +46,7 @@ import {
   Layers,
   AlertTriangle,
   ArrowUpRight,
+  Download,
 } from "lucide-react";
 
 const CHART_COLORS = [
@@ -89,6 +92,8 @@ const fmtTokens = (n: number) =>
 
 export default function AiUsageDashboard() {
   const [days, setDays] = useState(30);
+  const [exporting, setExporting] = useState(false);
+  const { toast } = useToast();
 
   const { from, to } = useMemo(() => {
     const today = new Date();
@@ -110,6 +115,30 @@ export default function AiUsageDashboard() {
 
   const summary = analytics?.summary;
 
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const csv = await exportAiUsage({ from, to });
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `ai-usage_${from}_to_${to}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Export failed",
+        description: "Could not export AI usage for this range. Please try again.",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -122,18 +151,34 @@ export default function AiUsageDashboard() {
             request.
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-lg border bg-card p-1">
-          {RANGES.map((r) => (
-            <Button
-              key={r.days}
-              size="sm"
-              variant={days === r.days ? "default" : "ghost"}
-              onClick={() => setDays(r.days)}
-              className="h-8"
-            >
-              {r.label}
-            </Button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-lg border bg-card p-1">
+            {RANGES.map((r) => (
+              <Button
+                key={r.days}
+                size="sm"
+                variant={days === r.days ? "default" : "ghost"}
+                onClick={() => setDays(r.days)}
+                className="h-8"
+              >
+                {r.label}
+              </Button>
+            ))}
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-10 gap-2"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Export CSV
+          </Button>
         </div>
       </div>
 

@@ -159,6 +159,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/AiUsageAnalytics"
 
+  /ai-usage/export:
+    get:
+      operationId: exportAiUsage
+      tags: [ai-usage]
+      summary: Export AI usage request-level rows as CSV
+      description: Org-scoped, date-filtered CSV of individual AI requests for the selected range (same scope, permission gate, and window as the on-screen dashboard). Streamed page-by-page server-side so large ranges do not buffer the whole ledger in memory. Suitable for finance/ops reconciliation.
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Inclusive start day (YYYY-MM-DD). Defaults to 29 days before `to`.
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Inclusive end day (YYYY-MM-DD). Defaults to today (UTC).
+      responses:
+        "200":
+          description: CSV file of AI usage rows
+          content:
+            text/csv:
+              schema:
+                type: string
+
   /ai-usage/requests:
     get:
       operationId: listAiUsageRequests

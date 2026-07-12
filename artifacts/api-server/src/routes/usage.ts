@@ -1,9 +1,16 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, aiUsageTable, usersTable } from "@workspace/db";
-import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or, sql, type SQL } from "drizzle-orm";
 import { requirePermission, orgId } from "../lib/rbac/context";
 import { cachedDashboard } from "../lib/cache/dashboard-cache";
 import { parsePagination } from "../lib/pagination";
+import {
+  EXPORT_COLUMNS,
+  EXPORT_PAGE_SIZE,
+  csvRow,
+  formatExportRow,
+  type Cursor,
+} from "./usage-export";
 
 const router: IRouter = Router();
 
@@ -180,6 +187,96 @@ router.get(
       },
     );
     res.json(payload);
+  },
+);
+
+// CSV export of the request-level AI usage ledger for the selected range. Same
+// org scope, permission gate, and date window as /ai-usage/requests, but streams
+// the rows page-by-page straight to the response so finance can pull an
+// arbitrarily large range without the server buffering the whole table.
+//
+// Paging uses a keyset (seek) cursor ordered by (createdAt DESC, id DESC), not
+// OFFSET: id is a unique tie-breaker so rows sharing a timestamp are never
+// skipped or duplicated across pages, and rows inserted during the export can't
+// shift the window (which would silently drop or double-count rows under OFFSET).
+router.get(
+  "/ai-usage/export",
+  requirePermission("dashboard:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const { from, toExclusive, fromStr, toStr } = resolveRange(req);
+    const org = orgId(req);
+
+    res.status(200);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="ai-usage_${fromStr}_to_${toStr}.csv"`,
+    );
+    // Prevent any intermediary from caching a tenant's spend export.
+    res.setHeader("Cache-Control", "no-store");
+
+    // Fetch one keyset page. Extracted so the cursor never appears in its own
+    // query's inferred type (which would trip circular type inference).
+    const fetchPage = (cursor: Cursor | null) => {
+      const keyset: SQL | undefined = cursor
+        ? or(
+            lt(aiUsageTable.createdAt, cursor.createdAt),
+            and(
+              eq(aiUsageTable.createdAt, cursor.createdAt),
+              lt(aiUsageTable.id, cursor.id),
+            ),
+          )
+        : undefined;
+      return db
+        .select({
+          id: aiUsageTable.id,
+          userName: usersTable.name,
+          workload: aiUsageTable.workload,
+          reviewType: aiUsageTable.reviewType,
+          model: aiUsageTable.model,
+          tier: aiUsageTable.tier,
+          promptTokens: aiUsageTable.promptTokens,
+          completionTokens: aiUsageTable.completionTokens,
+          totalTokens: aiUsageTable.totalTokens,
+          costUsd: aiUsageTable.costUsd,
+          durationMs: aiUsageTable.durationMs,
+          success: aiUsageTable.success,
+          errorMessage: aiUsageTable.errorMessage,
+          riskScore: aiUsageTable.riskScore,
+          confidence: aiUsageTable.confidence,
+          escalated: aiUsageTable.escalated,
+          requestId: aiUsageTable.requestId,
+          createdAt: aiUsageTable.createdAt,
+        })
+        .from(aiUsageTable)
+        .leftJoin(usersTable, eq(usersTable.id, aiUsageTable.userId))
+        .where(
+          and(
+            eq(aiUsageTable.organizationId, org),
+            gte(aiUsageTable.createdAt, from),
+            lt(aiUsageTable.createdAt, toExclusive),
+            keyset,
+          ),
+        )
+        .orderBy(desc(aiUsageTable.createdAt), desc(aiUsageTable.id))
+        .limit(EXPORT_PAGE_SIZE);
+    };
+
+    // Header row.
+    res.write(csvRow(EXPORT_COLUMNS));
+
+    let cursor: Cursor | null = null;
+    for (;;) {
+      const rows = await fetchPage(cursor);
+      for (const r of rows) {
+        res.write(csvRow(formatExportRow(r)));
+      }
+      if (rows.length < EXPORT_PAGE_SIZE) break;
+      const last = rows[rows.length - 1]!;
+      cursor = { createdAt: last.createdAt, id: last.id };
+    }
+
+    res.end();
   },
 );
 

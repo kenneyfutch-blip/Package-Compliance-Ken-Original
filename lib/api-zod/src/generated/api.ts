@@ -128,6 +128,18 @@ export const GetAiUsageAnalyticsResponse = zod.object({
 
 
 /**
+ * Org-scoped, date-filtered CSV of individual AI requests for the selected range (same scope, permission gate, and window as the on-screen dashboard). Streamed page-by-page server-side so large ranges do not buffer the whole ledger in memory. Suitable for finance/ops reconciliation.
+ * @summary Export AI usage request-level rows as CSV
+ */
+export const ExportAiUsageQueryParams = zod.object({
+  "from": zod.coerce.string().optional().describe('Inclusive start day (YYYY-MM-DD). Defaults to 29 days before `to`.'),
+  "to": zod.coerce.string().optional().describe('Inclusive end day (YYYY-MM-DD). Defaults to today (UTC).')
+})
+
+export const ExportAiUsageResponse = zod.unknown()
+
+
+/**
  * Org-scoped, date-filtered list of individual AI requests, newest first. Bounded via limit/offset.
  * @summary Recent AI requests (paginated)
  */

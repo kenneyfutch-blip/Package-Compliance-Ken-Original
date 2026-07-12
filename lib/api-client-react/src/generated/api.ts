@@ -59,6 +59,7 @@ import type {
   EcfrStatus,
   EcfrSyncResult,
   ErrorEnvelope,
+  ExportAiUsageParams,
   FdaIntelligence,
   FdaRecallResponse,
   FdaStatus,
@@ -729,6 +730,91 @@ export function useGetAiUsageAnalytics<TData = Awaited<ReturnType<typeof getAiUs
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAiUsageAnalyticsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getExportAiUsageUrl = (params?: ExportAiUsageParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/ai-usage/export?${stringifiedParams}` : `/api/ai-usage/export`
+}
+
+/**
+ * Org-scoped, date-filtered CSV of individual AI requests for the selected range (same scope, permission gate, and window as the on-screen dashboard). Streamed page-by-page server-side so large ranges do not buffer the whole ledger in memory. Suitable for finance/ops reconciliation.
+ * @summary Export AI usage request-level rows as CSV
+ */
+export const exportAiUsage = async (params?: ExportAiUsageParams, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getExportAiUsageUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getExportAiUsageQueryKey = (params?: ExportAiUsageParams,) => {
+    return [
+    `/api/ai-usage/export`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getExportAiUsageQueryOptions = <TData = Awaited<ReturnType<typeof exportAiUsage>>, TError = ErrorType<unknown>>(params?: ExportAiUsageParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportAiUsage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportAiUsageQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportAiUsage>>> = ({ signal }) => exportAiUsage(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportAiUsage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExportAiUsageQueryResult = NonNullable<Awaited<ReturnType<typeof exportAiUsage>>>
+export type ExportAiUsageQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Export AI usage request-level rows as CSV
+ */
+
+export function useExportAiUsage<TData = Awaited<ReturnType<typeof exportAiUsage>>, TError = ErrorType<unknown>>(
+ params?: ExportAiUsageParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof exportAiUsage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExportAiUsageQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -2368,6 +2368,17 @@ from?: string;
 to?: string;
 };
 
+export type ExportAiUsageParams = {
+/**
+ * Inclusive start day (YYYY-MM-DD). Defaults to 29 days before `to`.
+ */
+from?: string;
+/**
+ * Inclusive end day (YYYY-MM-DD). Defaults to today (UTC).
+ */
+to?: string;
+};
+
 export type ListAiUsageRequestsParams = {
 /**
  * Inclusive start day (YYYY-MM-DD).
