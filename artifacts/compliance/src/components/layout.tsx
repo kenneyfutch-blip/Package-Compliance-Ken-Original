@@ -597,7 +597,7 @@ function Brand() {
         <img
           src={`${import.meta.env.BASE_URL}dollar-tree-logo.png`}
           alt="Dollar Tree"
-          className="h-6 w-auto object-contain"
+          className="h-12 w-auto object-contain"
         />
       </span>
       <span className="flex flex-col leading-none border-l border-border pl-2.5 min-w-0">

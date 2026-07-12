@@ -35,7 +35,7 @@ export default function Landing() {
               <img
                 src={`${basePath}/dollar-tree-logo.png`}
                 alt="Dollar Tree"
-                className="h-6 w-auto object-contain"
+                className="h-12 w-auto object-contain"
               />
             </span>
             <span className="border-l border-white/15 pl-2.5">Packaging Compliance AI</span>
