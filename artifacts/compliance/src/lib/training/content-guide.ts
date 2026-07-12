@@ -76,7 +76,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         key: "guide:package-states",
         title: "Package states",
         body: [
-          "Packages move through Active, Approved, Rejected, and Archived. Each state has its own view under the Products section.",
+          "Packages move through Active, Approved, Rejected, and Archived. Each state has its own view under the Packages section.",
           "A rejected package can be corrected and re-submitted against the same record so the version history stays linked.",
         ],
       },

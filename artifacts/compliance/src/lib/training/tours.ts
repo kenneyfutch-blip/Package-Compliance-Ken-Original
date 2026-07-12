@@ -119,7 +119,7 @@ export const TOURS: TourDef[] = [
       },
       {
         element: '[data-tour="nav-products"]',
-        title: "Products",
+        title: "Packages",
         description:
           "Every package, organized by status: all packages, active reviews, approved, rejected, and archived.",
       },
@@ -131,7 +131,7 @@ export const TOURS: TourDef[] = [
       },
       {
         element: '[data-tour="nav-partners"]',
-        title: "Partners",
+        title: "Suppliers",
         description:
           "Everything supplier-facing: the vendor directory, vendor scorecards, and the supplier portal.",
       },

@@ -131,7 +131,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     id: "products",
-    label: "Products",
+    label: "Packages",
     items: [
       { name: "All Packages", href: "/packages", icon: Box },
       { name: "Active Reviews", href: "/packages/active", icon: ListChecks },
@@ -148,7 +148,6 @@ const SECTIONS: NavSection[] = [
     // per-agency libraries collapse into one "Regulatory Library" (the combined
     // knowledge base at /regulations, which already filters by agency).
     items: [
-      { name: "Compliance Dashboard", href: "/", icon: LayoutDashboard },
       {
         group: "Reviews & Findings",
         items: [
@@ -179,7 +178,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     id: "partners",
-    label: "Partners",
+    label: "Suppliers",
     defaultOpen: false,
     items: [
       { name: "Vendor Directory", href: "/suppliers", icon: Building2 },
