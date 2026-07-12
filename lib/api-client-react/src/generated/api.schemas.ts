@@ -682,6 +682,67 @@ export interface LanguageReviewDetail {
   findings: LanguageFinding[];
 }
 
+export interface ClaimFinding {
+  id: number;
+  analysisId: number;
+  packageId: number;
+  claimType: string;
+  /** @nullable */
+  claimText?: string | null;
+  /** @nullable */
+  jurisdiction?: string | null;
+  riskLevel: string;
+  /** @nullable */
+  regulationReference?: string | null;
+  /** @nullable */
+  remediation?: string | null;
+  /** @nullable */
+  confidence?: number | null;
+  escalated: boolean;
+  status: string;
+  /** @nullable */
+  createdAt?: string | null;
+}
+
+export interface ClaimAnalysis {
+  id: number;
+  packageId: number;
+  status: string;
+  /** @nullable */
+  summary?: string | null;
+  /** @nullable */
+  confidence?: number | null;
+  claimsFound: number;
+  lowCount: number;
+  mediumCount: number;
+  highCount: number;
+  criticalCount: number;
+  /** @nullable */
+  highestRisk?: string | null;
+  escalated: boolean;
+  /** @nullable */
+  tier?: string | null;
+  /** @nullable */
+  model?: string | null;
+  /** @nullable */
+  createdAt?: string | null;
+}
+
+export interface ClaimsAnalysisPackage {
+  id: number;
+  sku: string;
+  name: string;
+  vendor: string;
+  /** @nullable */
+  artworkUrl?: string | null;
+}
+
+export interface ClaimsAnalysisDetail {
+  package: ClaimsAnalysisPackage;
+  analysis?: ClaimAnalysis | null;
+  findings: ClaimFinding[];
+}
+
 export interface LanguageReviewSummary {
   packageId: number;
   sku: string;

@@ -8,6 +8,7 @@ import { recordAiUsage } from "./ai-usage";
 export type AiWorkload =
   | "packaging_analysis"
   | "language_review"
+  | "claims_review"
   | "copilot"
   | "ocr"
   | "field_extraction"
@@ -16,6 +17,7 @@ export type AiWorkload =
 export const WORKLOAD_LABELS: Record<AiWorkload, string> = {
   packaging_analysis: "Packaging compliance analysis",
   language_review: "Language review",
+  claims_review: "Claims compliance",
   copilot: "Compliance copilot",
   ocr: "Artwork OCR",
   field_extraction: "Metadata extraction",
@@ -27,6 +29,7 @@ export const WORKLOAD_LABELS: Record<AiWorkload, string> = {
 export const WORKLOAD_INITIAL_TIER: Record<AiWorkload, AiTier> = {
   packaging_analysis: "standard",
   language_review: "standard",
+  claims_review: "standard",
   copilot: "standard",
   ocr: "fast",
   field_extraction: "fast",
@@ -38,6 +41,7 @@ export const WORKLOAD_INITIAL_TIER: Record<AiWorkload, AiTier> = {
 export const WORKLOAD_ESCALATES: Record<AiWorkload, boolean> = {
   packaging_analysis: true,
   language_review: true,
+  claims_review: true,
   copilot: false,
   ocr: false,
   field_extraction: false,

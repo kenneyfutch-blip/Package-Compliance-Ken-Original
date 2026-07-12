@@ -13,6 +13,7 @@ export * from "./annotations";
 export * from "./review_tasks";
 export * from "./approval_decisions";
 export * from "./language";
+export * from "./claims";
 export * from "./audit_events";
 export * from "./notifications";
 export * from "./reports";

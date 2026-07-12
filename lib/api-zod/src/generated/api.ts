@@ -1735,6 +1735,106 @@ export const RunLanguageReviewResponse = zod.object({
 
 
 /**
+ * @summary Get the latest AI claims compliance analysis for a package
+ */
+export const GetClaimsAnalysisParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetClaimsAnalysisResponse = zod.object({
+  "package": zod.object({
+  "id": zod.number(),
+  "sku": zod.string(),
+  "name": zod.string(),
+  "vendor": zod.string(),
+  "artworkUrl": zod.string().nullish()
+}),
+  "analysis": zod.union([zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "status": zod.string(),
+  "summary": zod.string().nullish(),
+  "confidence": zod.number().nullish(),
+  "claimsFound": zod.number(),
+  "lowCount": zod.number(),
+  "mediumCount": zod.number(),
+  "highCount": zod.number(),
+  "criticalCount": zod.number(),
+  "highestRisk": zod.string().nullish(),
+  "escalated": zod.boolean(),
+  "tier": zod.string().nullish(),
+  "model": zod.string().nullish(),
+  "createdAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "findings": zod.array(zod.object({
+  "id": zod.number(),
+  "analysisId": zod.number(),
+  "packageId": zod.number(),
+  "claimType": zod.string(),
+  "claimText": zod.string().nullish(),
+  "jurisdiction": zod.string().nullish(),
+  "riskLevel": zod.string(),
+  "regulationReference": zod.string().nullish(),
+  "remediation": zod.string().nullish(),
+  "confidence": zod.number().nullish(),
+  "escalated": zod.boolean(),
+  "status": zod.string(),
+  "createdAt": zod.string().nullish()
+}))
+})
+
+
+/**
+ * @summary Run (or re-run) the AI Claims Compliance Engine for a package
+ */
+export const RunClaimsAnalysisParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RunClaimsAnalysisResponse = zod.object({
+  "package": zod.object({
+  "id": zod.number(),
+  "sku": zod.string(),
+  "name": zod.string(),
+  "vendor": zod.string(),
+  "artworkUrl": zod.string().nullish()
+}),
+  "analysis": zod.union([zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "status": zod.string(),
+  "summary": zod.string().nullish(),
+  "confidence": zod.number().nullish(),
+  "claimsFound": zod.number(),
+  "lowCount": zod.number(),
+  "mediumCount": zod.number(),
+  "highCount": zod.number(),
+  "criticalCount": zod.number(),
+  "highestRisk": zod.string().nullish(),
+  "escalated": zod.boolean(),
+  "tier": zod.string().nullish(),
+  "model": zod.string().nullish(),
+  "createdAt": zod.string().nullish()
+}),zod.null()]).optional(),
+  "findings": zod.array(zod.object({
+  "id": zod.number(),
+  "analysisId": zod.number(),
+  "packageId": zod.number(),
+  "claimType": zod.string(),
+  "claimText": zod.string().nullish(),
+  "jurisdiction": zod.string().nullish(),
+  "riskLevel": zod.string(),
+  "regulationReference": zod.string().nullish(),
+  "remediation": zod.string().nullish(),
+  "confidence": zod.number().nullish(),
+  "escalated": zod.boolean(),
+  "status": zod.string(),
+  "createdAt": zod.string().nullish()
+}))
+})
+
+
+/**
  * @summary Run the AI Language Review Engine across many packages
  */
 export const BulkLanguageReviewBody = zod.object({

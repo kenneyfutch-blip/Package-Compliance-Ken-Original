@@ -44,6 +44,7 @@ import type {
   BulkLanguageReviewInput,
   BulkLanguageReviewResult,
   CheckPackageDuplicatesParams,
+  ClaimsAnalysisDetail,
   CommentReplyInput,
   CopilotAnswer,
   CopilotInput,
@@ -2321,6 +2322,154 @@ export const useRunLanguageReview = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getRunLanguageReviewMutationOptions(options));
+    }
+
+export const getGetClaimsAnalysisUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/claims`
+}
+
+/**
+ * @summary Get the latest AI claims compliance analysis for a package
+ */
+export const getClaimsAnalysis = async (id: number, options?: RequestInit): Promise<ClaimsAnalysisDetail> => {
+
+  return customFetch<ClaimsAnalysisDetail>(getGetClaimsAnalysisUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClaimsAnalysisQueryKey = (id: number,) => {
+    return [
+    `/api/packages/${id}/claims`
+    ] as const;
+    }
+
+
+export const getGetClaimsAnalysisQueryOptions = <TData = Awaited<ReturnType<typeof getClaimsAnalysis>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClaimsAnalysis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClaimsAnalysisQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClaimsAnalysis>>> = ({ signal }) => getClaimsAnalysis(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClaimsAnalysis>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClaimsAnalysisQueryResult = NonNullable<Awaited<ReturnType<typeof getClaimsAnalysis>>>
+export type GetClaimsAnalysisQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get the latest AI claims compliance analysis for a package
+ */
+
+export function useGetClaimsAnalysis<TData = Awaited<ReturnType<typeof getClaimsAnalysis>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClaimsAnalysis>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClaimsAnalysisQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getRunClaimsAnalysisUrl = (id: number,) => {
+
+
+
+
+  return `/api/packages/${id}/claims`
+}
+
+/**
+ * @summary Run (or re-run) the AI Claims Compliance Engine for a package
+ */
+export const runClaimsAnalysis = async (id: number, options?: RequestInit): Promise<ClaimsAnalysisDetail> => {
+
+  return customFetch<ClaimsAnalysisDetail>(getRunClaimsAnalysisUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRunClaimsAnalysisMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runClaimsAnalysis>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runClaimsAnalysis>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['runClaimsAnalysis'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runClaimsAnalysis>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  runClaimsAnalysis(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunClaimsAnalysisMutationResult = NonNullable<Awaited<ReturnType<typeof runClaimsAnalysis>>>
+
+    export type RunClaimsAnalysisMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Run (or re-run) the AI Claims Compliance Engine for a package
+ */
+export const useRunClaimsAnalysis = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runClaimsAnalysis>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runClaimsAnalysis>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRunClaimsAnalysisMutationOptions(options));
     }
 
 export const getBulkLanguageReviewUrl = () => {

@@ -7,6 +7,7 @@ import {
   useCreateReviewTask, useUpdateReviewTask, useCreateApprovalDecision,
   useAskCopilot, useExportProof, useComparePackageVersions, getComparePackageVersionsQueryKey,
   useGetLanguageReview, useRunLanguageReview, getGetLanguageReviewQueryKey,
+  useGetClaimsAnalysis, useRunClaimsAnalysis, getGetClaimsAnalysisQueryKey,
   useCreatePackageVersion, useExtractArtworkText,
   useGetPackageAssignment, getGetPackageAssignmentQueryKey,
   type PackageDetail, type Annotation as ApiAnnotation, type Violation as ApiViolation,
@@ -40,6 +41,7 @@ import {
 import { cn } from "@/lib/utils"
 import { hasDistinctFix } from "@/lib/compliance"
 import { LanguageReviewTab } from "@/components/language-review-tab"
+import { ClaimsComplianceTab } from "@/components/claims-compliance-tab"
 import { DocumentAiTab } from "@/components/document-ai-tab"
 import { ReviewOwnership } from "@/components/review-ownership"
 import { ReviewLockBanner, useReviewLock } from "@/components/presence-indicators"
@@ -101,6 +103,19 @@ export default function ReviewWorkspace() {
     runLanguage.mutate({ id: packageId }, {
       onSuccess: (data) => {
         qc.setQueryData(getGetLanguageReviewQueryKey(packageId), data)
+        invalidate()
+      },
+    })
+  }
+
+  const runClaims = useRunClaimsAnalysis()
+  const { data: claimsAnalysis } = useGetClaimsAnalysis(packageId, {
+    query: { enabled: !!packageId, queryKey: getGetClaimsAnalysisQueryKey(packageId) },
+  })
+  const handleRunClaims = () => {
+    runClaims.mutate({ id: packageId }, {
+      onSuccess: (data) => {
+        qc.setQueryData(getGetClaimsAnalysisQueryKey(packageId), data)
         invalidate()
       },
     })
@@ -353,7 +368,7 @@ export default function ReviewWorkspace() {
               {[
                 ["findings", "Findings"], ["comments", "Comments"], ["tasks", "Tasks"],
                 ["data", "Data"], ["fda", "FDA Intel"], ["ecfr", "eCFR Regs"], ["copilot", "Copilot"], ["compare", "Compare"],
-                ["language", "Language"], ["document", "Document AI"],
+                ["language", "Language"], ["claims", "Claims"], ["document", "Document AI"],
               ].map(([v, label]) => (
                 <TabsTrigger key={v} value={v}
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2.5 px-1 text-sm">
@@ -372,6 +387,7 @@ export default function ReviewWorkspace() {
               <TabsContent value="copilot" className="m-0 p-4 h-full"><CopilotPanel packageId={packageId} pkg={pkg} /></TabsContent>
               <TabsContent value="compare" className="m-0 p-4"><ComparePanel pkg={pkg} packageId={packageId} /></TabsContent>
               <TabsContent value="language" className="m-0 p-4"><LanguageReviewTab detail={languageReview} onRun={handleRunLanguage} isRunning={runLanguage.isPending} /></TabsContent>
+              <TabsContent value="claims" className="m-0 p-4"><ClaimsComplianceTab detail={claimsAnalysis} onRun={handleRunClaims} isRunning={runClaims.isPending} /></TabsContent>
               <TabsContent value="document" className="m-0 p-4 h-full"><DocumentAiTab packageId={packageId} /></TabsContent>
             </div>
           </Tabs>
