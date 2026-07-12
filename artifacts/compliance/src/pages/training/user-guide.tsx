@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
-import { BookOpen, Search } from "lucide-react"
+import { BookOpen, Search, PlayCircle } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Accordion,
@@ -11,6 +12,7 @@ import {
 import { TrainingHeader, Chip } from "@/components/training/kit"
 import { cn } from "@/lib/utils"
 import { GUIDE_SECTIONS } from "@/lib/training/content-guide"
+import { startTour } from "@/lib/training/tours"
 
 export default function UserGuide() {
   const [query, setQuery] = useState("")
@@ -42,7 +44,12 @@ export default function UserGuide() {
         eyebrow="Training & Help"
         title="User Guide"
         description="The complete reference for Packaging Compliance AI, organized by area. Search across every article or jump straight to a section."
-      />
+      >
+        <Button onClick={() => startTour("platform-orientation")} className="gap-2">
+          <PlayCircle className="h-4 w-4" />
+          Take the tour
+        </Button>
+      </TrainingHeader>
 
       <div className="relative max-w-xl">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
