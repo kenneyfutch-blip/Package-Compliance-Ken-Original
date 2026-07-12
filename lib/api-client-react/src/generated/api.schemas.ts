@@ -1985,6 +1985,8 @@ export interface ReviewAssignInput {
   backupUserId?: number | null;
   managerUserId?: number | null;
   slaHours?: number;
+  /** Explicit review deadline. When provided it overrides the priority-derived SLA window; omit or send null to fall back to the SLA default for the chosen priority. */
+  dueAt?: string | null;
   priority?: ReviewAssignInputPriority;
   reason?: string;
   comments?: string;

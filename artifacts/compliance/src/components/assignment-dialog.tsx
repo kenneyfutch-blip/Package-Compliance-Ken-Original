@@ -24,8 +24,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { useToast } from "@/hooks/use-toast"
-import { Loader2, Lightbulb, AlertTriangle } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { format, endOfDay, startOfDay } from "date-fns"
+import { Loader2, Lightbulb, AlertTriangle, CalendarIcon } from "lucide-react"
 
 const UNASSIGNED = "__unassigned__"
 const NO_TEAM = "__none__"
@@ -67,6 +71,7 @@ export function AssignmentDialog({
   const [priority, setPriority] = React.useState<string>("normal")
   const [reason, setReason] = React.useState<string>(REASONS[0])
   const [comments, setComments] = React.useState<string>("")
+  const [dueAt, setDueAt] = React.useState<Date | undefined>(undefined)
 
   // Seed the form from the current assignment each time the dialog opens.
   React.useEffect(() => {
@@ -78,6 +83,8 @@ export function AssignmentDialog({
     setPriority(assignment?.priority ?? "normal")
     setReason(REASONS[0])
     setComments("")
+    // Seed from the current deadline so unrelated edits never silently shift it.
+    setDueAt(assignment?.dueAt ? new Date(assignment.dueAt) : undefined)
   }, [open, assignment])
 
   const teamNum = teamId === NO_TEAM ? undefined : Number(teamId)
@@ -101,6 +108,13 @@ export function AssignmentDialog({
           backupUserId: backupId === UNASSIGNED ? null : Number(backupId),
           managerUserId: managerId === UNASSIGNED ? null : Number(managerId),
           priority: priority as (typeof PRIORITIES)[number],
+          // ISO string = explicit deadline; null = reset to priority SLA (only
+          // when clearing an existing one); undefined = leave unchanged.
+          dueAt: dueAt
+            ? dueAt.toISOString()
+            : assignment?.dueAt
+              ? null
+              : undefined,
           reason,
           comments: comments.trim() || undefined,
         },
@@ -222,6 +236,42 @@ export function AssignmentDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Due date <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !dueAt && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="w-4 h-4 mr-2" />
+                  {dueAt ? format(dueAt, "PPP") : "Auto — based on priority SLA"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dueAt}
+                  onSelect={(d) => setDueAt(d ? endOfDay(d) : undefined)}
+                  disabled={{ before: startOfDay(new Date()) }}
+                />
+                {dueAt && (
+                  <div className="border-t p-2">
+                    <Button type="button" variant="ghost" size="sm" className="w-full text-xs" onClick={() => setDueAt(undefined)}>
+                      Clear (use priority SLA)
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+            <p className="text-[11px] text-muted-foreground">
+              {dueAt
+                ? "Reviewer must complete by this date."
+                : "No custom deadline — the priority's SLA window sets the due date."}
+            </p>
           </div>
 
           <div className="space-y-1.5">

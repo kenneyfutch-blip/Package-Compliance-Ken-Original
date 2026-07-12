@@ -154,6 +154,8 @@ export interface AssignParams {
   managerUserId?: number | null;
   priority?: string;
   slaHours?: number;
+  // Explicit deadline that overrides the priority-derived SLA window.
+  dueAt?: Date | null;
   actorUserId?: number | null;
   actorName: string;
   detail?: string | null;
@@ -184,7 +186,7 @@ export async function assignReview(p: AssignParams): Promise<ReviewAssignmentRow
       .for("update");
 
     const priority = p.priority ?? existing?.priority ?? "normal";
-    const slaHours =
+    let slaHours =
       p.slaHours ??
       existing?.slaHours ??
       SLA_HOURS_BY_PRIORITY[priority] ??
@@ -217,9 +219,27 @@ export async function assignReview(p: AssignParams): Promise<ReviewAssignmentRow
         ? now
         : existing.assignedAt
       : null;
-    const dueAt = assignedAt
-      ? new Date(assignedAt.getTime() + slaHours * 3_600_000)
-      : null;
+    // Deadline resolution:
+    //  - explicit Date  → pin that deadline and back-compute slaHours (via ceil,
+    //    never rounding the window shorter) so at-risk/breach math stays coherent.
+    //  - null           → reset to the priority SLA default, ignoring any prior
+    //    (possibly back-computed) slaHours.
+    //  - undefined      → leave the SLA-derived behavior unchanged.
+    let dueAt: Date | null;
+    if (!assignedAt) {
+      dueAt = null;
+    } else if (p.dueAt instanceof Date) {
+      dueAt = new Date(p.dueAt);
+      slaHours = Math.max(
+        1,
+        Math.ceil((dueAt.getTime() - assignedAt.getTime()) / 3_600_000),
+      );
+    } else {
+      if (p.dueAt === null) {
+        slaHours = SLA_HOURS_BY_PRIORITY[priority] ?? DEFAULT_SLA_HOURS;
+      }
+      dueAt = new Date(assignedAt.getTime() + slaHours * 3_600_000);
+    }
     const escalationLevel = assigneeChanged ? 0 : (existing?.escalationLevel ?? 0);
     const lastEscalatedAt = assigneeChanged
       ? null

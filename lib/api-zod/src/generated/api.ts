@@ -4481,6 +4481,7 @@ export const AssignPackageReviewBody = zod.object({
   "backupUserId": zod.number().nullish(),
   "managerUserId": zod.number().nullish(),
   "slaHours": zod.number().optional(),
+  "dueAt": zod.coerce.date().nullish().describe('Explicit review deadline. When provided it overrides the priority-derived SLA window; omit or send null to fall back to the SLA default for the chosen priority.'),
   "priority": zod.enum(['low', 'normal', 'high', 'critical']).optional(),
   "reason": zod.string().optional(),
   "comments": zod.string().optional()

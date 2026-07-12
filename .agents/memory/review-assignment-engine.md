@@ -64,6 +64,22 @@ the bulk action path supports approve/reject/assign/rescan only, so there is no 
 escalate to reach parity with.
 **Why:** escalation is the only point where manager sign-off is implied.
 
+## Manual due-date override (tri-state `dueAt`)
+**Rule:** `assignReview` accepts an optional `dueAt`: a `Date` pins that exact
+deadline and back-computes `slaHours = max(1, ceil((dueAt-assignedAt)/3600h))`;
+`null` resets to the priority SLA default (ignoring any prior back-computed
+slaHours); `undefined` leaves the SLA-derived behavior untouched. `dueAt` only
+applies when there's an assignee (`assignedAt` set); team-only rows stay null.
+**Why:** deriving a deadline purely from `slaHours` silently drifts when you later
+edit an assignment (rounding + `assignedAt` reuse), so the deadline must be stored
+explicitly, and the at-risk/breach window (`slaStatusFor` uses both fields) must
+stay coherent with it.
+**How to apply:** the assign dialog **seeds** its date picker from the existing
+`assignment.dueAt` so unrelated edits re-submit the same instant (no drift); an
+empty picker submits `null` (reset) when a deadline existed, else `undefined`.
+Picked calendar dates are normalized to `endOfDay` (local instant). Bulk-assign
+does not send `dueAt` (SLA-derived only).
+
 ## Category → team routing
 Keyword rules (case-insensitive) map a package category to a seeded team *name*,
 resolved to a team row per org. Unmatched categories produce a team-less
