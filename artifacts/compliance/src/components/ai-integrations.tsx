@@ -25,8 +25,19 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import {
-  Sparkles, Plus, Plug, CheckCircle2, XCircle, CircleDashed, Trash2, Loader2, KeyRound, Star,
+  Sparkles, Plus, Plug, CheckCircle2, XCircle, CircleDashed, Trash2, Loader2, KeyRound, Star, ChevronDown,
 } from "lucide-react"
+
+// Capabilities powered by the active AI model, surfaced on the active provider
+// card so users can see exactly what this integration drives across the app.
+const POWERED_TOOLS: { name: string; desc: string }[] = [
+  { name: "Packaging compliance analysis", desc: "Re-run AI, Findings, risk score, grade & fix recommendations" },
+  { name: "Language & Copy Review", desc: "Marketing-copy quality score and copy findings" },
+  { name: "Claims Compliance", desc: "Auditing product claims against regulations" },
+  { name: "Compliance Pilot", desc: "The in-app AI assistant / Q&A" },
+  { name: "Version comparison", desc: "AI change summary when comparing two versions" },
+  { name: "Artwork OCR + field auto-fill", desc: "Reads text from artwork and auto-fills package fields" },
+]
 
 const PROVIDER_PRESETS: Record<string, { label: string; baseUrl: string; modelHint: string }> = {
   openai: { label: "OpenAI", baseUrl: "", modelHint: "e.g. gpt-4o, gpt-4.1" },
@@ -67,6 +78,7 @@ export function AiIntegrations() {
   const [form, setForm] = React.useState<ProviderForm>(EMPTY_FORM)
   const [editingId, setEditingId] = React.useState<number | null>(null)
   const [testingId, setTestingId] = React.useState<number | null>(null)
+  const [showPowers, setShowPowers] = React.useState(false)
 
   const openAdd = () => {
     setEditingId(null)
@@ -203,7 +215,42 @@ export function AiIntegrations() {
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
+                  {p.active && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="gap-1.5 text-primary hover:text-primary ml-auto"
+                      onClick={() => setShowPowers((s) => !s)}
+                      aria-expanded={showPowers}
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      What this powers
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showPowers ? "rotate-180" : ""}`} />
+                    </Button>
+                  )}
                 </div>
+                {p.active && showPowers && (
+                  <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2.5">
+                    <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" /> This model powers
+                    </p>
+                    <ul className="space-y-2">
+                      {POWERED_TOOLS.map((t) => (
+                        <li key={t.name} className="flex items-start gap-2">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />
+                          <span className="text-xs leading-snug">
+                            <span className="font-medium text-foreground">{t.name}</span>
+                            <span className="text-muted-foreground"> — {t.desc}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-[11px] text-muted-foreground border-t border-primary/10 pt-2">
+                      All speed tiers — Luna (fast), Terra (standard), Sol (reasoning) — resolve to{" "}
+                      <span className="font-mono text-foreground">{p.model}</span>.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
