@@ -348,19 +348,33 @@ router.post(
 
     let current = inserted;
 
-    // Extraction layer: the active OCR provider runs on new-package upload. When
-    // it is not configured, this is a no-op and we fall back to any supplied text.
-    try {
-      const run = await runExtraction({ req, pkg: inserted });
-      if (run.outcome === "Complete" || run.outcome === "Cached") {
-        const [afterExtract] = await db
-          .select()
-          .from(packagesTable)
-          .where(eq(packagesTable.id, inserted.id));
-        if (afterExtract) current = afterExtract;
+    // Extraction layer. If the client already supplied artwork text — a PDF text
+    // layer read in-browser, an image OCR result, or pasted copy — trust it and
+    // SKIP the OCR provider. Re-running Vision OCR here just duplicates work and
+    // is the slow part of "Analyzing…". Only invoke the provider when we have no
+    // text to work from.
+    if (data.extractedText && data.extractedText.trim()) {
+      const now = new Date();
+      await db
+        .update(packagesTable)
+        .set({ extractionStatus: "Provided", extractedAt: now })
+        .where(eq(packagesTable.id, inserted.id));
+      current = { ...inserted, extractionStatus: "Provided", extractedAt: now };
+    } else {
+      // No supplied text: the active OCR provider runs on new-package upload.
+      // When it is not configured, this is a no-op.
+      try {
+        const run = await runExtraction({ req, pkg: inserted });
+        if (run.outcome === "Complete" || run.outcome === "Cached") {
+          const [afterExtract] = await db
+            .select()
+            .from(packagesTable)
+            .where(eq(packagesTable.id, inserted.id));
+          if (afterExtract) current = afterExtract;
+        }
+      } catch (err) {
+        logger.error({ err }, "Document extraction failed on create");
       }
-    } catch (err) {
-      logger.error({ err }, "Document extraction failed on create");
     }
 
     // Reasoning layer: OpenAI analysis runs once we have extracted text, whether

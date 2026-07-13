@@ -21,6 +21,10 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { UploadCloud, Wand2, Loader2, Info, FileText, X, CheckCircle2, ScanText, AlertTriangle } from "lucide-react"
 import { fileTypeFromName } from "@/lib/proof-utils"
+import * as pdfjsLib from "pdfjs-dist"
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 
 const ACCEPT = ".png,.jpg,.jpeg,.pdf,.ai,.indd"
 const RENDERABLE = ["png", "jpg", "pdf"]
@@ -57,6 +61,33 @@ function fileToDownscaledDataUrl(file: File): Promise<string> {
   })
 }
 
+// Pull the embedded text layer straight out of a PDF in the browser — fast and
+// no AI round-trip. Design/artwork PDFs almost always carry a real text layer,
+// so this is near-instant. Returns "" when the PDF has no selectable text (e.g.
+// a scanned/flattened export), so the caller can fall back to OCR at analysis.
+async function extractPdfText(file: File): Promise<string> {
+  const buf = await file.arrayBuffer()
+  const doc = await pdfjsLib.getDocument({ data: buf }).promise
+  try {
+    const maxPages = Math.min(doc.numPages, 20)
+    const parts: string[] = []
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await doc.getPage(i)
+      const content = await page.getTextContent()
+      const line = content.items
+        .map((it) => ("str" in it ? (it as { str: string }).str : ""))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim()
+      if (line) parts.push(line)
+      page.cleanup()
+    }
+    return parts.join("\n").trim()
+  } finally {
+    await doc.destroy()
+  }
+}
+
 // Metadata is optional so specialists can upload & analyze in-progress or
 // partial artwork (also enabling auditing of existing packages). The AI runs on
 // whatever text is available; any blank identifiers can be filled in later.
@@ -87,6 +118,7 @@ export default function UploadPage() {
   const [dragActive, setDragActive] = useState(false)
   const [demoLoaded, setDemoLoaded] = useState(false)
   const [ocrError, setOcrError] = useState<string | null>(null)
+  const [pdfExtracting, setPdfExtracting] = useState(false)
   // Metadata fields that were auto-filled from the artwork and should be reviewed.
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set())
   const [artwork, setArtwork] = useState<{ name: string; type: string; url: string; preview: string | null } | null>(null)
@@ -218,6 +250,27 @@ export default function UploadPage() {
       }
       await fieldsPromise
     }
+
+    // PDFs: read the embedded text layer directly in the browser — near-instant,
+    // no AI round-trip. The server also skips its OCR when we send this text, so
+    // analysis starts immediately instead of re-reading the whole PDF.
+    if (type === "pdf") {
+      setPdfExtracting(true)
+      try {
+        const text = await extractPdfText(file)
+        if (text) {
+          setValue("extractedText", text, { shouldValidate: true })
+        } else {
+          setOcrError(
+            "No selectable text found in this PDF — it may be scanned or flattened. Paste the copy manually, or it will be read during analysis.",
+          )
+        }
+      } catch (err) {
+        setOcrError(err instanceof Error ? err.message : "Failed to read text from the PDF.")
+      } finally {
+        setPdfExtracting(false)
+      }
+    }
   }
 
   const loadDemo = () => {
@@ -252,6 +305,10 @@ export default function UploadPage() {
   }
 
   const isPending = createPackage.isPending
+  // Block submit while text is still being pulled from the file, so the fast
+  // path is deterministic: the request always carries extractedText and never
+  // falls back to the slow server-side OCR just because the user clicked early.
+  const extracting = pdfExtracting || extractText.isPending || extractFields.isPending
 
   // Subtle affordance for fields auto-filled from the artwork that need review.
   const reviewClass = (field: string) =>
@@ -292,10 +349,10 @@ export default function UploadPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 {artwork.type.toUpperCase()} uploaded{!RENDERABLE.includes(artwork.type) ? " — tracked only (no visual proof rendering)" : " — ready for visual proofing"}
               </p>
-              {(artwork.type === "png" || artwork.type === "jpg") && (
+              {RENDERABLE.includes(artwork.type) && (
                 <div className="mt-1 text-xs space-y-0.5">
-                  {(extractText.isPending || extractFields.isPending) ? (
-                    <span className="inline-flex items-center gap-1 text-primary"><Loader2 className="w-3 h-3 animate-spin" /> Extracting text with OCR…</span>
+                  {(extractText.isPending || extractFields.isPending || pdfExtracting) ? (
+                    <span className="inline-flex items-center gap-1 text-primary"><Loader2 className="w-3 h-3 animate-spin" /> Extracting text…</span>
                   ) : (
                     <>
                       {ocrError ? (
@@ -470,12 +527,14 @@ export default function UploadPage() {
           <Button type="button" variant="outline" onClick={() => window.history.back()}>Cancel</Button>
           <Button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || extracting}
             variant={hasDuplicates ? "destructive" : "default"}
             className="min-w-[150px]"
           >
             {isPending ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analyzing...</>
+            ) : extracting ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Reading text…</>
             ) : hasDuplicates ? (
               "Upload Anyway"
             ) : (
