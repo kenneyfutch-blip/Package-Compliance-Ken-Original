@@ -40,3 +40,4 @@
 - [Training Center](training-center.md) — in-app Training & Help hub: data-driven content modules, server-saved progress, driver.js tours anchored to persistent chrome, support tickets; /training/* open to all incl suppliers.
 - [Dashboard page resilience](dashboard-page-resilience.md) — never gate a multi-widget page behind one combined isLoading; one stalled query freezes the whole page. Per-card loading/empty; check the shared gate before query-tuning.
 - [Notifications management](notifications-management.md) — org-wide notifications use a per-user notification_states overlay (read/archive/soft-delete) so one user never mutates a shared broadcast for everyone; muting filters by `type` at GET.
+- [Seed reference vs demo split](seed-lifecycle.md) — seedReference (prod-safe, idempotent, never deletes) vs seedDemo (dev-only, NODE_ENV-guarded); default `seed`=reference; clearDemo is full-table not per-org.

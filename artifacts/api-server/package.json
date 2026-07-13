@@ -7,6 +7,10 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
+    "seed": "node seed-build.mjs && node dist/seed.mjs reference",
+    "seed:reference": "node seed-build.mjs && node dist/seed.mjs reference",
+    "seed:demo": "node seed-build.mjs && NODE_ENV=\"${NODE_ENV:-development}\" node dist/seed.mjs demo",
+    "seed:all": "node seed-build.mjs && NODE_ENV=\"${NODE_ENV:-development}\" node dist/seed.mjs all",
     "test": "node ./test.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

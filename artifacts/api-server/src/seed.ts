@@ -26,6 +26,8 @@ import {
   teamsTable,
   teamMembersTable,
   glossaryEntriesTable,
+  notificationStatesTable,
+  notificationPreferencesTable,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { analyzePackaging } from "./lib/ai";
@@ -139,14 +141,22 @@ const seedPackages: SeedPackage[] = [
   },
 ];
 
-async function clearAll() {
-  // Audit is append-only in normal operation; drop the guard so the seed can
-  // reset it, then reinstall it at the end.
+// Reset tenant data for a fresh demo. Global reference data (permissions,
+// roles, role-permission mappings, regulations, AI providers) is intentionally
+// preserved. NOTE: this clears ALL tenant-scoped tables, not a single org — it
+// is only ever reached via seedDemo(), which refuses to run outside
+// development/staging/test, so it can never touch a production database. In
+// dev/staging the demo org is the only tenant; do not run the demo seed in an
+// environment that holds real customer data.
+async function clearDemo() {
+  // Audit is append-only in normal operation; drop the guard so the reset can
+  // clear it, then the caller reinstalls it once seeding completes.
   await dropAuditImmutability();
+  await db.delete(notificationStatesTable);
+  await db.delete(notificationPreferencesTable);
   await db.delete(teamMembersTable);
   await db.delete(teamsTable);
   await db.delete(userPermissionsTable);
-  await db.delete(rolePermissionsTable);
   await db.delete(commentRepliesTable);
   await db.delete(annotationsTable);
   await db.delete(reviewTasksTable);
@@ -156,14 +166,14 @@ async function clearAll() {
   await db.delete(reportsTable);
   await db.delete(auditEventsTable);
   await db.delete(glossaryEntriesTable);
+  await db.delete(supplierContactsTable);
+  await db.delete(supplierScorecardsTable);
+  await db.delete(supplierStatusHistoryTable);
+  await db.delete(supplierSubmissionsTable);
   await db.delete(packagesTable);
-  await db.delete(regulationsTable);
   await db.delete(suppliersTable);
   await db.delete(notificationsTable);
   await db.delete(usersTable);
-  await db.delete(rolesTable);
-  await db.delete(permissionsTable);
-  await db.delete(aiProvidersTable);
   await db.delete(organizationsTable);
 }
 
@@ -366,60 +376,117 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
   }
 }
 
-async function main() {
-  logger.info("Seeding database...");
-  await clearAll();
+// Production-safe, idempotent baseline: the config a live environment needs but
+// that contains NO fictional/demo content. Safe to run repeatedly and safe to
+// run in production. Never deletes anything.
+export async function seedReference() {
+  logger.info("Seeding reference data...");
 
-  // Organization (tenant)
-  const [org] = await db.insert(organizationsTable).values(ORG).returning();
-  const orgId = org!.id;
-
-  // Permissions + roles + role-permission mappings
-  const insertedPerms = await db
+  // Permissions (idempotent by unique key)
+  await db
     .insert(permissionsTable)
     .values(PERMISSIONS)
-    .returning();
+    .onConflictDoNothing({ target: permissionsTable.key });
+  const insertedPerms = await db.select().from(permissionsTable);
   const permIdByKey = new Map(insertedPerms.map((p) => [p.key, p.id]));
 
-  await db.insert(rolesTable).values(
-    ROLES.map((r) => ({
-      key: r.key,
-      name: r.name,
-      description: r.description,
-      rank: r.rank,
-      isSystem: true,
-    })),
-  );
+  // Roles (idempotent by unique key)
+  await db
+    .insert(rolesTable)
+    .values(
+      ROLES.map((r) => ({
+        key: r.key,
+        name: r.name,
+        description: r.description,
+        rank: r.rank,
+        isSystem: true,
+      })),
+    )
+    .onConflictDoNothing({ target: rolesTable.key });
   const insertedRoles = await db.select().from(rolesTable);
   const roleIdByKey = new Map(insertedRoles.map((r) => [r.key, r.id]));
 
+  // Role → permission mappings, derived from code (idempotent by composite PK)
   const rolePermRows: { roleId: number; permissionId: number }[] = [];
   for (const role of ROLES) {
-    const roleId = roleIdByKey.get(role.key)!;
+    const roleId = roleIdByKey.get(role.key);
+    if (!roleId) continue;
     for (const permKey of permissionsForRole(role.key)) {
       const permissionId = permIdByKey.get(permKey);
       if (permissionId) rolePermRows.push({ roleId, permissionId });
     }
   }
   if (rolePermRows.length) {
-    await db.insert(rolePermissionsTable).values(rolePermRows);
+    await db
+      .insert(rolePermissionsTable)
+      .values(rolePermRows)
+      .onConflictDoNothing();
   }
+
+  // Global federal regulations baseline — add only rules not already present so
+  // any eCFR-synced rules are left untouched.
+  const existingRegs = await db
+    .select({ ruleCode: regulationsTable.ruleCode })
+    .from(regulationsTable);
+  const existingCodes = new Set(existingRegs.map((r) => r.ruleCode));
+  const missingRegs = regulations.filter((r) => !existingCodes.has(r.ruleCode));
+  if (missingRegs.length) {
+    await db.insert(regulationsTable).values(missingRegs);
+  }
+
+  // Managed AI provider — only when none is configured yet (respects the
+  // single-active invariant).
+  const existingProviders = await db
+    .select({ id: aiProvidersTable.id })
+    .from(aiProvidersTable);
+  if (existingProviders.length === 0) {
+    await db.insert(aiProvidersTable).values({
+      name: "Replit-managed OpenAI",
+      providerType: "openai",
+      model: "gpt-5.4",
+      managed: true,
+      active: true,
+      status: "connected",
+      statusMessage: "Built-in Replit AI integration",
+    });
+  }
+
+  logger.info("Reference data ready.");
+}
+
+// Fictional demo tenant ("Dollar Tree") and all its sample content. DEV/STAGING
+// ONLY — refuses to run in production so a live deploy never loads demo data.
+export async function seedDemo() {
+  // Hard block: demo data may load ONLY in a recognized non-production
+  // environment. Production AND an unset/misconfigured NODE_ENV both count as
+  // unsafe and are refused, so demo content can never reach a live database.
+  const env = process.env.NODE_ENV;
+  if (env !== "development" && env !== "staging" && env !== "test") {
+    throw new Error(
+      `Refusing to seed demo data: NODE_ENV="${env ?? "(unset)"}" is not a ` +
+        "recognized non-production environment (development | staging | test). " +
+        "Demo content must never be loaded into a live database — run the " +
+        "reference seed instead.",
+    );
+  }
+  logger.info("Seeding demo data...");
+
+  // Reference data (permissions, roles, regulations, AI provider) must exist
+  // first — the demo package analysis reasons against the regulations.
+  await seedReference();
+
+  // Reset demo-scoped data only; global reference data is preserved.
+  await clearDemo();
+
+  // Organization (demo tenant)
+  const [org] = await db.insert(organizationsTable).values(ORG).returning();
+  const orgId = org!.id;
 
   // Teams
   const insertedTeams = await db
     .insert(teamsTable)
     .values(teams.map((t) => ({ ...t, organizationId: orgId })))
     .returning();
-
-  await db.insert(aiProvidersTable).values({
-    name: "Replit-managed OpenAI",
-    providerType: "openai",
-    model: "gpt-5.4",
-    managed: true,
-    active: true,
-    status: "connected",
-    statusMessage: "Built-in Replit AI integration",
-  });
 
   // Users (scoped to org, with enterprise role keys)
   const insertedUsers = await db
@@ -497,10 +564,9 @@ async function main() {
     { organizationId: orgId, supplierId: golden.id, submittedByName: "Li Wei", title: "Snack mix carton", category: "Food & Beverage", notes: "New product line.", status: "ChangesRequested", reviewerName: "Compliance Team", reviewNotes: "Add Contains statement for tree nuts (FALCPA)." },
     { organizationId: orgId, supplierId: cleanco.id, submittedByName: "Sarah Brooks", title: "Multi-surface cleaner label", category: "Household Chemicals", notes: "Reformulated product.", status: "Submitted" },
   ]);
-  const insertedRegs = await db
-    .insert(regulationsTable)
-    .values(regulations)
-    .returning();
+  // Reference regulations were loaded by seedReference(); read them back so the
+  // AI analysis below can reason against them.
+  const insertedRegs = await db.select().from(regulationsTable);
 
   // Approved Language & Glossary library — the wording reviewers must reuse and
   // that the AI language review reasons against.
@@ -637,10 +703,27 @@ async function main() {
   // Re-enable append-only enforcement on the audit trail.
   await ensureAuditImmutability();
 
-  logger.info("Seed complete.");
+  logger.info("Demo data seeded.");
 }
 
-main()
+// --- CLI --------------------------------------------------------------------
+// Usage:
+//   node dist/seed.mjs reference   → production-safe reference data only
+//   node dist/seed.mjs demo        → demo data (also ensures reference exists)
+//   node dist/seed.mjs [all]       → full dev seed (reference + demo)
+async function runCli() {
+  const mode = (process.argv[2] ?? "all").toLowerCase();
+  if (mode === "reference") {
+    await seedReference();
+  } else if (mode === "demo" || mode === "all") {
+    await seedDemo();
+  } else {
+    throw new Error(`Unknown seed mode "${mode}". Use: reference | demo | all`);
+  }
+  logger.info(`Seed finished (mode: ${mode}).`);
+}
+
+runCli()
   .then(() => process.exit(0))
   .catch((err) => {
     logger.error({ err }, "Seed failed");
