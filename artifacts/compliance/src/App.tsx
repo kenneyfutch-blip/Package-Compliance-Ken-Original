@@ -400,6 +400,11 @@ function ClerkProviderWithRoutes() {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
+      // Default landing after login is the app root, which renders the
+      // Dashboard. `fallback` (not `force`) so an explicit deep link — e.g. a
+      // shared package URL opened while signed out — is still honored.
+      signInFallbackRedirectUrl={basePath || "/"}
+      signUpFallbackRedirectUrl={basePath || "/"}
       localization={{
         signIn: { start: { title: "Welcome back", subtitle: "Sign in with your Dollar Tree account" } },
         signUp: { start: { title: "Create your account", subtitle: "Use your Dollar Tree email address" } },
