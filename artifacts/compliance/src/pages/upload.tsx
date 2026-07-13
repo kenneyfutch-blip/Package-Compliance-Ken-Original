@@ -82,7 +82,10 @@ async function extractPdfText(file: File): Promise<string> {
       if (line) parts.push(line)
       page.cleanup()
     }
-    return parts.join("\n").trim()
+    const text = parts.join("\n").trim()
+    // Guard against degenerate text layers (e.g. a lone page number): too little
+    // text means no usable layer, so return "" and let the server OCR fall back.
+    return text.replace(/\s/g, "").length >= 12 ? text : ""
   } finally {
     await doc.destroy()
   }

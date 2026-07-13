@@ -149,6 +149,20 @@ async function ecfrRegulationsFor(
   }
 }
 
+// Load the four independent analysis inputs concurrently. None depends on the
+// others, so awaiting them serially just stacked latency in front of every AI
+// analysis. Each helper already swallows its own failures to undefined.
+async function loadAnalysisContext(pkg: PackageRow, req: Request) {
+  const [regulations, priorKnowledge, internalStandards, cfrRegulations] =
+    await Promise.all([
+      loadRegulations(),
+      priorKnowledgeFor(pkg, req),
+      relevantPoliciesFor(pkg, req),
+      ecfrRegulationsFor(pkg),
+    ]);
+  return { regulations, priorKnowledge, internalStandards, cfrRegulations };
+}
+
 function parseId(raw: string | string[] | undefined): number {
   const value = Array.isArray(raw) ? raw[0] : raw;
   return Number(value);
@@ -381,10 +395,8 @@ router.post(
     // it came from Document AI or was supplied on the request.
     if (current.extractedText && current.extractedText.trim()) {
       try {
-        const regulations = await loadRegulations();
-        const priorKnowledge = await priorKnowledgeFor(current, req);
-        const internalStandards = await relevantPoliciesFor(current, req);
-        const cfrRegulations = await ecfrRegulationsFor(current);
+        const { regulations, priorKnowledge, internalStandards, cfrRegulations } =
+          await loadAnalysisContext(current, req);
         const result = await analyzePackaging(
           current,
           regulations,
@@ -581,10 +593,8 @@ router.post(
     const pkg = await loadOwnedPackage(req, res, id);
     if (!pkg) return;
     try {
-      const regulations = await loadRegulations();
-      const priorKnowledge = await priorKnowledgeFor(pkg, req);
-      const internalStandards = await relevantPoliciesFor(pkg, req);
-      const cfrRegulations = await ecfrRegulationsFor(pkg);
+      const { regulations, priorKnowledge, internalStandards, cfrRegulations } =
+        await loadAnalysisContext(pkg, req);
       const result = await analyzePackaging(
         pkg,
         regulations,
@@ -655,10 +665,8 @@ router.post(
     let current = afterExtract ?? pkg;
     if (current.extractedText && current.extractedText.trim()) {
       try {
-        const regulations = await loadRegulations();
-        const priorKnowledge = await priorKnowledgeFor(current, req);
-        const internalStandards = await relevantPoliciesFor(current, req);
-        const cfrRegulations = await ecfrRegulationsFor(current);
+        const { regulations, priorKnowledge, internalStandards, cfrRegulations } =
+          await loadAnalysisContext(current, req);
         const result = await analyzePackaging(
           current,
           regulations,
@@ -816,9 +824,12 @@ router.post(
 
     const analyzeOne = async (pkg: (typeof rows)[number]): Promise<void> => {
       try {
-        const priorKnowledge = await priorKnowledgeFor(pkg, req);
-        const internalStandards = await relevantPoliciesFor(pkg, req);
-        const cfrRegulations = await ecfrRegulationsFor(pkg);
+        const [priorKnowledge, internalStandards, cfrRegulations] =
+          await Promise.all([
+            priorKnowledgeFor(pkg, req),
+            relevantPoliciesFor(pkg, req),
+            ecfrRegulationsFor(pkg),
+          ]);
         const result = await analyzePackaging(
           pkg,
           regulations,
