@@ -91,6 +91,29 @@ async function extractPdfText(file: File): Promise<string> {
   }
 }
 
+// Render a PDF's first page to a downscaled JPEG data URL so the image-based
+// field OCR can pre-fill package metadata from PDFs too. Returns null if the
+// page can't be rendered (caller then simply skips metadata pre-fill).
+async function renderPdfFirstPageToDataUrl(file: File): Promise<string | null> {
+  const buf = await file.arrayBuffer()
+  const doc = await pdfjsLib.getDocument({ data: buf }).promise
+  try {
+    const page = await doc.getPage(1)
+    const base = page.getViewport({ scale: 1 })
+    const scale = Math.min(2, MAX_DIMENSION / Math.max(base.width, base.height))
+    const viewport = page.getViewport({ scale })
+    const canvas = document.createElement("canvas")
+    canvas.width = Math.round(viewport.width)
+    canvas.height = Math.round(viewport.height)
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return null
+    await page.render({ canvasContext: ctx, viewport }).promise
+    return canvas.toDataURL("image/jpeg", 0.85)
+  } finally {
+    await doc.destroy()
+  }
+}
+
 // Metadata is optional so specialists can upload & analyze in-progress or
 // partial artwork (also enabling auditing of existing packages). The AI runs on
 // whatever text is available; any blank identifiers can be filled in later.
@@ -193,6 +216,36 @@ export default function UploadPage() {
     })
   }
 
+  // Best-effort structured-field extraction from an artwork image data URL, used
+  // for both images and (via a rendered first page) PDFs. Fail-safe: unread
+  // fields come back empty and it never blocks the upload or surfaces an error.
+  // Non-destructive: only fills metadata inputs the user hasn't already touched.
+  const extractFieldsFromDataUrl = (dataUrl: string): Promise<void> =>
+    extractFields
+      .mutateAsync({ data: { imageDataUrl: dataUrl } })
+      .then((fields) => {
+        const map: Array<[keyof UploadFormValues, string]> = [
+          ["name", fields.productName],
+          ["brand", fields.brand],
+          ["upc", fields.upc],
+          ["netWeight", fields.netWeight],
+          ["country", fields.country],
+        ]
+        const filled = new Set<string>()
+        for (const [field, value] of map) {
+          const v = value?.trim() ?? ""
+          const current = (watch(field) ?? "").toString().trim()
+          if (v && !current) {
+            setValue(field, v, { shouldValidate: true })
+            filled.add(field)
+          }
+        }
+        if (filled.size > 0) setAutoFilled((prev) => new Set([...prev, ...filled]))
+      })
+      .catch(() => {
+        // Field extraction is best-effort; swallow errors silently.
+      })
+
   const handleFiles = async (files: FileList | null) => {
     const file = files?.[0]
     if (!file) return
@@ -214,34 +267,8 @@ export default function UploadPage() {
         return
       }
 
-      // Kick off the best-effort field extraction alongside the OCR text read.
-      // It is fail-safe: unread fields come back empty and it never blocks the
-      // upload or surfaces an error.
-      const fieldsPromise = extractFields
-        .mutateAsync({ data: { imageDataUrl: dataUrl } })
-        .then((fields) => {
-          // Non-destructive: only fill metadata inputs the user hasn't touched.
-          const map: Array<[keyof UploadFormValues, string]> = [
-            ["name", fields.productName],
-            ["brand", fields.brand],
-            ["upc", fields.upc],
-            ["netWeight", fields.netWeight],
-            ["country", fields.country],
-          ]
-          const filled = new Set<string>()
-          for (const [field, value] of map) {
-            const v = value?.trim() ?? ""
-            const current = (watch(field) ?? "").toString().trim()
-            if (v && !current) {
-              setValue(field, v, { shouldValidate: true })
-              filled.add(field)
-            }
-          }
-          if (filled.size > 0) setAutoFilled((prev) => new Set([...prev, ...filled]))
-        })
-        .catch(() => {
-          // Field extraction is best-effort; swallow errors silently.
-        })
+      // Best-effort structured-field extraction runs alongside the OCR text read.
+      const fieldsPromise = extractFieldsFromDataUrl(dataUrl)
 
       try {
         const result = await extractText.mutateAsync({ data: { imageDataUrl: dataUrl } })
@@ -259,6 +286,7 @@ export default function UploadPage() {
     // analysis starts immediately instead of re-reading the whole PDF.
     if (type === "pdf") {
       setPdfExtracting(true)
+      let fieldsPromise: Promise<void> | undefined
       try {
         const text = await extractPdfText(file)
         if (text) {
@@ -268,11 +296,20 @@ export default function UploadPage() {
             "No selectable text found in this PDF — it may be scanned or flattened. Paste the copy manually, or it will be read during analysis.",
           )
         }
+        // Also pre-fill the metadata form: render the first page and run the same
+        // image field OCR used for images. Best-effort — never blocks the text.
+        try {
+          const pageImage = await renderPdfFirstPageToDataUrl(file)
+          if (pageImage) fieldsPromise = extractFieldsFromDataUrl(pageImage)
+        } catch {
+          // Rendering the page failed; skip metadata pre-fill silently.
+        }
       } catch (err) {
         setOcrError(err instanceof Error ? err.message : "Failed to read text from the PDF.")
       } finally {
         setPdfExtracting(false)
       }
+      if (fieldsPromise) await fieldsPromise
     }
   }
 
