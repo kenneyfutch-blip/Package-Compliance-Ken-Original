@@ -2759,9 +2759,38 @@ export const ListNotificationsResponseItem = zod.object({
   "message": zod.string(),
   "type": zod.string(),
   "read": zod.boolean(),
+  "archived": zod.boolean(),
   "createdAt": zod.coerce.date()
 })
 export const ListNotificationsResponse = zod.array(ListNotificationsResponseItem)
+
+
+/**
+ * @summary Get the caller's notification preferences
+ */
+export const GetNotificationPreferencesResponse = zod.object({
+  "mutedTypes": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Update the caller's notification preferences (silence types)
+ */
+export const UpdateNotificationPreferencesBody = zod.object({
+  "mutedTypes": zod.array(zod.string())
+})
+
+export const UpdateNotificationPreferencesResponse = zod.object({
+  "mutedTypes": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Mark all of the caller's notifications as read
+ */
+export const MarkAllNotificationsReadResponse = zod.object({
+  "success": zod.boolean()
+})
 
 
 /**
@@ -2779,7 +2808,80 @@ export const MarkNotificationReadResponse = zod.object({
   "message": zod.string(),
   "type": zod.string(),
   "read": zod.boolean(),
+  "archived": zod.boolean(),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Mark a notification as unread
+ */
+export const MarkNotificationUnreadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkNotificationUnreadResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "packageId": zod.number().nullish(),
+  "title": zod.string(),
+  "message": zod.string(),
+  "type": zod.string(),
+  "read": zod.boolean(),
+  "archived": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Archive a notification
+ */
+export const ArchiveNotificationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiveNotificationResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "packageId": zod.number().nullish(),
+  "title": zod.string(),
+  "message": zod.string(),
+  "type": zod.string(),
+  "read": zod.boolean(),
+  "archived": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Restore an archived notification
+ */
+export const UnarchiveNotificationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UnarchiveNotificationResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "packageId": zod.number().nullish(),
+  "title": zod.string(),
+  "message": zod.string(),
+  "type": zod.string(),
+  "read": zod.boolean(),
+  "archived": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a notification
+ */
+export const DeleteNotificationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteNotificationResponse = zod.object({
+  "success": zod.boolean()
 })
 
 

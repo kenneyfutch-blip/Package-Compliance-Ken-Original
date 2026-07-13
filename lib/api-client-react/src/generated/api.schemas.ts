@@ -1792,7 +1792,16 @@ export interface Notification {
   message: string;
   type: string;
   read: boolean;
+  archived: boolean;
   createdAt: string;
+}
+
+export interface NotificationPreferences {
+  mutedTypes: string[];
+}
+
+export interface MutationResult {
+  success: boolean;
 }
 
 export interface Report {

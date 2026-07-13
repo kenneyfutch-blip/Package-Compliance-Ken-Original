@@ -14,5 +14,6 @@ export interface Notification {
   message: string;
   type: string;
   read: boolean;
+  archived: boolean;
   createdAt: Date;
 }

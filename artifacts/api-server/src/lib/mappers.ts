@@ -519,6 +519,7 @@ export function mapNotification(n: NotificationRow) {
     message: n.message,
     type: n.type,
     read: n.read,
+    archived: n.archived,
     createdAt: iso(n.createdAt)!,
   };
 }

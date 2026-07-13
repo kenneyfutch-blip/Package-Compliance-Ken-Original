@@ -882,7 +882,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { data: notifications = [] } = useListNotifications()
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [q, setQ] = React.useState("")
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const unreadCount = notifications.filter((n) => !n.read && !n.archived).length
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
 
