@@ -422,12 +422,12 @@ export default function ReviewWorkspace() {
             {exportProof.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
             Export Proof
           </Button>
-          <PoweredByAi className="mr-1 hidden md:inline-flex" />
           <Button variant="default" className="gap-2 h-9" disabled={analyze.isPending}
             onClick={() => analyze.mutate({ id: packageId }, { onSuccess: invalidate })}>
             {analyze.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
             Re-run AI
           </Button>
+          <PoweredByAi className="ml-1 hidden md:inline-flex" />
         </div>
       </div>
 
