@@ -123,17 +123,6 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: "review-operations",
-    label: "Review Operations",
-    defaultOpen: true,
-    items: [
-      { name: "High Risk Queue", href: "/queue/high-risk", icon: AlertTriangle },
-      { name: "Assigned Reviews", href: "/queue/assigned", icon: ClipboardList },
-      { name: "Bulk Review", href: "/bulk", icon: Layers },
-      { name: "Fast Review", href: "/fast-review", icon: Zap },
-    ],
-  },
-  {
     id: "products",
     label: "Packages",
     defaultOpen: true,
@@ -143,6 +132,17 @@ const SECTIONS: NavSection[] = [
       { name: "Approved", href: "/packages/approved", icon: ShieldCheck },
       { name: "Rejected", href: "/packages/rejected", icon: AlertTriangle },
       { name: "Archived", href: "/packages/archived", icon: History },
+    ],
+  },
+  {
+    id: "review-operations",
+    label: "Review Operations",
+    defaultOpen: true,
+    items: [
+      { name: "High Risk Queue", href: "/queue/high-risk", icon: AlertTriangle },
+      { name: "Assigned Reviews", href: "/queue/assigned", icon: ClipboardList },
+      { name: "Bulk Review", href: "/bulk", icon: Layers },
+      { name: "Fast Review", href: "/fast-review", icon: Zap },
     ],
   },
   {
