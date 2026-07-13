@@ -38,9 +38,9 @@ export function PoweredByAi({ className }: { className?: string }) {
             <span className="text-white">{label} {active.model}</span>
           </span>
         </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
+        <TooltipContent className="max-w-xs border border-neutral-700 bg-neutral-900 text-neutral-100">
           <p className="font-medium">Powered by {label} · {active.model}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          <p className="mt-0.5 text-xs text-neutral-400">
             Compliance analysis, findings, risk score and fix recommendations all run
             on your active AI model across every speed tier.
           </p>
