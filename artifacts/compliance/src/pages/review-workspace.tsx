@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -483,16 +484,31 @@ export default function ReviewWorkspace() {
         <div className="w-1/2 min-w-0 flex flex-col bg-card border border-border rounded-xl overflow-hidden">
           <Tabs defaultValue="findings" className="flex-1 flex flex-col min-h-0">
             <TabsList className="w-full justify-start rounded-none border-b border-border h-auto p-0 bg-muted/20 gap-4 px-4 overflow-x-auto shrink-0">
-              {[
-                ["findings", "Findings"], ["comments", "Comments"], ["tasks", "Tasks"],
-                ["data", "Data"], ["fda", "FDA Intel"], ["ecfr", "eCFR Regs"], ["copilot", "Copilot"], ["compare", "Compare"],
-                ["language", "Language"], ["claims", "Claims"], ["document", "Document AI"],
-              ].map(([v, label]) => (
-                <TabsTrigger key={v} value={v}
-                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2.5 px-1 text-sm">
-                  {label}
-                </TabsTrigger>
-              ))}
+              <TooltipProvider delayDuration={150}>
+                {[
+                  ["findings", "Findings", "Compliance issues the AI found in this artwork — each with severity, regulatory citations, and a suggested fix."],
+                  ["comments", "Comments", "Threaded reviewer comments and discussion, including pins placed directly on the artwork."],
+                  ["tasks", "Tasks", "Action items and follow-ups tracked for this package until it's ready to approve."],
+                  ["data", "Data", "Extracted package fields and metadata — SKU, brand, net weight, ingredients, and more."],
+                  ["fda", "FDA Intel", "Live FDA reference data (recalls, enforcement actions, labeling) relevant to this product."],
+                  ["ecfr", "eCFR Regs", "Matching federal regulations from the curated Code of Federal Regulations (eCFR) library."],
+                  ["copilot", "Copilot", "Ask the AI assistant questions about this package and its compliance — powered by your active model."],
+                  ["compare", "Compare", "Compare two versions of this package side by side, with an AI summary of what changed."],
+                  ["language", "Language", "AI copy review — spelling, grammar, contextual wording, marketing claims, and brand language."],
+                  ["claims", "Claims", "Audits product claims (e.g. \"Natural\", \"Non-Toxic\") against the regulations that govern them."],
+                  ["document", "Document AI", "OCR text extraction from the artwork image, powered by the active AI model."],
+                ].map(([v, label, info]) => (
+                  <Tooltip key={v}>
+                    <TooltipTrigger asChild>
+                      <TabsTrigger value={v}
+                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2.5 px-1 text-sm">
+                        {label}
+                      </TabsTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">{info}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </TooltipProvider>
             </TabsList>
 
             <div className="flex-1 overflow-y-auto min-h-0">
