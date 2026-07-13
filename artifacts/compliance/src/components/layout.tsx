@@ -683,9 +683,9 @@ function Brand() {
           className="h-10 w-auto object-contain"
         />
       </span>
-      <span className="flex flex-col justify-center gap-0.5 leading-none border-l border-border pl-3 min-w-0">
-        <span className="text-xl font-bold text-foreground truncate">Compliance AI</span>
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground truncate">
+      <span className="flex flex-col justify-center gap-0.5 leading-none border-l border-border pl-3 shrink-0">
+        <span className="text-xl font-bold text-foreground whitespace-nowrap">Compliance AI</span>
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">
           Packaging Review
         </span>
       </span>
