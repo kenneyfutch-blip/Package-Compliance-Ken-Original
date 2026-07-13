@@ -38,3 +38,4 @@
 - [Clerk path-routing with wouter](clerk-path-routing.md) — render UserProfile/SignIn as pages: path must include BASE_URL, wouter route needs `nest` for sub-routes, requiredPermFor leaves /account ungated.
 - [Vite PORT/BASE_PATH build blocker](vite-port-build-blocker.md) — web artifact vite.config must require PORT only for `serve`, not `build`; default BASE_PATH to '/' or the prod deploy build throws.
 - [Training Center](training-center.md) — in-app Training & Help hub: data-driven content modules, server-saved progress, driver.js tours anchored to persistent chrome, support tickets; /training/* open to all incl suppliers.
+- [Dashboard page resilience](dashboard-page-resilience.md) — never gate a multi-widget page behind one combined isLoading; one stalled query freezes the whole page. Per-card loading/empty; check the shared gate before query-tuning.
