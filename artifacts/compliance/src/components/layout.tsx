@@ -680,12 +680,12 @@ function Brand() {
         <img
           src={`${import.meta.env.BASE_URL}dollar-tree-logo.png`}
           alt="Dollar Tree"
-          className="h-10 w-auto object-contain"
+          className="h-8 w-auto object-contain"
         />
       </span>
       <span className="flex flex-col justify-center gap-0.5 leading-none border-l border-border pl-3 shrink-0">
-        <span className="text-xl font-bold text-foreground whitespace-nowrap">Compliance AI</span>
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">
+        <span className="text-base font-bold text-foreground whitespace-nowrap">Compliance AI</span>
+        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">
           Packaging Review
         </span>
       </span>
