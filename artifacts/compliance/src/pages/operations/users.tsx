@@ -64,6 +64,21 @@ export default function UserManagement() {
     return u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.role.toLowerCase().includes(q)
   })
 
+  // Stable display order so changing a user's role never reshuffles the list:
+  // Platform Administrators always sort to the top, everyone else alphabetically
+  // by name. Both keys are independent of the mutable role (except admin), so a
+  // non-admin role change leaves every row exactly where it was.
+  const sorted = [...filtered].sort((a, b) => {
+    const aAdmin = a.roleKey === "platform_admin" ? 0 : 1
+    const bAdmin = b.roleKey === "platform_admin" ? 0 : 1
+    if (aAdmin !== bAdmin) return aAdmin - bAdmin
+    const byName = a.name.localeCompare(b.name)
+    if (byName !== 0) return byName
+    // Final deterministic tie-breaker (stable id) so users with identical names
+    // never fall back to the role-dependent server order on refetch.
+    return a.id - b.id
+  })
+
   const submitInvite = () => {
     setInviteError(null)
     inviteMut.mutate(
@@ -112,7 +127,7 @@ export default function UserManagement() {
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-          ) : filtered.length === 0 ? (
+          ) : sorted.length === 0 ? (
             <div className="py-16 text-center text-muted-foreground">No users found.</div>
           ) : (
             <Table>
@@ -126,7 +141,7 @@ export default function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((u) => (
+                {sorted.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell>
                       <div className="font-medium">{u.name}</div>
