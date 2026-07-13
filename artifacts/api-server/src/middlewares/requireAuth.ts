@@ -20,6 +20,32 @@ type CacheEntry = {
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const cache = new Map<string, CacheEntry>();
 
+// This tool is for Dollar Tree employees only. A non-Dollar-Tree address is
+// already denied all data (403 below), but Replit-managed Clerk exposes no
+// sign-up domain allowlist, so an outside user can still *create* a login. To
+// guarantee no usable outside login persists, we delete the Clerk account the
+// moment a disallowed email is confirmed on the server.
+//
+// Safety: only ever delete when we have a POSITIVELY confirmed non-allowed
+// email. A null/undefined email (e.g. a transient lookup gap) returns 403 but
+// must NEVER trigger deletion — that could remove a legitimate associate.
+async function purgeDisallowedClerkUser(
+  userId: string,
+  email: string | null,
+  req: Request,
+): Promise<void> {
+  if (!email || isEmailAllowed(email)) return;
+  try {
+    await clerkClient.users.deleteUser(userId);
+    req.log?.warn({ email }, "Deleted non-Dollar-Tree Clerk account");
+  } catch (err) {
+    req.log?.error(
+      { err, email },
+      "Failed to delete non-Dollar-Tree Clerk account",
+    );
+  }
+}
+
 export async function requireAuth(
   req: Request,
   res: Response,
@@ -113,6 +139,12 @@ export async function requireAuth(
             "Could not verify your session right now. Please retry in a moment.",
         });
       return;
+    }
+    if (gate.status === 403) {
+      // Outside email positively confirmed: purge the Clerk account so no
+      // usable non-Dollar-Tree login can persist. Fire-and-forget — the 403
+      // below is still returned regardless of whether deletion succeeds.
+      void purgeDisallowedClerkUser(userId as string, gate.email, req);
     }
     entry = {
       email: gate.email,
