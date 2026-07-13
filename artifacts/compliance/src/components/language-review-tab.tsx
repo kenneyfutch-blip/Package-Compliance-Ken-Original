@@ -19,6 +19,7 @@ import {
   Search,
   ChevronDown,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react"
 import { usePermissions } from "@/lib/access"
 import { cn } from "@/lib/utils"
@@ -154,6 +155,16 @@ export function LanguageReviewTab({
 
   return (
     <div className="space-y-6">
+      <div className="flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <p>
+          <span className="font-medium text-foreground">AI-powered spell check &amp; language analysis.</span>{" "}
+          This copy is reviewed by AI (OpenAI GPT-5.4) for content and accuracy across spelling,
+          grammar, context, regulatory language, and marketing claims. Always confirm critical
+          findings before approval.
+        </p>
+      </div>
+
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div>

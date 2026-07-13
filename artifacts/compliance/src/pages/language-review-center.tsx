@@ -94,8 +94,9 @@ export default function LanguageReviewCenter() {
           <Languages className="w-7 h-7 text-primary" /> Language Review
         </h1>
         <p className="text-muted-foreground mt-1">
-          AI-detected language issues across all packaging — spelling, grammar,
-          context, regulatory language, marketing claims, and brand standards.
+          AI-reviewed for content and accuracy (OpenAI GPT-5.4) across all
+          packaging — spelling, grammar, context, regulatory language, marketing
+          claims, and brand standards.
         </p>
       </div>
 

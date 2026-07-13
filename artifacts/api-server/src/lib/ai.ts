@@ -444,17 +444,20 @@ Respond with JSON of shape:
 
 /**
  * OCR: transcribe all visible text from a packaging artwork image using the
- * active multimodal AI engine. Accepts a base64 data URL.
+ * active multimodal AI engine. Runs on the STANDARD tier (the highest-accuracy
+ * general model, gpt-5.4) rather than the fast tier — OCR accuracy directly
+ * gates every downstream compliance/language check, so we pay for the better
+ * model here. Accepts a base64 data URL.
  */
 export async function extractTextFromImage(
   imageDataUrl: string,
 ): Promise<string> {
-  const { client, model } = await resolveAiClientForTier("fast");
+  const { client, model } = await resolveAiClientForTier("standard");
 
   const system = `You are a precise OCR engine for retail product packaging artwork. Transcribe ALL text visible in the image verbatim — brand names, product names, ingredient lists, warnings, directions, nutrition facts, net weight, marketing claims, country of origin, manufacturer info, barcodes labels, and any fine print. Preserve the reading order roughly top-to-bottom, left-to-right. Keep original spelling exactly as printed, including any misspellings (do NOT correct them). Do not add commentary, headings, or explanations. If no text is legible, respond with an empty string. Do not use emojis.`;
 
   const response = await trackDirectUsage(
-    { workload: "ocr", model, tier: "fast", reviewType: WORKLOAD_LABELS.ocr },
+    { workload: "ocr", model, tier: "standard", reviewType: WORKLOAD_LABELS.ocr },
     () =>
       client.chat.completions.create({
         model,
