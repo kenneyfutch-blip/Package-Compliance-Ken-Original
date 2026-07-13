@@ -28,7 +28,7 @@ import {
   ArrowLeft, BrainCircuit, CheckCircle, Loader2, Send, ShieldCheck, ShieldAlert,
   MessageSquarePlus, Trash2, CheckCheck, CornerDownRight, ClipboardList, Plus,
   FileDown, GitCompareArrows, Sparkles, ChevronDown, XCircle, AlertOctagon, ScrollText,
-  Gavel, Bot, User as UserIcon, FilePlus, Download, RotateCcw,
+  Gavel, Bot, User as UserIcon, FilePlus, Download, RotateCcw, HelpCircle,
 } from "lucide-react"
 import { useUpload } from "@workspace/object-storage-web"
 import { ProofViewer, type ViewerAnnotation, type AnnotationDraft } from "@/components/proof-viewer"
@@ -498,15 +498,26 @@ export default function ReviewWorkspace() {
                   ["claims", "Claims", "Audits product claims (e.g. \"Natural\", \"Non-Toxic\") against the regulations that govern them."],
                   ["document", "Document AI", "OCR text extraction from the artwork image, powered by the active AI model."],
                 ].map(([v, label, info]) => (
-                  <Tooltip key={v}>
-                    <TooltipTrigger asChild>
-                      <TabsTrigger value={v}
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2.5 px-1 text-sm">
-                        {label}
-                      </TabsTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">{info}</TooltipContent>
-                  </Tooltip>
+                  <TabsTrigger key={v} value={v}
+                    className="group/tab inline-flex items-center gap-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2.5 px-1 text-sm">
+                    {label}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          role="button"
+                          tabIndex={-1}
+                          aria-label={`About ${label}`}
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+                          className="inline-flex cursor-help text-muted-foreground/50 transition-colors hover:text-foreground"
+                        >
+                          <HelpCircle className="h-3.5 w-3.5" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs border border-neutral-700 bg-neutral-900 text-neutral-100">
+                        {info}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TabsTrigger>
                 ))}
               </TooltipProvider>
             </TabsList>
