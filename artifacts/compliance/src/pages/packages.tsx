@@ -22,7 +22,10 @@ import {
   ArchiveRestore,
   Trash2,
   Loader2 as Spinner,
+  ImageOff,
+  FileText,
 } from "lucide-react"
+import { servingUrl, fileTypeFromName } from "@/lib/proof-utils"
 import { gradeColor, riskBand } from "@/lib/compliance"
 import { usePermissions } from "@/lib/access"
 import { useToast } from "@/hooks/use-toast"
@@ -49,6 +52,50 @@ interface Props {
   statusFilter?: string
   riskFilter?: string
   emptyText?: string
+}
+
+// Small artwork thumbnail shown at the top of each package card. Reuses the
+// same URL resolver the review workspace uses so object-storage, seed, and
+// public artwork all render. Falls back to a typed placeholder for PDFs / vector
+// source files (.ai/.indd) and for missing or broken images.
+function ArtworkPreview({ url, name }: { url: string | null | undefined; name: string }) {
+  const [broken, setBroken] = useState(false)
+  const src = servingUrl(url)
+  const type = url ? fileTypeFromName(url) : "other"
+  const isImage = type === "png" || type === "jpg"
+  const showImage = Boolean(src) && isImage && !broken
+
+  return (
+    <div className="relative aspect-[16/9] w-full overflow-hidden rounded-t-md border-b border-border bg-muted">
+      {showImage ? (
+        <img
+          src={src!}
+          alt={`${name} artwork`}
+          loading="lazy"
+          className="h-full w-full object-contain"
+          onError={() => setBroken(true)}
+        />
+      ) : (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
+          {type === "pdf" || type === "ai" || type === "indd" ? (
+            <>
+              <FileText className="h-7 w-7" />
+              <span className="text-[10px] font-medium uppercase tracking-wide">
+                {type} file
+              </span>
+            </>
+          ) : (
+            <>
+              <ImageOff className="h-7 w-7" />
+              <span className="text-[10px] font-medium uppercase tracking-wide">
+                No preview
+              </span>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function PackageCardMenu({
@@ -250,9 +297,10 @@ export default function PackagesView({
             return (
               <Card
                 key={pkg.id}
-                className="flex flex-col hover-elevate transition-all border-t-4"
+                className="flex flex-col hover-elevate transition-all border-t-4 overflow-hidden"
                 style={{ borderTopColor: band.border }}
               >
+                <ArtworkPreview url={pkg.artworkUrl} name={pkg.name} />
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <div>
