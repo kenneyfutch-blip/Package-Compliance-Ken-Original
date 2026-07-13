@@ -8,6 +8,7 @@ import {
   Undo2, Loader2, Copy, Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import {
   type MarkupTool, DRAG_TOOLS, findingClassMeta, HUMAN_MARKUP_COLOR, servingUrl,
@@ -211,20 +212,28 @@ export function ProofViewer(props: Props) {
     <div className="flex flex-col h-full bg-accent/30 rounded-xl border border-border overflow-hidden">
       {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b border-border bg-card shrink-0 flex-wrap">
-        <div className="flex items-center gap-0.5 mr-1">
-          {TOOLS.map((t) => (
-            <Button
-              key={t.tool}
-              variant={activeTool === t.tool ? "default" : "ghost"}
-              size="icon"
-              className="h-8 w-8"
-              title={t.label}
-              onClick={() => onToolChange(t.tool)}
-            >
-              <t.icon className="w-4 h-4" />
-            </Button>
-          ))}
-        </div>
+        <TooltipProvider delayDuration={150}>
+          <div className="flex items-center gap-0.5 mr-1">
+            {TOOLS.map((t) => (
+              <Tooltip key={t.tool}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={activeTool === t.tool ? "default" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label={t.label}
+                    onClick={() => onToolChange(t.tool)}
+                  >
+                    <t.icon className="w-4 h-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent className="border border-neutral-700 bg-neutral-900 text-neutral-100">
+                  {t.label}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </TooltipProvider>
         <div className="h-6 w-px bg-border mx-1" />
         <Button
           variant="ghost"
