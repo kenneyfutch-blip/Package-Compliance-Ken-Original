@@ -29,13 +29,13 @@ export function PoweredByAi({ className }: { className?: string }) {
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground cursor-default select-none",
+              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium text-white cursor-default select-none",
               className,
             )}
           >
-            <Sparkles className="w-3 h-3 text-primary shrink-0" />
-            <span className="hidden sm:inline">Powered by</span>
-            <span className="text-foreground">{label} {active.model}</span>
+            <Sparkles className="w-3 h-3 text-white shrink-0" />
+            <span className="hidden text-white/70 sm:inline">Powered by</span>
+            <span className="text-white">{label} {active.model}</span>
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
