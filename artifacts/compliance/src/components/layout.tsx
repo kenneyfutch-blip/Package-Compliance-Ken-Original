@@ -60,6 +60,7 @@ import { useUser, useClerk } from "@clerk/react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -319,6 +320,72 @@ function loadSectionState(): Record<string, boolean> {
   }
 }
 
+// Short, plain-language descriptions for each navigation tool, keyed by href.
+// Shown as a hover tooltip on the sidebar row so users understand what a tool
+// does before clicking. Keep each to one concise sentence.
+const NAV_DESC: Record<string, string> = {
+  "/my-dashboard": "Your personal overview of reviews, tasks, and recent activity.",
+  "/reviews": "Reviews currently assigned to you.",
+  "/my-work": "Your open tasks and follow-ups.",
+  "/notifications": "Alerts, mentions, and updates for you.",
+  "/": "Team-wide compliance dashboard and key metrics.",
+  "/upload": "Upload artwork to start a new package review.",
+  "/queue/high-risk": "Packages flagged high risk, prioritized for review.",
+  "/queue/assigned": "All reviews assigned across the team.",
+  "/bulk": "Review many packages at once.",
+  "/fast-review": "Streamlined single-pass review for quick approvals.",
+  "/packages": "Every package in the system.",
+  "/packages/active": "Packages currently under review.",
+  "/packages/approved": "Packages that have passed review.",
+  "/packages/rejected": "Packages that failed review.",
+  "/packages/archived": "Retired packages kept for reference.",
+  "/ai/violations": "Compliance violations the AI detected across packages.",
+  "/ai/claims": "Marketing claim audits against the regulations that govern them.",
+  "/ai/language": "AI copy review — spelling, grammar, and wording.",
+  "/ai/fixes": "AI-suggested corrections for open findings.",
+  "/ai/heatmaps": "Visual maps of where issues cluster on artwork.",
+  "/ai/memory": "Institutional knowledge the AI recalls across reviews.",
+  "/regulations": "Searchable library of federal and agency regulations.",
+  "/regulatory/sop": "Internal standard operating procedures.",
+  "/regulatory/sources": "Trusted regulatory data sources and their status.",
+  "/regulatory-updates": "Recent changes to rules and regulations.",
+  "/regulatory/recalls": "Latest FDA recalls and enforcement actions.",
+  "/suppliers": "Directory of all vendors and suppliers.",
+  "/suppliers/scorecards": "Compliance performance scores by vendor.",
+  "/suppliers/portal": "The submission portal your suppliers use.",
+  "/resources": "Central hub for references, guides, and standards.",
+  "/resources/policies": "Internal policies and standards.",
+  "/resources/sop": "SOP documents with full version history.",
+  "/resources/glossary": "Approved wording and terminology.",
+  "/reports": "Compliance reports and summaries.",
+  "/reports/executive": "High-level reports for leadership.",
+  "/reports/trends": "Trends and patterns over time.",
+  "/operations/teams": "Overview of team activity and capacity.",
+  "/admin/queue": "Assign and route reviews to the team.",
+  "/operations/workload": "Workload balance and SLA tracking.",
+  "/admin/dashboard": "System-wide administration overview.",
+  "/admin/activity": "Live activity across the platform.",
+  "/admin/usage": "Platform usage analytics.",
+  "/admin/ai-usage": "AI call volume and cost tracking.",
+  "/admin/integrations": "Connected AI providers and services.",
+  "/admin/policies": "Create and manage internal policies.",
+  "/operations/users": "Manage user accounts.",
+  "/operations/roles": "Roles and permission settings.",
+  "/operations/audit": "Full audit trail of every change.",
+  "/operations/system": "Background job queue and system health.",
+  "/admin": "Application settings.",
+  "/training/getting-started": "Quick-start guide for new users.",
+  "/training/user-guide": "The complete product reference.",
+  "/training/walkthroughs": "Interactive, guided product tours.",
+  "/training/videos": "Video tutorials.",
+  "/training/best-practices": "Recommended ways to work.",
+  "/training/academy": "Structured compliance courses.",
+  "/training/faq": "Answers to common questions.",
+  "/training/release-notes": "What's new, improved, and fixed.",
+  "/training/glossary": "Platform terms and definitions.",
+  "/training/support": "Contact support for help.",
+}
+
 // A single sidebar row: the tool link plus a star toggle (revealed on hover,
 // always shown once starred). The star is a sibling of the Link — never nested
 // inside the anchor — so it stays valid, clickable markup.
@@ -341,19 +408,30 @@ function NavRow({
         active ? "bg-muted border-muted-foreground/50" : "border-transparent hover:bg-accent",
       )}
     >
-      <Link
-        href={item.href}
-        onClick={onNavigate}
-        className={cn(
-          "flex min-w-0 flex-1 items-center gap-3 pl-3 pr-1 py-2.5 text-sm",
-          active
-            ? "text-foreground font-semibold"
-            : "text-foreground group-hover/navrow:text-foreground",
-        )}
-      >
-        <Icon className={cn("w-4 h-4 shrink-0", active && "text-foreground")} />
-        <span className="truncate">{item.name}</span>
-      </Link>
+      <TooltipProvider delayDuration={300}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link
+              href={item.href}
+              onClick={onNavigate}
+              className={cn(
+                "flex min-w-0 flex-1 items-center gap-3 pl-3 pr-1 py-2.5 text-sm",
+                active
+                  ? "text-foreground font-semibold"
+                  : "text-foreground group-hover/navrow:text-foreground",
+              )}
+            >
+              <Icon className={cn("w-4 h-4 shrink-0", active && "text-foreground")} />
+              <span className="truncate">{item.name}</span>
+            </Link>
+          </TooltipTrigger>
+          {NAV_DESC[item.href] && (
+            <TooltipContent side="right" className="max-w-xs border border-neutral-700 bg-neutral-900 text-neutral-100">
+              {NAV_DESC[item.href]}
+            </TooltipContent>
+          )}
+        </Tooltip>
+      </TooltipProvider>
       <button
         type="button"
         onClick={(e) => {
