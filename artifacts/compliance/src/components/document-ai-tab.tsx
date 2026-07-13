@@ -73,7 +73,7 @@ export function DocumentAiTab({ packageId }: { packageId: number }) {
           </div>
           <div>
             <div className="font-semibold text-sm flex items-center gap-2">
-              Google Document AI
+              {status?.engine === "google-document-ai" ? "Google Document AI" : "OpenAI Vision"}
               {configured ? (
                 <Badge variant="outline" className="text-[10px] bg-success/10 text-success border-success/20">Connected</Badge>
               ) : (

@@ -125,27 +125,36 @@ export default function Integrations() {
                     </div>
                   )}
                   
-                  <div className="mt-6 pt-4 border-t border-border/50">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Service Checks</div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-md">
-                        {docAi.projectConfigured ? <CheckCircle2 className="w-4 h-4 text-success" /> : <AlertTriangle className="w-4 h-4 text-warning" />}
-                        <span className="font-medium text-xs">Project Config</span>
-                      </div>
-                      <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-md">
-                        {docAi.processorConfigured ? <CheckCircle2 className="w-4 h-4 text-success" /> : <AlertTriangle className="w-4 h-4 text-warning" />}
-                        <span className="font-medium text-xs">Processor Link</span>
-                      </div>
-                      <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-md">
-                        {docAi.serviceAccountConfigured ? <CheckCircle2 className="w-4 h-4 text-success" /> : <AlertTriangle className="w-4 h-4 text-warning" />}
-                        <span className="font-medium text-xs">Service Auth</span>
-                      </div>
-                      <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-md">
-                        {docAi.locationConfigured ? <CheckCircle2 className="w-4 h-4 text-success" /> : <AlertTriangle className="w-4 h-4 text-warning" />}
-                        <span className="font-medium text-xs">Location Sync</span>
+                  {docAi.engine === "google-document-ai" ? (
+                    <div className="mt-6 pt-4 border-t border-border/50">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Service Checks</div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-md">
+                          {docAi.projectConfigured ? <CheckCircle2 className="w-4 h-4 text-success" /> : <AlertTriangle className="w-4 h-4 text-warning" />}
+                          <span className="font-medium text-xs">Project Config</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-md">
+                          {docAi.processorConfigured ? <CheckCircle2 className="w-4 h-4 text-success" /> : <AlertTriangle className="w-4 h-4 text-warning" />}
+                          <span className="font-medium text-xs">Processor Link</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-md">
+                          {docAi.serviceAccountConfigured ? <CheckCircle2 className="w-4 h-4 text-success" /> : <AlertTriangle className="w-4 h-4 text-warning" />}
+                          <span className="font-medium text-xs">Service Auth</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-md">
+                          {docAi.locationConfigured ? <CheckCircle2 className="w-4 h-4 text-success" /> : <AlertTriangle className="w-4 h-4 text-warning" />}
+                          <span className="font-medium text-xs">Location Sync</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="mt-6 pt-4 border-t border-border/50">
+                      <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-md">
+                        <CheckCircle2 className="w-4 h-4 text-success" />
+                        <span className="font-medium text-xs">Runs on the active AI model — no separate credentials required</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

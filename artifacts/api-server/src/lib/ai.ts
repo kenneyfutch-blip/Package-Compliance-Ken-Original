@@ -481,6 +481,66 @@ export async function extractTextFromImage(
   return response.choices[0]?.message?.content?.trim() ?? "";
 }
 
+/**
+ * Provider-agnostic OCR transcription through the active OpenAI-compatible model.
+ * Handles raster images (sent as an image part) and PDFs (sent as a file part so
+ * the model reads every page). Returns the verbatim transcript plus the model id
+ * used. This is the engine behind the OpenAI Vision OCR provider — the active AI
+ * provider (the user's key, else the Replit-managed fallback) powers it.
+ */
+export async function runOpenAiOcr(input: {
+  content: Buffer;
+  mimeType: string;
+  fileName?: string;
+}): Promise<{ text: string; model: string }> {
+  const { client, model } = await resolveAiClientForTier("standard");
+  const base64 = input.content.toString("base64");
+  const isPdf = input.mimeType === "application/pdf";
+
+  const system = `You are a precise OCR engine for retail product packaging artwork and documents. Transcribe ALL text visible in the document verbatim — brand names, product names, ingredient lists, warnings, directions, nutrition facts, net weight, marketing claims, country of origin, manufacturer info, barcode digits, and any fine print. Preserve the reading order roughly top-to-bottom, left-to-right; for multi-page documents transcribe every page in order. Keep original spelling exactly as printed, including any misspellings (do NOT correct them). Do not add commentary, headings, or explanations. If no text is legible, respond with an empty string. Do not use emojis.`;
+
+  const response = await trackDirectUsage(
+    { workload: "ocr", model, tier: "standard", reviewType: WORKLOAD_LABELS.ocr },
+    () =>
+      client.chat.completions.create({
+        model,
+        messages: [
+          { role: "system", content: system },
+          {
+            role: "user",
+            content: isPdf
+              ? [
+                  {
+                    type: "text",
+                    text: "Transcribe every piece of text in this document, verbatim, page by page.",
+                  },
+                  {
+                    type: "file",
+                    file: {
+                      filename: input.fileName || "document.pdf",
+                      file_data: `data:application/pdf;base64,${base64}`,
+                    },
+                  },
+                ]
+              : [
+                  {
+                    type: "text",
+                    text: "Transcribe every piece of text on this packaging artwork, verbatim.",
+                  },
+                  {
+                    type: "image_url",
+                    image_url: { url: `data:${input.mimeType};base64,${base64}` },
+                  },
+                ],
+          },
+        ],
+        max_completion_tokens: 8192,
+      }),
+  );
+
+  return { text: response.choices[0]?.message?.content?.trim() ?? "", model };
+}
+
 export type ExtractedPackageFields = {
   productName: string;
   brand: string;

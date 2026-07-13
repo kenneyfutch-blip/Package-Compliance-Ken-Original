@@ -5,24 +5,30 @@
 // helpers here, so adding a provider is a one-line registration change with no
 // ripple through callers.
 //
-// Selection: `OCR_PROVIDER` env var chooses the active provider (for future
-// providers); it defaults to Google Document AI and falls back to the default if
-// set to an unknown id.
+// Selection: `OCR_PROVIDER` env var chooses the active provider; it defaults to
+// OpenAI Vision (which rides on the active AI model and is always available) and
+// falls back to the default if set to an unknown id. Google Document AI stays
+// registered and can be re-selected with OCR_PROVIDER=google-document-ai.
 
 import { logger } from "../../logger";
 import {
   GOOGLE_DOCUMENT_AI_PROVIDER_ID,
   googleDocumentAiProvider,
 } from "./google";
+import {
+  OPENAI_VISION_PROVIDER_ID,
+  openaiVisionProvider,
+} from "./openai";
 import type { OcrProvider, OcrProviderStatus } from "./types";
 
 // Registry of available providers. To add a provider: implement OcrProvider in a
 // sibling module and register it here.
 const PROVIDERS: Record<string, OcrProvider> = {
+  [OPENAI_VISION_PROVIDER_ID]: openaiVisionProvider,
   [GOOGLE_DOCUMENT_AI_PROVIDER_ID]: googleDocumentAiProvider,
 };
 
-const DEFAULT_PROVIDER_ID = GOOGLE_DOCUMENT_AI_PROVIDER_ID;
+const DEFAULT_PROVIDER_ID = OPENAI_VISION_PROVIDER_ID;
 
 /** The provider currently selected for extraction (via OCR_PROVIDER, else default). */
 export function getActiveProvider(): OcrProvider {
