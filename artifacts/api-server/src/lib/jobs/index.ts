@@ -14,6 +14,10 @@ import {
   PRESENCE_SWEEP_INTERVAL_MS,
   sweepPresenceAndLocks,
 } from "../reviews/presence";
+import {
+  PACKAGE_ANALYSIS_TYPE,
+  handlePackageAnalysisJob,
+} from "../packageAnalysis";
 import { ensurePendingJob, ensureScheduledJob } from "./queue";
 import { registerJobHandler, startJobWorker } from "./worker";
 
@@ -62,6 +66,11 @@ export async function initJobs(): Promise<void> {
     });
     return result;
   });
+
+  // On-demand (non-recurring) job: full compliance analysis for a package,
+  // enqueued when a package is created with artwork text so the upload can
+  // return immediately instead of blocking on the AI analysis.
+  registerJobHandler(PACKAGE_ANALYSIS_TYPE, handlePackageAnalysisJob);
 
   startJobWorker();
 

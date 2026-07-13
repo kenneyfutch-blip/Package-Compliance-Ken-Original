@@ -42,3 +42,4 @@
 - [Notifications management](notifications-management.md) — org-wide notifications use a per-user notification_states overlay (read/archive/soft-delete) so one user never mutates a shared broadcast for everyone; muting filters by `type` at GET.
 - [Seed reference vs demo split](seed-lifecycle.md) — seedReference (prod-safe, idempotent, never deletes) vs seedDemo (dev-only, NODE_ENV-guarded); default `seed`=reference; clearDemo is full-table not per-org.
 - [Employees-only login](domain-restricted-login.md) — managed Clerk has no sign-up allowlist; enforce via server 403 gate + purge Clerk account on CONFIRMED non-allowed email only (never on null/503/load-test).
+- [Background package analysis](background-analysis.md) — upload enqueues a durable analysis job + "AI Review" holding state; three exits (success/perm-fail/enqueue-fail) must all release it or packages hang "Analyzing" forever.

@@ -52,6 +52,7 @@ import { packageConds, canAccessPackage } from "../lib/rbac/scope";
 import { writeAudit } from "../lib/audit";
 import { autoAssignReview, completeReview } from "../lib/reviews/engine";
 import { matchTeamName } from "../lib/reviews/routing";
+import { enqueuePackageAnalysis } from "../lib/packageAnalysis";
 import {
   retrieveSimilarFindings,
   captureFindingsForDecision,
@@ -391,47 +392,76 @@ router.post(
       }
     }
 
-    // Reasoning layer: OpenAI analysis runs once we have extracted text, whether
-    // it came from Document AI or was supplied on the request.
+    // Reasoning + assignment now run in the BACKGROUND so the upload returns
+    // immediately instead of blocking on a multi-second — and, for high-risk
+    // items that escalate to the reasoning tier, multi-minute — AI analysis.
+    // The package enters "AI Review"; a durable job analyzes it and routes it to
+    // a team, and the review page polls until the results land.
     if (current.extractedText && current.extractedText.trim()) {
-      try {
-        const { regulations, priorKnowledge, internalStandards, cfrRegulations } =
-          await loadAnalysisContext(current, req);
-        const result = await analyzePackaging(
-          current,
-          regulations,
-          priorKnowledge,
-          internalStandards,
-          cfrRegulations,
-        );
-        const version = await ensureInitialVersion(current);
-        await applyAnalysis(current, result, version.id, organizationId);
-        const [refreshed] = await db
-          .select()
-          .from(packagesTable)
-          .where(eq(packagesTable.id, inserted.id));
-        if (refreshed) current = refreshed;
-      } catch (err) {
-        logger.error({ err }, "Auto-analysis failed on create");
-      }
-    }
-
-    // Assignment layer: route the package to the right team by category and
-    // load-balance it onto the least-loaded specialist. Non-fatal — a failure
-    // here must not block package creation.
-    try {
       const ctx = getAuthContext(req);
-      await autoAssignReview({
-        organizationId,
-        packageId: current.id,
-        category: current.category,
-        teamName: matchTeamName(current.category),
-        priority: (current.criticalCount ?? 0) > 0 ? "critical" : "normal",
-        actorUserId: ctx.userId,
-        actorName: ctx.name || ctx.email || "System",
-      });
-    } catch (err) {
-      logger.error({ err }, "Auto-assignment failed on create");
+      const supplierId =
+        ctx.roleKey === "supplier_user" ? (ctx.supplierId ?? -1) : null;
+      await db
+        .update(packagesTable)
+        .set({ status: "AI Review" })
+        .where(eq(packagesTable.id, current.id));
+      current = { ...current, status: "AI Review" };
+      try {
+        await enqueuePackageAnalysis({
+          packageId: current.id,
+          organizationId,
+          supplierId,
+          actorUserId: ctx.userId,
+          actorName: ctx.name || ctx.email || "System",
+        });
+      } catch (err) {
+        // Enqueue failed: never strand the package in "AI Review" with no job to
+        // complete it. Drop it out of the holding state and route it for manual
+        // handling, mirroring the no-text branch below.
+        logger.error(
+          { err, packageId: current.id },
+          "Failed to enqueue package analysis; routing for manual review",
+        );
+        await db
+          .update(packagesTable)
+          .set({ status: "Needs Review" })
+          .where(eq(packagesTable.id, current.id))
+          .catch(() => {});
+        current = { ...current, status: "Needs Review" };
+        try {
+          await autoAssignReview({
+            organizationId,
+            packageId: current.id,
+            category: current.category,
+            teamName: matchTeamName(current.category),
+            priority: "normal",
+            actorUserId: ctx.userId,
+            actorName: ctx.name || ctx.email || "System",
+          });
+        } catch (assignErr) {
+          logger.error(
+            { err: assignErr, packageId: current.id },
+            "Auto-assignment failed after enqueue failure",
+          );
+        }
+      }
+    } else {
+      // No text to analyze (e.g. a scanned PDF with no OCR): there is no
+      // background analysis to defer to, so route it for manual handling now.
+      try {
+        const ctx = getAuthContext(req);
+        await autoAssignReview({
+          organizationId,
+          packageId: current.id,
+          category: current.category,
+          teamName: matchTeamName(current.category),
+          priority: "normal",
+          actorUserId: ctx.userId,
+          actorName: ctx.name || ctx.email || "System",
+        });
+      } catch (err) {
+        logger.error({ err }, "Auto-assignment failed on create");
+      }
     }
 
     res.status(201).json(await buildDetail(current));

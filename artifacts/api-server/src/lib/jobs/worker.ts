@@ -75,3 +75,12 @@ export function startJobWorker(): void {
   setTimeout(loop, 2_000);
   logger.info({ workerId: WORKER_ID }, "Background job worker started");
 }
+
+// Wake the worker to drain due jobs immediately instead of waiting for the next
+// poll tick — used right after enqueuing a latency-sensitive job (e.g. package
+// analysis) so results start landing without the poll delay. No-op until the
+// worker has been started.
+export function pokeJobWorker(): void {
+  if (!started) return;
+  void tick();
+}

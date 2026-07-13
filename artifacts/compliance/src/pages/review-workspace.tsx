@@ -92,7 +92,14 @@ export default function ReviewWorkspace() {
   const { toast: pageToast } = useToast()
 
   const { data: pkg, isLoading } = useGetPackage(packageId, {
-    query: { enabled: !!packageId, queryKey: getGetPackageQueryKey(packageId) },
+    query: {
+      enabled: !!packageId,
+      queryKey: getGetPackageQueryKey(packageId),
+      // While a background compliance analysis runs, the package sits in the
+      // "AI Review" holding state. Poll until the results land, then stop.
+      refetchInterval: (query) =>
+        query.state.data?.status === "AI Review" ? 4000 : false,
+    },
   })
 
   const analyze = useAnalyzePackage()
@@ -630,6 +637,15 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
   const annForViolation = (vid: number) => pkg.annotations.find((a) => a.violationId === vid)
 
   if (pkg.violations.length === 0) {
+    if (pkg.status === "AI Review") {
+      return (
+        <div className="text-center py-12 text-muted-foreground">
+          <Loader2 className="w-12 h-12 mx-auto mb-3 text-primary opacity-70 animate-spin" />
+          <p className="font-medium text-foreground">Analyzing packaging…</p>
+          <p className="text-xs mt-1">The AI compliance review is running. Findings will appear here automatically when it finishes.</p>
+        </div>
+      )
+    }
     return <div className="text-center py-12 text-muted-foreground"><CheckCircle className="w-12 h-12 mx-auto mb-3 text-success opacity-50" /><p>No findings yet. Run the AI analysis.</p></div>
   }
   return (
