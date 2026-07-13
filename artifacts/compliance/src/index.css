@@ -247,3 +247,30 @@
 .hotspot-informational:hover {
   background-color: hsla(var(--success) / 0.3);
 }
+
+/* Rotating rainbow border for the "Powered by AI" pill (border only). */
+@property --pba-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes pba-rotate {
+  to {
+    --pba-angle: 360deg;
+  }
+}
+.pba-rainbow {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
+    conic-gradient(
+      from var(--pba-angle),
+      #ff0040, #ff8000, #ffe000, #00e05a, #00d0ff, #4060ff, #a000ff, #ff00a0, #ff0040
+    ) border-box;
+  animation: pba-rotate 4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pba-rainbow {
+    animation: none;
+  }
+}
