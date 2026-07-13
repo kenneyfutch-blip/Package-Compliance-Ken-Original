@@ -26,6 +26,11 @@ description: Object-storage uploads, proof/annotation/comment/decision model, an
 - `createProof` rejects any `objectPath` not under the `/objects/` private namespace before linking it to a package.
 - `proofs` has a unique constraint on `(package_id, version)`. Version = `max(version)+1`, wrapped in a retry loop that catches Postgres `23505` (unique_violation) so concurrent uploads don't produce duplicate versions.
 
+## AI finding pins anchor to the model bbox, not a grid
+- In `applyAnalysis`, each AI-violation pin is placed at the **center of the model-provided bbox** (`bboxX + bboxW/2`, `bboxY + bboxH/2`, clamped 0..1). The synthetic `layoutPinPositions` grid is a **fallback only** for findings the model could not localize (null bbox) — never the whole set.
+  - **Why:** a prior version ran every pin through `layoutPinPositions`, so all markers appeared in an even grid detached from the flagged regions (user-reported). The model already returns per-finding bbox (clamped in ai.ts); use it.
+  - **How to apply:** fix is forward-only — existing packages keep their old grid coords until re-analyzed. Pin w/h stay null (bbox w/h is a text-guess that draws detached boxes in PDF export); only x/y are used, via the bbox center.
+
 ## Markup is image-only
 - Pin/box markup and the AI-violation overlay are enabled **only for image proofs**. For `application/pdf`, markup tools + AI overlay are disabled; PDFs get the embedded viewer + general comments + approval.
   - **Why:** annotation coords are normalized 0..1 to the rendered element; a scrolling/multi-page PDF iframe has no stable element↔page mapping, so overlay markup would be inaccurate. The schema keeps a `page` field for a future real PDF renderer.

@@ -260,11 +260,28 @@ export async function applyAnalysis(
     );
 
   if (insertedViolations.length > 0) {
-    const pinPositions = layoutPinPositions(insertedViolations.length);
+    // Anchor each pin at the CENTER of the model-provided bounding box so it
+    // lands on the actual region it flags. Only findings the model could not
+    // localize (no bbox) fall back to a synthetic, non-overlapping grid — never
+    // the whole set, which is what made every pin look grid-placed.
+    const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+    const fallbackCount = insertedViolations.filter(
+      (v) => v.bboxX == null || v.bboxY == null,
+    ).length;
+    const fallbackPositions = layoutPinPositions(fallbackCount);
+    let fallbackIdx = 0;
     await db.insert(annotationsTable).values(
-      insertedViolations.map((v, i) => {
-        const fx = pinPositions[i]!.x;
-        const fy = pinPositions[i]!.y;
+      insertedViolations.map((v) => {
+        let fx: number;
+        let fy: number;
+        if (v.bboxX != null && v.bboxY != null) {
+          fx = clamp01(v.bboxX + (v.bboxW ?? 0) / 2);
+          fy = clamp01(v.bboxY + (v.bboxH ?? 0) / 2);
+        } else {
+          const p = fallbackPositions[fallbackIdx++] ?? { x: 0.5, y: 0.5 };
+          fx = p.x;
+          fy = p.y;
+        }
         const cls = v.findingClass as
           | "issue"
           | "warning"
