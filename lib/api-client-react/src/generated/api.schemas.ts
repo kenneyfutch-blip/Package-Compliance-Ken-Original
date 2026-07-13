@@ -2315,6 +2315,25 @@ export interface UserUpdateInput {
   active?: boolean;
 }
 
+export interface PermissionDef {
+  key: string;
+  category: string;
+  description: string;
+}
+
+export interface UserPermissions {
+  userId: number;
+  /** @nullable */
+  roleKey?: string | null;
+  roleName: string;
+  rolePermissions: string[];
+  effective: string[];
+}
+
+export interface UserPermissionsUpdateInput {
+  permissions: string[];
+}
+
 export interface RoleInfo {
   key: string;
   name: string;

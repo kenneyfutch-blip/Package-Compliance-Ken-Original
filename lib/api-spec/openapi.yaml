@@ -1653,6 +1653,81 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /permissions:
+    get:
+      operationId: listPermissions
+      tags: [admin]
+      summary: List the full permission catalog
+      responses:
+        "200":
+          description: Permissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PermissionDef"
+
+  /users/{id}/permissions:
+    get:
+      operationId: getUserPermissions
+      tags: [admin]
+      summary: Get a user's role baseline and effective permissions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPermissions"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    put:
+      operationId: updateUserPermissions
+      tags: [admin]
+      summary: Replace a user's permission overrides
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserPermissionsUpdateInput"
+      responses:
+        "200":
+          description: Updated user permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserPermissions"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
   /roles:
     get:
       operationId: listRoles
@@ -8189,6 +8264,53 @@ components:
           type: string
         active:
           type: boolean
+
+    PermissionDef:
+      type: object
+      properties:
+        key:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+      required:
+        - key
+        - category
+        - description
+
+    UserPermissions:
+      type: object
+      properties:
+        userId:
+          type: integer
+        roleKey:
+          type: ["string", "null"]
+        roleName:
+          type: string
+        rolePermissions:
+          type: array
+          items:
+            type: string
+        effective:
+          type: array
+          items:
+            type: string
+      required:
+        - userId
+        - roleName
+        - rolePermissions
+        - effective
+
+    UserPermissionsUpdateInput:
+      type: object
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+      required:
+        - permissions
 
     RoleInfo:
       type: object

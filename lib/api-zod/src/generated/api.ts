@@ -2890,6 +2890,53 @@ export const UpdateUserResponse = zod.object({
 
 
 /**
+ * @summary List the full permission catalog
+ */
+export const ListPermissionsResponseItem = zod.object({
+  "key": zod.string(),
+  "category": zod.string(),
+  "description": zod.string()
+})
+export const ListPermissionsResponse = zod.array(ListPermissionsResponseItem)
+
+
+/**
+ * @summary Get a user's role baseline and effective permissions
+ */
+export const GetUserPermissionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetUserPermissionsResponse = zod.object({
+  "userId": zod.number(),
+  "roleKey": zod.string().nullish(),
+  "roleName": zod.string(),
+  "rolePermissions": zod.array(zod.string()),
+  "effective": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Replace a user's permission overrides
+ */
+export const UpdateUserPermissionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateUserPermissionsBody = zod.object({
+  "permissions": zod.array(zod.string())
+})
+
+export const UpdateUserPermissionsResponse = zod.object({
+  "userId": zod.number(),
+  "roleKey": zod.string().nullish(),
+  "roleName": zod.string(),
+  "rolePermissions": zod.array(zod.string()),
+  "effective": zod.array(zod.string())
+})
+
+
+/**
  * @summary List roles and the permissions each grants
  */
 export const ListRolesResponseItem = zod.object({

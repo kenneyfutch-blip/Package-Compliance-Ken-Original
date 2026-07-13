@@ -5,9 +5,14 @@ import {
   useListRoles,
   useInviteUser,
   useUpdateUser,
+  useListPermissions,
+  useGetUserPermissions,
+  useUpdateUserPermissions,
   getListUsersQueryKey,
 } from "@workspace/api-client-react"
-import type { UserAccount } from "@workspace/api-client-react"
+import type { UserAccount, PermissionDef } from "@workspace/api-client-react"
+import { usePermissions } from "@/lib/access"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,7 +31,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Users, Plus, Loader2, Search, UserCheck, UserX, ShieldCheck } from "lucide-react"
+import { Users, Plus, Loader2, Search, UserCheck, UserX, ShieldCheck, SlidersHorizontal } from "lucide-react"
 
 function StatusBadge({ user }: { user: UserAccount }) {
   if (!user.active)
@@ -38,6 +43,7 @@ function StatusBadge({ user }: { user: UserAccount }) {
 
 export default function UserManagement() {
   const queryClient = useQueryClient()
+  const { me } = usePermissions()
   const { data: users = [], isLoading } = useListUsers()
   const { data: roles = [] } = useListRoles()
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() })
@@ -50,6 +56,7 @@ export default function UserManagement() {
   const [invite, setInvite] = React.useState({ name: "", email: "", roleKey: "" })
   const [inviteError, setInviteError] = React.useState<string | null>(null)
   const [deactivating, setDeactivating] = React.useState<UserAccount | null>(null)
+  const [permsFor, setPermsFor] = React.useState<UserAccount | null>(null)
 
   const filtered = users.filter((u) => {
     const q = search.trim().toLowerCase()
@@ -144,13 +151,18 @@ export default function UserManagement() {
                     </TableCell>
                     <TableCell><StatusBadge user={u} /></TableCell>
                     <TableCell className="text-right">
-                      {u.active ? (
-                        <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeactivating(u)}>
-                          Deactivate
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setPermsFor(u)}>
+                          <SlidersHorizontal className="w-3.5 h-3.5" /> Permissions
                         </Button>
-                      ) : (
-                        <Button variant="ghost" size="sm" onClick={() => toggleActive(u)}>Reactivate</Button>
-                      )}
+                        {u.active ? (
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => setDeactivating(u)}>
+                            Deactivate
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => toggleActive(u)}>Reactivate</Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -215,6 +227,182 @@ export default function UserManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {permsFor && (
+        <PermissionsDialog
+          user={permsFor}
+          isSelf={me?.id === permsFor.id}
+          onClose={() => setPermsFor(null)}
+        />
+      )}
     </div>
+  )
+}
+
+// Per-user permission editor. Shows every capability grouped by area, with the
+// user's role defaults pre-checked; anything the admin changes from those
+// defaults is flagged as an override. Saving sends the full desired set — the
+// server persists only the deltas from the role baseline.
+function PermissionsDialog({
+  user,
+  isSelf,
+  onClose,
+}: {
+  user: UserAccount
+  isSelf: boolean
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const { data: catalog = [] } = useListPermissions()
+  const { data: perms, isLoading } = useGetUserPermissions(user.id)
+  const updateMut = useUpdateUserPermissions()
+
+  const [selected, setSelected] = React.useState<Set<string> | null>(null)
+  const [error, setError] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    if (perms) setSelected(new Set(perms.effective))
+  }, [perms])
+
+  const roleSet = React.useMemo(
+    () => new Set(perms?.rolePermissions ?? []),
+    [perms],
+  )
+
+  const groups = React.useMemo(() => {
+    const m = new Map<string, PermissionDef[]>()
+    for (const p of catalog) {
+      const list = m.get(p.category) ?? []
+      list.push(p)
+      m.set(p.category, list)
+    }
+    return [...m.entries()]
+  }, [catalog])
+
+  const toggle = (key: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev ?? [])
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+
+  const resetToRole = () => setSelected(new Set(perms?.rolePermissions ?? []))
+
+  const overrideCount = selected
+    ? catalog.filter((p) => selected.has(p.key) !== roleSet.has(p.key)).length
+    : 0
+
+  const save = () => {
+    if (!selected) return
+    setError(null)
+    updateMut.mutate(
+      { id: user.id, data: { permissions: [...selected] } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() })
+          onClose()
+        },
+        onError: (err: unknown) =>
+          setError((err as { error?: string })?.error ?? "Could not update permissions"),
+      },
+    )
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldCheck className="w-5 h-5 text-primary" /> Permissions — {user.name}
+          </DialogTitle>
+          <DialogDescription>
+            Checked capabilities are granted. Items that differ from the{" "}
+            {perms?.roleName ?? "role"} defaults are highlighted as overrides and
+            take effect the next time the user's session refreshes.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isSelf ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">
+            You cannot edit your own permissions. Ask another administrator to make changes.
+          </p>
+        ) : isLoading || !selected ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto pr-1 space-y-5">
+            {groups.map(([category, defs]) => (
+              <div key={category}>
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  {category}
+                </h4>
+                <div className="space-y-1.5">
+                  {defs.map((p) => {
+                    const checked = selected.has(p.key)
+                    const inRole = roleSet.has(p.key)
+                    const isOverride = checked !== inRole
+                    return (
+                      <label
+                        key={p.key}
+                        className={`flex items-start gap-3 rounded-md border p-2.5 cursor-pointer transition-colors ${
+                          isOverride ? "border-primary/50 bg-primary/5" : "border-border hover:bg-accent/40"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={() => toggle(p.key)}
+                          className="mt-0.5"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium flex flex-wrap items-center gap-2">
+                            <span className="font-mono text-xs">{p.key}</span>
+                            {inRole && (
+                              <Badge variant="outline" className="text-[10px] font-normal">role default</Badge>
+                            )}
+                            {isOverride && (
+                              <Badge className="text-[10px] bg-primary/10 text-primary hover:bg-primary/20">
+                                {checked ? "added" : "removed"}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{p.description}</div>
+                        </div>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {error && <p className="text-sm text-destructive">{error}</p>}
+
+        <DialogFooter className="sm:justify-between gap-2">
+          <div className="flex items-center gap-3">
+            {!isSelf && (
+              <>
+                <span className="text-xs text-muted-foreground">
+                  {overrideCount} override{overrideCount === 1 ? "" : "s"}
+                </span>
+                <Button variant="ghost" size="sm" onClick={resetToRole} disabled={updateMut.isPending || !selected}>
+                  Reset to role defaults
+                </Button>
+              </>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            {!isSelf && (
+              <Button onClick={save} disabled={updateMut.isPending || !selected} className="gap-2">
+                {updateMut.isPending && <Loader2 className="w-4 h-4 animate-spin" />} Save permissions
+              </Button>
+            )}
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

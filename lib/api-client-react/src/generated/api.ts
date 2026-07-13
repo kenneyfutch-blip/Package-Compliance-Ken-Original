@@ -105,6 +105,7 @@ import type {
   PackageUpdate,
   PackageVersion,
   PackageVersionInput,
+  PermissionDef,
   Policy,
   PolicyInput,
   PolicyMatch,
@@ -169,6 +170,8 @@ import type {
   UploadUrlResponse,
   UserAccount,
   UserInviteInput,
+  UserPermissions,
+  UserPermissionsUpdateInput,
   UserUpdateInput,
   VendorPerformanceItem,
   VersionComparison,
@@ -5171,6 +5174,232 @@ export const useUpdateUser = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getUpdateUserMutationOptions(options));
+    }
+
+export const getListPermissionsUrl = () => {
+
+
+
+
+  return `/api/permissions`
+}
+
+/**
+ * @summary List the full permission catalog
+ */
+export const listPermissions = async ( options?: RequestInit): Promise<PermissionDef[]> => {
+
+  return customFetch<PermissionDef[]>(getListPermissionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPermissionsQueryKey = () => {
+    return [
+    `/api/permissions`
+    ] as const;
+    }
+
+
+export const getListPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof listPermissions>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPermissionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPermissions>>> = ({ signal }) => listPermissions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPermissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof listPermissions>>>
+export type ListPermissionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the full permission catalog
+ */
+
+export function useListPermissions<TData = Awaited<ReturnType<typeof listPermissions>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPermissionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetUserPermissionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/users/${id}/permissions`
+}
+
+/**
+ * @summary Get a user's role baseline and effective permissions
+ */
+export const getUserPermissions = async (id: number, options?: RequestInit): Promise<UserPermissions> => {
+
+  return customFetch<UserPermissions>(getGetUserPermissionsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetUserPermissionsQueryKey = (id: number,) => {
+    return [
+    `/api/users/${id}/permissions`
+    ] as const;
+    }
+
+
+export const getGetUserPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof getUserPermissions>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetUserPermissionsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getUserPermissions>>> = ({ signal }) => getUserPermissions(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getUserPermissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetUserPermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof getUserPermissions>>>
+export type GetUserPermissionsQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get a user's role baseline and effective permissions
+ */
+
+export function useGetUserPermissions<TData = Awaited<ReturnType<typeof getUserPermissions>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getUserPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetUserPermissionsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateUserPermissionsUrl = (id: number,) => {
+
+
+
+
+  return `/api/users/${id}/permissions`
+}
+
+/**
+ * @summary Replace a user's permission overrides
+ */
+export const updateUserPermissions = async (id: number,
+    userPermissionsUpdateInput: UserPermissionsUpdateInput, options?: RequestInit): Promise<UserPermissions> => {
+
+  return customFetch<UserPermissions>(getUpdateUserPermissionsUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(userPermissionsUpdateInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateUserPermissionsMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserPermissions>>, TError,{id: number;data: BodyType<UserPermissionsUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateUserPermissions>>, TError,{id: number;data: BodyType<UserPermissionsUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateUserPermissions'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateUserPermissions>>, {id: number;data: BodyType<UserPermissionsUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateUserPermissions(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateUserPermissionsMutationResult = NonNullable<Awaited<ReturnType<typeof updateUserPermissions>>>
+    export type UpdateUserPermissionsMutationBody = BodyType<UserPermissionsUpdateInput>
+    export type UpdateUserPermissionsMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Replace a user's permission overrides
+ */
+export const useUpdateUserPermissions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateUserPermissions>>, TError,{id: number;data: BodyType<UserPermissionsUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateUserPermissions>>,
+        TError,
+        {id: number;data: BodyType<UserPermissionsUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateUserPermissionsMutationOptions(options));
     }
 
 export const getListRolesUrl = () => {
