@@ -104,6 +104,7 @@ const SECTIONS: NavSection[] = [
   {
     id: "my-work",
     label: "My Work",
+    defaultOpen: true,
     items: [
       { name: "My Dashboard", href: "/my-dashboard", icon: Gauge },
       { name: "My Reviews", href: "/reviews", icon: ClipboardList },
@@ -114,6 +115,7 @@ const SECTIONS: NavSection[] = [
   {
     id: "home",
     label: "Home",
+    defaultOpen: true,
     items: [
       { name: "Dashboard", href: "/", icon: LayoutDashboard },
       { name: "New Package", href: "/upload", icon: Upload },
@@ -122,6 +124,7 @@ const SECTIONS: NavSection[] = [
   {
     id: "review-operations",
     label: "Review Operations",
+    defaultOpen: true,
     items: [
       { name: "High Risk Queue", href: "/queue/high-risk", icon: AlertTriangle },
       { name: "Assigned Reviews", href: "/queue/assigned", icon: ClipboardList },
@@ -132,6 +135,7 @@ const SECTIONS: NavSection[] = [
   {
     id: "products",
     label: "Packages",
+    defaultOpen: true,
     items: [
       { name: "All Packages", href: "/packages", icon: Box },
       { name: "Active Reviews", href: "/packages/active", icon: ListChecks },
@@ -303,7 +307,7 @@ function isItemActive(location: string, href: string): boolean {
 // Persist which sections the user has explicitly opened/closed, so the layout
 // survives navigation and reloads. Stores only user overrides; untouched
 // sections fall back to their declared defaultOpen.
-const NAV_STATE_KEY = "compliance-nav-sections-v1"
+const NAV_STATE_KEY = "compliance-nav-sections-v2"
 
 function loadSectionState(): Record<string, boolean> {
   try {
