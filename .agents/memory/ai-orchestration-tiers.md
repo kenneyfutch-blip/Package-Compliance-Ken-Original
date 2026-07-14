@@ -83,3 +83,33 @@ upload to be a fast ~30s triage and the explicit re-run to be the deep review.
 always = `model`). Admin AI Providers page shows the effective per-tier model per
 provider (read-only display); override columns are wired through the provider
 POST/PATCH bodies. Managed provider is uneditable, so its tiers show the defaults.
+
+## Unset-override trap (custom providers) — "every AI tool is slow"
+For a **custom** (BYO-key) provider, `tierModelFor` resolves fast/reasoning to
+`override || standard` — so when `fast_model`/`reasoning_model` are **null, every
+tier collapses onto the provider's single `model`.** A provider configured with
+only `model` (e.g. the heaviest `gpt-5.5`) therefore runs that heavy model on
+*every* workload: not just standard reviews, but the high-volume **fast/utility
+tiers** (`ocr`, `field_extraction`, `version_compare`) and **copilot** — and
+substantive reviews (language/claims/packaging-deep) that escalate standard→
+reasoning do *two* heavy passes. Symptom the user reports: "all the AI tools are
+too slow," reviews take minutes, OCR/extraction crawl. It is NOT staging and NOT
+per-call infra latency — it's the model, resolved from an unconfigured provider.
+
+**Fix (config, no code):** set the provider's per-tier overrides. Sane OpenAI
+mapping: `fast_model=gpt-5.4-mini` (utility + triage), `model` (standard) = a fast
+flagship like `gpt-5.4`, `reasoning_model` = a strong model for the rare escalation
+(kept `gpt-5.5` here so high-risk/low-confidence copy still gets max rigor).
+**Do NOT** make substantive review primary passes a *mini* model (initial tier
+`fast`): for a compliance tool a mini model can miss a violation *and* report high
+confidence, so it never escalates → false negative. Keep a flagship on every
+primary review; only utility/triage rides the mini model.
+
+**Why:** the fallback-to-`standard` is deliberate (an arbitrary custom endpoint
+may host only one model name), but for an OpenAI-type provider it silently defeats
+the entire tier system. **How to apply:** when a custom provider "feels slow
+across the board," first check `fast_model`/`reasoning_model` are set, not null.
+The provider PATCH is a *partial* update (writes only fields present in the body),
+so direct override edits survive Settings saves unless explicitly cleared. Model
+is part of the AI cache key, so changing it serves fresh results with no restart
+(provider config is read from the DB on every call).
