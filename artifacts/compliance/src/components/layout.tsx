@@ -1162,11 +1162,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </Link>
             <Button
               size="sm"
-              variant="outline"
+              variant="ghost"
               onClick={() => setAssistantOpen((v) => !v)}
               aria-pressed={assistantOpen}
               data-tour="ai-assistant"
-              className="hidden sm:flex gap-2 border-green-600/40 text-green-700 hover:bg-green-600/10 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400"
+              className="pba-rainbow-dark hidden sm:flex gap-2 px-3 text-green-400 hover:text-green-300"
             >
               <Sparkles className="w-4 h-4" />
               Ask AI
