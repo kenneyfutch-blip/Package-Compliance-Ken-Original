@@ -11,6 +11,7 @@ export interface ReviewerPresence {
   userId: number;
   name: string;
   role: string;
+  imageUrl?: string | null;
   state: ReviewerPresenceState;
   packageId?: number | null;
   packageName?: string | null;

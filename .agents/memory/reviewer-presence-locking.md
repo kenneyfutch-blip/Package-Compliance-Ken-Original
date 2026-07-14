@@ -8,6 +8,14 @@ description: Live reviewer presence + soft review locks — expiry-on-read desig
 Live "who's online / who's reviewing what" presence plus a soft lock warning that
 a package review is already in progress.
 
+Presence avatars render Clerk profile photos with an initials fallback. The photo
+URL lives in `users.image_url` (nullable), synced from Clerk `user.imageUrl` in
+`requireAuth` → `provisionUser` and surfaced through `PresenceDTO`. **Why per-user
+on the server, not Clerk `useUser()`:** the presence strip shows *other* reviewers,
+whose photos Clerk's client hook can't provide (it only knows the current user).
+Freshness lags up to ~5-10 min because both the requireAuth cache and provisionUser
+cache are 5-min TTL — acceptable for an avatar; don't add invalidation for it.
+
 ## Core design decisions
 
 - **Expiry-on-read is authoritative, the sweep is only housekeeping.** Presence

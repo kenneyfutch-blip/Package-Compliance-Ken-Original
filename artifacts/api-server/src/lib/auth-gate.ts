@@ -27,8 +27,8 @@ export function isEmailAllowed(email: string | null | undefined): boolean {
 export type AuthGateResult =
   | { status: 401 }
   | { status: 503; error?: unknown }
-  | { status: 403; email: string | null; name: string }
-  | { status: 200; email: string | null; name: string };
+  | { status: 403; email: string | null; name: string; imageUrl: string | null }
+  | { status: 200; email: string | null; name: string; imageUrl: string | null };
 
 /**
  * Classify a single request against the auth/domain gate given the resolved
@@ -39,19 +39,23 @@ export type AuthGateResult =
  */
 export async function classifyAuthGate(
   userId: string | null | undefined,
-  lookupUser: (id: string) => Promise<{ email: string | null; name: string }>,
+  lookupUser: (
+    id: string,
+  ) => Promise<{ email: string | null; name: string; imageUrl?: string | null }>,
 ): Promise<AuthGateResult> {
   if (!userId) return { status: 401 };
   let email: string | null;
   let name: string;
+  let imageUrl: string | null;
   try {
     const u = await lookupUser(userId);
     email = u.email;
     name = u.name;
+    imageUrl = u.imageUrl ?? null;
   } catch (error) {
     return { status: 503, error };
   }
   return isEmailAllowed(email)
-    ? { status: 200, email, name }
-    : { status: 403, email, name };
+    ? { status: 200, email, name, imageUrl }
+    : { status: 403, email, name, imageUrl };
 }

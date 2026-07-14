@@ -63,6 +63,7 @@ export interface PresenceDTO {
   userId: number;
   name: string;
   role: string;
+  imageUrl: string | null;
   state: PresenceState;
   packageId: number | null;
   packageName: string | null;
@@ -123,6 +124,7 @@ export async function getPresence(
       lastSeenAt: reviewerPresenceTable.lastSeenAt,
       name: usersTable.name,
       role: usersTable.role,
+      imageUrl: usersTable.imageUrl,
       packageName: packagesTable.name,
     })
     .from(reviewerPresenceTable)
@@ -139,6 +141,7 @@ export async function getPresence(
       userId: r.userId,
       name: r.name,
       role: r.role,
+      imageUrl: r.imageUrl ?? null,
       state: effectivePresenceState(r.state, r.lastSeenAt, now),
       packageId: r.packageId,
       packageName: r.packageName ?? null,

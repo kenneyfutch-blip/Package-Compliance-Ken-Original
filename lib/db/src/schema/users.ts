@@ -18,6 +18,9 @@ export const usersTable = pgTable("users", {
   ),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  // Profile photo URL synced from Clerk on authenticated requests; shown in
+  // presence avatars (falls back to initials). Null until first sign-in.
+  imageUrl: text("image_url"),
   // Machine role key (e.g. "compliance_specialist") used for authorization.
   roleKey: text("role_key").notNull().default("read_only"),
   // Human role label kept in sync with roleKey, for display.

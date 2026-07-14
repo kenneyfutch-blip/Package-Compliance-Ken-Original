@@ -5867,6 +5867,7 @@ export const GetReviewPresenceResponseItem = zod.object({
   "userId": zod.number(),
   "name": zod.string(),
   "role": zod.string(),
+  "imageUrl": zod.string().nullish(),
   "state": zod.enum(['online', 'reviewing', 'approving', 'commenting', 'idle', 'offline']),
   "packageId": zod.number().nullish(),
   "packageName": zod.string().nullish(),

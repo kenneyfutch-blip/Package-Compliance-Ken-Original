@@ -14,6 +14,7 @@ export { isEmailAllowed };
 type CacheEntry = {
   email: string | null;
   name: string;
+  imageUrl: string | null;
   allowed: boolean;
   expires: number;
 };
@@ -115,7 +116,7 @@ export async function requireAuth(
         user.username ||
         (email ? email.split("@")[0] : null) ||
         "Reviewer";
-      return { email, name: displayName };
+      return { email, name: displayName, imageUrl: user.imageUrl ?? null };
     });
 
     if (gate.status === 401) {
@@ -149,6 +150,7 @@ export async function requireAuth(
     entry = {
       email: gate.email,
       name: gate.name,
+      imageUrl: gate.imageUrl,
       allowed: gate.status === 200,
       expires: now + CACHE_TTL_MS,
     };
@@ -180,7 +182,12 @@ export async function requireAuth(
   // and effective permissions for downstream authorization + tenant scoping.
   let authCtx;
   try {
-    authCtx = await provisionUser(sessionUserId, entry.email, entry.name);
+    authCtx = await provisionUser(
+      sessionUserId,
+      entry.email,
+      entry.name,
+      entry.imageUrl,
+    );
     setAuthContext(req, authCtx);
   } catch (err) {
     req.log?.error({ err }, "Failed to provision user");

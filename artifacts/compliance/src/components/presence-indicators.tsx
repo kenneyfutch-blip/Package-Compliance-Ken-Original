@@ -7,7 +7,7 @@ import {
   type ReviewerPresence,
   type ReviewLock,
 } from "@workspace/api-client-react"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { initialsFor } from "@/components/review-ownership"
 import { presenceMeta, sinceLabel } from "@/lib/presence-utils"
@@ -35,6 +35,7 @@ function PresenceAvatar({ p }: { p: ReviewerPresence }) {
   return (
     <div className="relative" title={title}>
       <Avatar className="h-7 w-7 border border-border">
+        {p.imageUrl && <AvatarImage src={p.imageUrl} alt={p.name} />}
         <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
           {initialsFor(p.name)}
         </AvatarFallback>

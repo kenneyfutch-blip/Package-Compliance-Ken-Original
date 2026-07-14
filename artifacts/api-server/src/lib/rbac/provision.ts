@@ -174,6 +174,7 @@ export async function provisionUser(
   clerkUserId: string,
   email: string | null,
   name: string | null,
+  imageUrl?: string | null,
 ): Promise<AuthContext> {
   const cached = cache.get(clerkUserId);
   if (cached && cached.expires > Date.now()) return cached.ctx;
@@ -187,12 +188,23 @@ export async function provisionUser(
 
   let user: typeof usersTable.$inferSelect;
   if (existing) {
-    // Keep name/email fresh; never downgrade role here (role changes go through
-    // the admin surface in a later phase).
-    if (existing.name !== displayName || existing.email !== (email ?? existing.email)) {
+    // Keep name/email/photo fresh; never downgrade role here (role changes go
+    // through the admin surface in a later phase). imageUrl===undefined means the
+    // caller didn't resolve one, so leave the stored value untouched.
+    const nextImageUrl =
+      imageUrl !== undefined ? imageUrl : existing.imageUrl;
+    if (
+      existing.name !== displayName ||
+      existing.email !== (email ?? existing.email) ||
+      existing.imageUrl !== nextImageUrl
+    ) {
       const [updated] = await db
         .update(usersTable)
-        .set({ name: displayName, email: email ?? existing.email })
+        .set({
+          name: displayName,
+          email: email ?? existing.email,
+          imageUrl: nextImageUrl,
+        })
         .where(eq(usersTable.id, existing.id))
         .returning();
       user = updated ?? existing;
@@ -251,6 +263,7 @@ export async function provisionUser(
           clerkUserId,
           name: displayName,
           organizationId: seedRow.organizationId ?? organizationId,
+          imageUrl: imageUrl ?? seedRow.imageUrl,
         })
         .where(eq(usersTable.id, seedRow.id))
         .returning();
@@ -265,6 +278,7 @@ export async function provisionUser(
           organizationId,
           name: displayName,
           email: email ?? "",
+          imageUrl: imageUrl ?? null,
           roleKey,
           role: roleDef?.name ?? "Read Only User",
           status: "active",
