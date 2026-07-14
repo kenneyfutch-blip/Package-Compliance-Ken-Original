@@ -87,22 +87,45 @@ export async function claimNextJob(workerId: string): Promise<JobRow | null> {
   });
 }
 
+// Terminal writes are ownership-guarded: they only take effect while the row is
+// still "running" AND locked by THIS worker. If the stale-job reclaim has since
+// handed the job to another worker, the guard matches 0 rows and the caller
+// learns it lost ownership — preventing a slow/stalled worker from clobbering
+// the new owner's result (split-brain). Returns true if the write took effect.
 export async function markJobCompleted(
   id: number,
   result: Record<string, unknown> | null,
-): Promise<void> {
-  await db
+  workerId: string,
+): Promise<boolean> {
+  const rows = await db
     .update(jobsTable)
     .set({ status: "completed", result, lockedAt: null, lockedBy: null })
-    .where(eq(jobsTable.id, id));
+    .where(
+      and(
+        eq(jobsTable.id, id),
+        eq(jobsTable.status, "running"),
+        eq(jobsTable.lockedBy, workerId),
+      ),
+    )
+    .returning({ id: jobsTable.id });
+  return rows.length > 0;
 }
 
 // Fail a job: retry with exponential backoff while attempts remain, otherwise
-// mark it permanently failed.
-export async function markJobFailed(job: JobRow, error: string): Promise<void> {
+// mark it permanently failed. Ownership-guarded like markJobCompleted.
+export async function markJobFailed(
+  job: JobRow,
+  error: string,
+  workerId: string,
+): Promise<boolean> {
+  const owned = and(
+    eq(jobsTable.id, job.id),
+    eq(jobsTable.status, "running"),
+    eq(jobsTable.lockedBy, workerId),
+  );
   if (job.attempts < job.maxAttempts) {
     const backoffMs = Math.min(5 * 60_000, 2 ** job.attempts * 5_000);
-    await db
+    const rows = await db
       .update(jobsTable)
       .set({
         status: "pending",
@@ -111,13 +134,33 @@ export async function markJobFailed(job: JobRow, error: string): Promise<void> {
         lockedAt: null,
         lockedBy: null,
       })
-      .where(eq(jobsTable.id, job.id));
-  } else {
-    await db
-      .update(jobsTable)
-      .set({ status: "failed", lastError: error, lockedAt: null, lockedBy: null })
-      .where(eq(jobsTable.id, job.id));
+      .where(owned)
+      .returning({ id: jobsTable.id });
+    return rows.length > 0;
   }
+  const rows = await db
+    .update(jobsTable)
+    .set({ status: "failed", lastError: error, lockedAt: null, lockedBy: null })
+    .where(owned)
+    .returning({ id: jobsTable.id });
+  return rows.length > 0;
+}
+
+// Refresh a running job's lock so the periodic stale-job reclaim never treats a
+// legitimately long-running job (e.g. a reasoning-tier package analysis) as
+// abandoned. Only touches a row this worker still owns and that is still
+// running, so it can't resurrect a job another worker has taken over.
+export async function heartbeatJob(id: number, workerId: string): Promise<void> {
+  await db
+    .update(jobsTable)
+    .set({ lockedAt: new Date() })
+    .where(
+      and(
+        eq(jobsTable.id, id),
+        eq(jobsTable.status, "running"),
+        eq(jobsTable.lockedBy, workerId),
+      ),
+    );
 }
 
 // Recover jobs left "running" by a crashed/restarted worker so they can be
