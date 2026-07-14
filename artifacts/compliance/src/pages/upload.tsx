@@ -91,24 +91,36 @@ async function extractPdfText(file: File): Promise<string> {
   }
 }
 
-// Render a PDF's first page to a downscaled JPEG data URL so the image-based
-// field OCR can pre-fill package metadata from PDFs too. Returns null if the
-// page can't be rendered (caller then simply skips metadata pre-fill).
-async function renderPdfFirstPageToDataUrl(file: File): Promise<string | null> {
+// Max PDF pages we OCR when there is no embedded text layer. Packaging artwork is
+// almost always 1–2 pages; the cap bounds cost/latency on unusually long PDFs.
+const OCR_PDF_PAGE_CAP = 8
+
+// Render a PDF's pages to downscaled JPEG data URLs. Used to (a) pre-fill package
+// metadata via image field OCR (page 1) and (b) fall back to full-text OCR when the
+// PDF has no embedded text layer (scanned/flattened exports). Returns [] if nothing
+// can be rendered (caller then simply skips the OCR pre-fill).
+async function renderPdfPagesToDataUrls(file: File, maxPages: number): Promise<string[]> {
   const buf = await file.arrayBuffer()
   const doc = await pdfjsLib.getDocument({ data: buf }).promise
   try {
-    const page = await doc.getPage(1)
-    const base = page.getViewport({ scale: 1 })
-    const scale = Math.min(2, MAX_DIMENSION / Math.max(base.width, base.height))
-    const viewport = page.getViewport({ scale })
-    const canvas = document.createElement("canvas")
-    canvas.width = Math.round(viewport.width)
-    canvas.height = Math.round(viewport.height)
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return null
-    await page.render({ canvasContext: ctx, viewport }).promise
-    return canvas.toDataURL("image/jpeg", 0.85)
+    const count = Math.min(doc.numPages, Math.max(1, maxPages))
+    const urls: string[] = []
+    for (let i = 1; i <= count; i++) {
+      const page = await doc.getPage(i)
+      const base = page.getViewport({ scale: 1 })
+      const scale = Math.min(2, MAX_DIMENSION / Math.max(base.width, base.height))
+      const viewport = page.getViewport({ scale })
+      const canvas = document.createElement("canvas")
+      canvas.width = Math.round(viewport.width)
+      canvas.height = Math.round(viewport.height)
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        await page.render({ canvasContext: ctx, viewport }).promise
+        urls.push(canvas.toDataURL("image/jpeg", 0.85))
+      }
+      page.cleanup()
+    }
+    return urls
   } finally {
     await doc.destroy()
   }
@@ -145,6 +157,7 @@ export default function UploadPage() {
   const [demoLoaded, setDemoLoaded] = useState(false)
   const [ocrError, setOcrError] = useState<string | null>(null)
   const [pdfExtracting, setPdfExtracting] = useState(false)
+  const [pdfOcrRunning, setPdfOcrRunning] = useState(false)
   // Metadata fields that were auto-filled from the artwork and should be reviewed.
   const [autoFilled, setAutoFilled] = useState<Set<string>>(new Set())
   const [artwork, setArtwork] = useState<{ name: string; type: string; url: string; preview: string | null } | null>(null)
@@ -289,20 +302,67 @@ export default function UploadPage() {
       let fieldsPromise: Promise<void> | undefined
       try {
         const text = await extractPdfText(file)
+
         if (text) {
+          // Text-layer PDF (the common case): use it directly and stay fast — only
+          // render page 1 for the best-effort metadata pre-fill.
           setValue("extractedText", text, { shouldValidate: true })
+          try {
+            const [firstPage] = await renderPdfPagesToDataUrls(file, 1)
+            if (firstPage) fieldsPromise = extractFieldsFromDataUrl(firstPage)
+          } catch {
+            // Rendering the page failed; skip metadata pre-fill silently.
+          }
         } else {
-          setOcrError(
-            "No selectable text found in this PDF — it may be scanned or flattened. Paste the copy manually, or it will be read during analysis.",
-          )
-        }
-        // Also pre-fill the metadata form: render the first page and run the same
-        // image field OCR used for images. Best-effort — never blocks the text.
-        try {
-          const pageImage = await renderPdfFirstPageToDataUrl(file)
-          if (pageImage) fieldsPromise = extractFieldsFromDataUrl(pageImage)
-        } catch {
-          // Rendering the page failed; skip metadata pre-fill silently.
+          // No embedded text layer (scanned/flattened PDF). Extracting the copy is
+          // the core job of this tool, so render the pages once and OCR them here
+          // rather than deferring to analysis. Page 1 doubles as the metadata source.
+          let pageImages: string[] = []
+          try {
+            pageImages = await renderPdfPagesToDataUrls(file, OCR_PDF_PAGE_CAP)
+          } catch {
+            // Rendering failed; metadata pre-fill and OCR fallback are skipped below.
+          }
+          if (pageImages[0]) fieldsPromise = extractFieldsFromDataUrl(pageImages[0])
+
+          if (pageImages.length > 0) {
+            setOcrError(null)
+            setPdfOcrRunning(true)
+            try {
+              const parts: string[] = []
+              let anyPageFailed = false
+              // Per-page OCR is best-effort: a transient failure on one page must not
+              // discard the text we already read from the others.
+              for (const img of pageImages) {
+                try {
+                  const result = await extractText.mutateAsync({ data: { imageDataUrl: img } })
+                  const t = result.text?.trim() ?? ""
+                  if (t) parts.push(t)
+                } catch {
+                  anyPageFailed = true
+                }
+              }
+              const ocrText = parts.join("\n\n").trim()
+              if (ocrText) {
+                setValue("extractedText", ocrText, { shouldValidate: true })
+                if (anyPageFailed) {
+                  setOcrError(
+                    "Some pages couldn't be read via OCR — review the extracted text below and add anything missing.",
+                  )
+                }
+              } else {
+                setOcrError(
+                  "We ran OCR but couldn't read any text from this PDF. You can type or paste the copy manually.",
+                )
+              }
+            } finally {
+              setPdfOcrRunning(false)
+            }
+          } else {
+            setOcrError(
+              "No selectable text found and the PDF couldn't be rendered for OCR. Paste the copy manually, or it will be read during analysis.",
+            )
+          }
         }
       } catch (err) {
         setOcrError(err instanceof Error ? err.message : "Failed to read text from the PDF.")
@@ -392,7 +452,7 @@ export default function UploadPage() {
               {RENDERABLE.includes(artwork.type) && (
                 <div className="mt-1 text-xs space-y-0.5">
                   {(extractText.isPending || extractFields.isPending || pdfExtracting) ? (
-                    <span className="inline-flex items-center gap-1 text-primary"><Loader2 className="w-3 h-3 animate-spin" /> Extracting text…</span>
+                    <span className="inline-flex items-center gap-1 text-primary"><Loader2 className="w-3 h-3 animate-spin" /> {pdfOcrRunning ? "No text layer found — reading the PDF with OCR…" : "Extracting text…"}</span>
                   ) : (
                     <>
                       {ocrError ? (
