@@ -20,6 +20,11 @@ import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -442,11 +447,43 @@ export default function ReviewWorkspace() {
             {exportProof.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
             Export Proof
           </Button>
-          <Button variant="default" className="gap-2 h-9" disabled={analyze.isPending || pkg.status === "AI Review"}
-            onClick={() => analyze.mutate({ id: packageId }, { onSuccess: invalidate })}>
-            {analyze.isPending || pkg.status === "AI Review" ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-            Deep Analysis
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="default" className="gap-2 h-9" disabled={analyze.isPending || pkg.status === "AI Review"}>
+                {analyze.isPending || pkg.status === "AI Review" ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
+                Deep Analysis
+                <span className="ml-1 rounded bg-primary-foreground/20 px-1.5 py-0.5 text-[10px] font-semibold leading-none">+$</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Run Deep Analysis?</AlertDialogTitle>
+                <AlertDialogDescription asChild>
+                  <div className="space-y-2">
+                    <p>
+                      Deep Analysis runs a heavier reasoning-tier AI model that re-reviews
+                      this package in more depth. It gives more thorough findings, but it:
+                    </p>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li>Uses significantly <strong>more tokens</strong> than the standard review</li>
+                      <li>Costs <strong>more per run</strong> (higher AI spend)</li>
+                      <li>Takes longer to complete (typically 1–3 minutes)</li>
+                    </ul>
+                    <p className="text-muted-foreground">
+                      Uploads are already analyzed automatically with the fast, low-cost model —
+                      only run Deep Analysis when a package genuinely needs a closer look.
+                    </p>
+                  </div>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => analyze.mutate({ id: packageId }, { onSuccess: invalidate })}>
+                  Run Deep Analysis
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <PoweredByAi className="ml-1 hidden md:inline-flex" />
         </div>
       </div>
