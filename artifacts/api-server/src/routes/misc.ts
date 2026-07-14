@@ -6,6 +6,7 @@ import {
   notificationPreferencesTable,
   notificationStatesTable,
   reportsTable,
+  packagesTable,
 } from "@workspace/db";
 import { and, desc, eq, gte, ilike, isNull, lte, notInArray, or, type SQL } from "drizzle-orm";
 import {
@@ -175,7 +176,7 @@ router.get(
       conds.push(notInArray(notificationsTable.type, muted));
     }
     const rows = await db
-      .select({ n: notificationsTable, s: notificationStatesTable })
+      .select({ n: notificationsTable, s: notificationStatesTable, pkgId: packagesTable.id })
       .from(notificationsTable)
       .leftJoin(
         notificationStatesTable,
@@ -184,11 +185,15 @@ router.get(
           eq(notificationStatesTable.userId, userId),
         ),
       )
+      .leftJoin(packagesTable, eq(packagesTable.id, notificationsTable.packageId))
       .where(and(...conds))
       .orderBy(desc(notificationsTable.createdAt));
     res.json(
       rows
         .filter((r) => !(r.s?.deleted ?? false))
+        // Drop orphans: a notification that references a package that no longer
+        // exists would render a dead "Open review" link → "page does not exist".
+        .filter((r) => r.n.packageId == null || r.pkgId != null)
         .map((r) => ({
           ...mapNotification(r.n),
           read: r.s?.read ?? r.n.read,

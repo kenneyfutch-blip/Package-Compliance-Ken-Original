@@ -6,6 +6,22 @@ import {
   violationsTable,
   auditEventsTable,
   reportsTable,
+  notificationsTable,
+  notificationStatesTable,
+  supplierSubmissionsTable,
+  reviewAssignmentsTable,
+  reviewTasksTable,
+  reviewLocksTable,
+  reviewerPresenceTable,
+  reviewHistoryTable,
+  reviewMetricsTable,
+  annotationsTable,
+  approvalDecisionsTable,
+  languageFindingsTable,
+  languageReviewsTable,
+  claimFindingsTable,
+  claimAnalysesTable,
+  complianceMemoryTable,
   type PackageRow,
 } from "@workspace/db";
 import {
@@ -712,8 +728,50 @@ router.delete(
       detail: `${existing.name} (${existing.sku}) deleted.`,
       before: { name: existing.name, sku: existing.sku },
     });
-    await db.delete(violationsTable).where(eq(violationsTable.packageId, id));
-    await db.delete(packagesTable).where(eq(packagesTable.id, id));
+    // Clean up every operational row that references this package before we drop
+    // it. These tables have no FK/cascade to packages, so without this the delete
+    // orphans notifications ("Open review" → dead link), review assignments,
+    // findings, etc. document_extractions/proofs cascade automatically on the
+    // final package delete; audit_events and supplier_submissions are preserved
+    // as historical/compliance records.
+    await db.transaction(async (tx) => {
+      // Drop per-user notification state (read/archive overlay) for this
+      // package's notifications first — it links by notificationId with no
+      // cascade, so it would otherwise orphan when the notifications go.
+      await tx.delete(notificationStatesTable).where(
+        inArray(
+          notificationStatesTable.notificationId,
+          tx
+            .select({ id: notificationsTable.id })
+            .from(notificationsTable)
+            .where(eq(notificationsTable.packageId, id)),
+        ),
+      );
+      await tx.delete(notificationsTable).where(eq(notificationsTable.packageId, id));
+      // Preserve the supplier's submission record, but unlink the now-deleted
+      // package so no downstream view can render a dead "open package" link.
+      await tx
+        .update(supplierSubmissionsTable)
+        .set({ packageId: null })
+        .where(eq(supplierSubmissionsTable.packageId, id));
+      await tx.delete(reviewAssignmentsTable).where(eq(reviewAssignmentsTable.packageId, id));
+      await tx.delete(reviewTasksTable).where(eq(reviewTasksTable.packageId, id));
+      await tx.delete(reviewLocksTable).where(eq(reviewLocksTable.packageId, id));
+      await tx.delete(reviewerPresenceTable).where(eq(reviewerPresenceTable.packageId, id));
+      await tx.delete(reviewHistoryTable).where(eq(reviewHistoryTable.packageId, id));
+      await tx.delete(reviewMetricsTable).where(eq(reviewMetricsTable.packageId, id));
+      await tx.delete(annotationsTable).where(eq(annotationsTable.packageId, id));
+      await tx.delete(approvalDecisionsTable).where(eq(approvalDecisionsTable.packageId, id));
+      await tx.delete(languageFindingsTable).where(eq(languageFindingsTable.packageId, id));
+      await tx.delete(languageReviewsTable).where(eq(languageReviewsTable.packageId, id));
+      await tx.delete(claimFindingsTable).where(eq(claimFindingsTable.packageId, id));
+      await tx.delete(claimAnalysesTable).where(eq(claimAnalysesTable.packageId, id));
+      await tx.delete(complianceMemoryTable).where(eq(complianceMemoryTable.packageId, id));
+      await tx.delete(reportsTable).where(eq(reportsTable.packageId, id));
+      await tx.delete(packageVersionsTable).where(eq(packageVersionsTable.packageId, id));
+      await tx.delete(violationsTable).where(eq(violationsTable.packageId, id));
+      await tx.delete(packagesTable).where(eq(packagesTable.id, id));
+    });
     res.status(204).send();
   },
 );
