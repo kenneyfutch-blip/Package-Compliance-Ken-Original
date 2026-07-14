@@ -27,6 +27,7 @@ import MyWorkPage from "@/pages/my-work"
 import MyDashboardPage from "@/pages/my-dashboard"
 import BulkQueuePage from "@/pages/bulk"
 import ReviewWorkspace from "@/pages/review-workspace"
+import ActiveReviews from "@/pages/active-reviews"
 import AdminPage from "@/pages/admin"
 import AccountPage from "@/pages/account"
 import ReportsPage from "@/pages/reports"
@@ -256,7 +257,7 @@ function AppRoutes() {
           <PackagesView title="All Packages" subtitle="Every packaging record in the system." />
         </Route>
         <Route path="/packages/active">
-          <PackagesView title="Active Reviews" subtitle="Packages currently in AI or specialist review." statusFilter="AI Review" emptyText="No active reviews in progress." />
+          <ActiveReviews />
         </Route>
         <Route path="/packages/approved">
           <PackagesView title="Approved Packages" subtitle="Packages cleared for production." statusFilter="Approved" emptyText="No packages approved yet." />
