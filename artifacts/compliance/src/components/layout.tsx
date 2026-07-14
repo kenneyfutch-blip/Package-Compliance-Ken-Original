@@ -706,7 +706,12 @@ function Brand() {
         />
       </span>
       <span className="flex flex-col justify-center gap-0.5 leading-none border-l border-border pl-3 shrink-0">
-        <span className="text-base font-bold text-foreground whitespace-nowrap">Compliance AI</span>
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-base font-bold text-foreground">Compliance AI</span>
+          <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-primary ring-1 ring-inset ring-primary/20">
+            Beta
+          </span>
+        </span>
         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground whitespace-nowrap">
           Packaging Review
         </span>
