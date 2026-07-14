@@ -3,7 +3,7 @@ import { useLocation } from "wouter"
 import { cn } from "@/lib/utils"
 import { useAssistantChat } from "@workspace/api-client-react"
 import type { AssistantToolSuggestion } from "@workspace/api-client-react"
-import { Sparkles, X, ArrowUp, Plus, ArrowRight } from "lucide-react"
+import { X, ArrowUp, Plus, ArrowRight } from "lucide-react"
 
 type ChatMessage = {
   role: "user" | "assistant"
@@ -116,8 +116,12 @@ export function AssistantPanel({
         {/* Header */}
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-white/10 px-4">
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-green-600">
-              <Sparkles className="h-4 w-4 text-white" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-white p-1">
+              <img
+                src={`${import.meta.env.BASE_URL}dollar-tree-icon.png`}
+                alt="Dollar Tree"
+                className="h-full w-full object-contain"
+              />
             </span>
             <div className="leading-tight">
               <p className="text-sm font-semibold">AI Assistant</p>
