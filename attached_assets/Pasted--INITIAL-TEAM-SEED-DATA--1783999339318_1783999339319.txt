@@ -1,0 +1,198 @@
+====================================================
+INITIAL TEAM SEED DATA
+====================================================
+
+Pre-populate the Specialist Directory with the following profiles.
+
+These are starter records and must be fully editable.
+
+Specialists, Managers, and Administrators must be able to update profile information as responsibilities evolve.
+
+----------------------------------------------------
+
+Name:
+Shantel Woody
+
+Role:
+Compliance Reviewer & Approver
+
+Department:
+Compliance
+
+Expertise:
+- Packaging Compliance
+- Final Approvals
+- Regulatory Review
+
+Approval Authority:
+Yes
+
+Escalation Level:
+Level 3
+
+Active Reviewer:
+Yes
+
+----------------------------------------------------
+
+Name:
+Laura Bolt
+
+Role:
+Packaging Owner
+
+Department:
+Packaging
+
+Expertise:
+- Packaging Development
+- Workflow Ownership
+
+Approval Authority:
+Yes
+
+Escalation Level:
+Level 2
+
+Active Reviewer:
+Yes
+
+----------------------------------------------------
+
+Name:
+Alice Rees
+
+Role:
+Reviewer
+
+Department:
+Packaging Compliance
+
+Expertise:
+- Label Reviews
+- Packaging Reviews
+
+Approval Authority:
+No
+
+Escalation Level:
+Level 1
+
+Active Reviewer:
+Yes
+
+----------------------------------------------------
+
+Name:
+Eric Blanchette
+
+Role:
+Reviewer
+
+Department:
+Compliance
+
+Expertise:
+- Compliance Review
+
+Approval Authority:
+No
+
+Escalation Level:
+Level 1
+
+Active Reviewer:
+Yes
+
+----------------------------------------------------
+
+Name:
+Megan Everding
+
+Role:
+Reviewer
+
+Department:
+Compliance
+
+Expertise:
+- Compliance Review
+
+Approval Authority:
+No
+
+Escalation Level:
+Level 1
+
+Active Reviewer:
+Yes
+
+====================================================
+PROFILE MANAGEMENT
+====================================================
+
+All specialist profiles must be editable.
+
+Permissions:
+
+Specialist:
+- Update personal profile
+- Update expertise
+- Update availability
+- Update certifications
+- Update working hours
+- Update region coverage
+
+Manager:
+- Create specialists
+- Edit specialist profiles
+- Edit expertise
+- Edit approval authority
+- Assign departments
+- Configure routing priority
+- Configure backup reviewers
+- Configure escalation settings
+
+Administrator:
+- Full access to all specialist profiles
+- Create, edit, deactivate, archive specialists
+- Configure routing rules
+- Configure review stages
+- Configure escalation matrix
+
+====================================================
+AI ROUTING REQUIREMENT
+====================================================
+
+Future AI Agents will use this directory as the authoritative source for routing and assignment decisions.
+
+The AI Agent will evaluate:
+
+- Expertise
+- Department
+- Review Role
+- Approval Authority
+- Availability
+- Current Workload
+- Escalation Level
+- Region Support
+
+Example:
+
+If OpenAI identifies:
+
+Issue:
+Regulatory Review Required
+
+The Agent should evaluate:
+
+1. Who has Regulatory Review expertise?
+2. Who is available?
+3. Who has capacity?
+4. Who has approval authority?
+
+Then automatically recommend or assign the appropriate reviewer.
+
+The AI Agent should never guess who to route work to.
+
+All routing decisions should be based on structured specialist profile data stored in the Specialist Directory.

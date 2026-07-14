@@ -1,0 +1,368 @@
+SPECIALIST DIRECTORY & AI ROUTING ENGINE
+
+OBJECTIVE
+
+Build a Specialist Directory and Workflow Routing Engine that will serve as the foundation for future AI-powered workflow agents.
+
+This system will be the source of truth for reviewer expertise, approvals, routing decisions, escalations, and workload balancing.
+
+IMPORTANT
+
+Build all infrastructure now even though the future AI Agent may not yet be connected.
+
+The AI Agent will use this directory as its primary reference system for determining who reviews and approves packaging.
+
+====================================================
+NEW NAVIGATION
+====================================================
+
+TEAM MANAGEMENT
+
+├── Specialists
+├── Departments
+├── Routing Rules
+├── Escalation Matrix
+├── Workload Dashboard
+├── Review Stages
+
+====================================================
+SPECIALIST DIRECTORY
+====================================================
+
+Create a fully editable Specialist Directory.
+
+Administrators must be able to:
+
+- Create profiles
+- Edit profiles
+- Disable profiles
+- Archive profiles
+- Assign expertise
+- Update skills
+- Configure routing settings
+- Configure approval authority
+- Configure escalation authority
+
+====================================================
+SPECIALIST PROFILE FIELDS
+====================================================
+
+Identity
+
+- Name
+- Email
+- Employee ID
+- Profile Photo
+- Job Title
+- Department
+- Manager
+- Location
+- Time Zone
+
+Role
+
+- Reviewer
+- Reviewer & Approver
+- Owner
+- Compliance Specialist
+- Regulatory Affairs
+- Legal
+- Packaging Engineer
+- Quality Assurance
+- Packaging Designer
+- Brand Manager
+- Compliance Director
+- Administrator
+
+Expertise
+
+Allow multiple values.
+
+Examples:
+
+- FDA
+- FTC
+- USDA
+- EPA
+- CPSC
+- California Compliance
+- Claims Review
+- Organic Claims
+- Environmental Claims
+- Nutrition Facts
+- Ingredient Review
+- Packaging Reviews
+- Regulatory Review
+- Barcodes
+- Dielines
+- Packaging Engineering
+- Product Safety
+- Amazon Compliance
+- Walmart Compliance
+- International Compliance
+
+Regions Supported
+
+- US
+- Canada
+- UK
+- EU
+- Mexico
+- Global
+
+Certifications
+
+Store:
+
+- Certification Name
+- Issuer
+- Effective Date
+- Expiration Date
+- Uploaded Documentation
+
+====================================================
+AI ROUTING PROFILE
+====================================================
+
+Every specialist must have an AI Routing Profile.
+
+Fields:
+
+- Active Reviewer
+- Accepting Assignments
+- Routing Priority
+- Expertise Rating
+- Backup Reviewer
+- Escalation Level
+- Approval Authority
+- Product Categories Supported
+- Regions Supported
+- Max Active Reviews
+- Current Workload
+
+Purpose:
+
+Future AI Agents will use this data to determine routing decisions.
+
+====================================================
+AI AGENT INTEGRATION
+====================================================
+
+This directory will serve as the AI Routing Knowledge Base.
+
+Future AI Agents must be able to:
+
+- Query specialist profiles
+- Query expertise
+- Query certifications
+- Query availability
+- Query workload
+- Query approval authority
+- Query escalation paths
+- Query regions supported
+- Query product categories
+
+The AI Agent should NEVER guess who to route work to.
+
+Routing decisions must be based on structured specialist data stored in this directory.
+
+This directory becomes the source of truth for:
+
+- Assignments
+- Reviews
+- Escalations
+- Approvals
+- Workflow Routing
+
+====================================================
+REVIEW STAGES
+====================================================
+
+Build support for stage-based reviews.
+
+Examples:
+
+Stage 1
+Packaging Review
+
+Stage 2
+Compliance Review
+
+Stage 3
+Regulatory Review
+
+Stage 4
+Final Approval
+
+Each stage supports:
+
+- Assigned Team
+- Assigned Reviewer
+- Approval Authority
+- SLA
+- Escalation Path
+
+====================================================
+DEPARTMENTS
+====================================================
+
+Support:
+
+- Compliance
+- Regulatory Affairs
+- Legal
+- Packaging Engineering
+- Creative
+- Merchandising
+- Quality Assurance
+
+Store:
+
+- Department Name
+- Department Leader
+- Escalation Owner
+- Department Members
+
+====================================================
+ROUTING RULE ENGINE
+====================================================
+
+Create configurable routing rules.
+
+Examples:
+
+IF Issue Type = Barcode
+THEN Route = Packaging Engineering
+
+IF Issue Type = FDA
+THEN Route = Compliance
+
+IF Issue Type = Organic Claim
+THEN Route = Regulatory Affairs
+
+IF Risk Score > 90
+THEN Escalate = Compliance Director
+
+Support:
+
+- Multi-condition rules
+- Rule priorities
+- Department routing
+- Specialist routing
+- Stage-based routing
+
+====================================================
+WORKLOAD MANAGEMENT
+====================================================
+
+Track:
+
+- Active Reviews
+- Available Capacity
+- Pending Tasks
+- Escalated Reviews
+- Average Resolution Time
+
+The routing engine should consider:
+
+- Expertise
+- Capacity
+- Availability
+- Department
+- Priority
+
+before making assignments.
+
+====================================================
+TASK MANAGEMENT
+====================================================
+
+Automatically create tracking records.
+
+Fields:
+
+- Task ID
+- Package
+- Assigned Reviewer
+- Assigned Department
+- Review Stage
+- Priority
+- Due Date
+- Status
+
+Statuses:
+
+- Pending
+- Assigned
+- In Progress
+- Approved
+- Rejected
+- Escalated
+- Closed
+
+====================================================
+AUDIT HISTORY
+====================================================
+
+Track:
+
+- Assignment Created
+- Reviewer Selected
+- Routing Rule Used
+- Escalation Triggered
+- Approval Completed
+- Reviewer Changes
+- Agent Recommendations
+
+All routing decisions must be auditable.
+
+====================================================
+FUTURE AI WORKFLOW
+====================================================
+
+Support future workflow:
+
+Package Uploaded
+↓
+OpenAI Compliance Review
+↓
+Risk Assessment
+↓
+AI Agent Evaluates Findings
+↓
+Queries Specialist Directory
+↓
+Queries Routing Rules
+↓
+Checks Availability
+↓
+Checks Workload
+↓
+Assigns Correct Reviewer
+↓
+Creates Task
+↓
+Sends Notifications
+↓
+Tracks Approval Process
+
+====================================================
+FINAL DELIVERABLE
+====================================================
+
+Provide:
+
+1. Database Schema
+2. Specialist Directory Design
+3. AI Routing Profile Design
+4. Review Stage Design
+5. Routing Engine Design
+6. Escalation Matrix Design
+7. Task Management Design
+8. Audit Trail Design
+9. Future AI Agent Architecture
+10. Enterprise Readiness Assessment
+
+GOAL
+
+Create a complete Specialist Directory and Routing Infrastructure that supports manual review processes today and serves as the foundation for future AI-powered workflow automation and intelligent assignment routing.
