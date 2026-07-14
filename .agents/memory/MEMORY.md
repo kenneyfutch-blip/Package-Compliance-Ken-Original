@@ -1,6 +1,7 @@
 - [Compliance AI build](compliance-ai.md) — Packaging Compliance AI product: stack, AI engine, seed, and non-obvious decisions.
 - [AI provider integrations](ai-providers.md) — configurable AI models: encrypted keys, single-active invariant, SSRF-validated baseUrl, 8-engine taxonomy.
 - [Proofing & Review Suite](proofing-suite.md) — presigned uploads (no per-object ACL, by design), server-only identity, version uniqueness, image-only markup.
+- [Proof annotation accuracy](proof-annotation-accuracy.md) — proof pins are LLM-guessed / synthetic-grid, NOT OCR-geometry; fix = map finding detectedText to spatial-OCR word boxes.
 - [openFDA integration](openfda.md) — server-only key proxy; 404=empty results, YYYYMMDD dates, per-category enforcement endpoints, 503-vs-502.
 - [eCFR integration](ecfr-integration.md) — weekly local sync of curated CFR parts; fetch-by-part public API; global pgvector table; semantic recall injected into AI analysis, fail-safe.
 - [Tenancy, RBAC & Teams](tenancy-rbac.md) — code is source of truth for roles/perms; Clerk provisioning + org scoping; requiredPermFor gates nav+routes; global regulations/ai_providers; append-only audit.
