@@ -765,6 +765,10 @@ router.post(
           supplierId,
           actorUserId: ctx.userId,
           actorName: ctx.name || ctx.email || "System",
+          // This endpoint backs the manual "Deep Analysis" re-run, so run the
+          // thorough, escalation-capable review — as opposed to the fast triage
+          // that runs automatically on upload.
+          deep: true,
         });
       } catch (err) {
         // Never strand the package in "AI Review" with no job to complete it.
@@ -788,8 +792,9 @@ router.post(
     }
 
     // Metadata-only package (no text, no artwork): there's nothing to OCR and the
-    // background job would just route it for manual review, so analyze inline —
-    // this path is fast without an OCR/reasoning step.
+    // background job would just route it for manual review, so analyze inline.
+    // This intentionally stays fast (no deep escalation) — it runs synchronously
+    // in the request, and a multi-minute deep pass here would hang the response.
     try {
       const { regulations, priorKnowledge, internalStandards, cfrRegulations } =
         await loadAnalysisContext(pkg, req);

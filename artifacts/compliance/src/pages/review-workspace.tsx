@@ -445,7 +445,7 @@ export default function ReviewWorkspace() {
           <Button variant="default" className="gap-2 h-9" disabled={analyze.isPending || pkg.status === "AI Review"}
             onClick={() => analyze.mutate({ id: packageId }, { onSuccess: invalidate })}>
             {analyze.isPending || pkg.status === "AI Review" ? <Loader2 className="w-4 h-4 animate-spin" /> : <BrainCircuit className="w-4 h-4" />}
-            Re-run AI
+            Deep Analysis
           </Button>
           <PoweredByAi className="ml-1 hidden md:inline-flex" />
         </div>
@@ -682,7 +682,9 @@ function AnalysisProgress({ pkg }: { pkg: Pkg }) {
       <div className="text-center mb-6">
         <p className="font-medium text-foreground">Analyzing packaging…</p>
         <p className="text-xs text-muted-foreground mt-1">
-          A full compliance review usually takes about 30 seconds. This page updates on its own — feel free to keep working elsewhere.
+          {pkg.analyzedAt
+            ? "A deep compliance review can take a few minutes. This page updates on its own — feel free to keep working elsewhere."
+            : "A full compliance review usually takes about 30 seconds. This page updates on its own — feel free to keep working elsewhere."}
         </p>
       </div>
       <ol className="space-y-3">

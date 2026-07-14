@@ -31,6 +31,9 @@ export interface PackageAnalysisPayload {
   supplierId?: number | null;
   actorUserId?: number | null;
   actorName?: string;
+  // true = the thorough "Deep Analysis" re-run (active engine, escalation-capable,
+  // no time cap); false/undefined = fast triage (managed fast model, ~30s cap).
+  deep?: boolean;
 }
 
 // The recall helpers below mirror the request-scoped versions in routes/packages.ts
@@ -176,6 +179,7 @@ export async function runPackageAnalysis(
     priorKnowledge,
     internalStandards,
     cfrRegulations,
+    { deep: p.deep ?? false },
   );
   const version = await ensureInitialVersion(pkg);
   await applyAnalysis(pkg, result, version.id, p.organizationId);

@@ -143,7 +143,12 @@ export async function analyzePackaging(
   priorKnowledge?: string,
   internalStandards?: string,
   cfrRegulations?: string,
+  opts?: { deep?: boolean },
 ): Promise<AnalysisResult> {
+  // Deep review = the thorough, escalation-capable path on the active engine
+  // (the explicit "Deep Analysis" re-run). Fast triage (default, e.g. on upload)
+  // = managed fast model, no escalation, hard ~30s time budget.
+  const deep = opts?.deep ?? false;
   const regContext = regulations
     .map(
       (r) =>
@@ -260,16 +265,18 @@ Respond with JSON of shape:
   const compute = async (): Promise<AnalysisResult> => {
     const { result, orchestration } = await runTiered<AnalysisResult>({
     workload: "packaging_analysis",
-    // Latency-critical: pin to the Replit-managed fast model (gpt-5.4-mini),
-    // never escalate, and cap the model call at a hard budget so a full review
-    // finishes in ~30s instead of the multi-minute heavy model. All regulatory
-    // context (regulations, compliance memory, internal standards, eCFR/FDA)
-    // and every accuracy safeguard (confidence-based downgrade, disclaimers,
-    // human-review flags) below are unchanged — only the model and time are.
-    initialTier: "fast",
-    escalates: false,
-    deadlineMs: PACKAGING_ANALYSIS_DEADLINE_MS,
-    resolveClient: () => resolveManagedFastClient(),
+    // Fast triage (default): pin to the Replit-managed fast model (gpt-5.4-mini),
+    // never escalate, cap the model call at a hard budget so it finishes in ~30s.
+    // Deep review ("Deep Analysis" re-run): the active engine at the standard
+    // tier, MAY escalate one step to the reasoning tier, no time cap — the
+    // thorough multi-minute path. All regulatory context (regulations, compliance
+    // memory, internal standards, eCFR/FDA) and every accuracy safeguard
+    // (confidence downgrade, disclaimers, human-review flags) below are identical
+    // for both — only the model and time budget differ.
+    initialTier: deep ? "standard" : "fast",
+    escalates: deep,
+    deadlineMs: deep ? undefined : PACKAGING_ANALYSIS_DEADLINE_MS,
+    resolveClient: deep ? undefined : () => resolveManagedFastClient(),
     context: {
       organizationId: pkg.organizationId,
       reviewType: WORKLOAD_LABELS.packaging_analysis,
@@ -458,7 +465,10 @@ Respond with JSON of shape:
     orgId: pkg.organizationId,
     workload: "packaging_analysis",
     promptVersion: ANALYSIS_PROMPT_VERSION,
-    keyParts: [system, user],
+    // Fast and deep produce different-depth results from different models, so
+    // they must never share a cache entry (the model in the base key is the
+    // active standard model for both, which wouldn't distinguish them).
+    keyParts: [deep ? "deep" : "fast", system, user],
     compute,
   });
 }
