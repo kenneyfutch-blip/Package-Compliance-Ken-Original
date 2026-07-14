@@ -175,7 +175,7 @@ export function DocumentAiTab({ packageId }: { packageId: number }) {
               <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5 shrink-0">
                 <Settings2 className="w-3.5 h-3.5" /> Extracted Text (cached)
               </h4>
-              <pre className="text-xs whitespace-pre-wrap font-mono bg-muted/40 border border-border rounded-lg p-3 flex-1 min-h-0 overflow-y-auto">
+              <pre className="text-xs whitespace-pre-wrap font-mono bg-muted/40 border border-border rounded-lg p-3 flex-1 min-h-[320px] overflow-y-auto">
                 {extraction.text}
               </pre>
             </div>

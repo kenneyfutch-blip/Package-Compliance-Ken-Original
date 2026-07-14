@@ -493,6 +493,7 @@ export default function ReviewWorkspace() {
             <TabsList className="w-full justify-start rounded-none border-b border-border h-auto p-0 bg-muted/20 gap-4 px-4 overflow-x-auto shrink-0">
               <TooltipProvider delayDuration={150}>
                 {[
+                  ["document", "Document AI", "OCR text extraction from the artwork image, powered by the active AI model."],
                   ["findings", "Findings", "Compliance issues the AI found in this artwork — each with severity, regulatory citations, and a suggested fix."],
                   ["comments", "Comments", "Threaded reviewer comments and discussion, including pins placed directly on the artwork."],
                   ["tasks", "Tasks", "Action items and follow-ups tracked for this package until it's ready to approve."],
@@ -503,7 +504,6 @@ export default function ReviewWorkspace() {
                   ["compare", "Compare", "Compare two versions of this package side by side, with an AI summary of what changed."],
                   ["language", "Language", "AI copy review — spelling, grammar, contextual wording, marketing claims, and brand language."],
                   ["claims", "Claims", "Audits product claims (e.g. \"Natural\", \"Non-Toxic\") against the regulations that govern them."],
-                  ["document", "Document AI", "OCR text extraction from the artwork image, powered by the active AI model."],
                 ].map(([v, label, info]) => (
                   <TabsTrigger key={v} value={v}
                     className="group/tab inline-flex items-center gap-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none py-2.5 px-1 text-sm">
@@ -530,6 +530,7 @@ export default function ReviewWorkspace() {
             </TabsList>
 
             <div className="flex-1 overflow-y-auto min-h-0">
+              <TabsContent value="document" className="m-0 p-4 h-full"><DocumentAiTab packageId={packageId} /></TabsContent>
               <TabsContent value="findings" className="m-0 p-4"><FindingsPanel pkg={pkg} selectedId={selectedId} onSelect={setSelectedId} /></TabsContent>
               <TabsContent value="comments" className="m-0 p-4"><CommentsPanel pkg={pkg} packageId={packageId} numbered={numbered} selectedId={selectedId} onSelect={setSelectedId} onChange={invalidate} onAddPin={() => setTool("pin")} /></TabsContent>
               <TabsContent value="tasks" className="m-0 p-4"><TasksPanel pkg={pkg} packageId={packageId} onChange={invalidate} /></TabsContent>
@@ -540,7 +541,6 @@ export default function ReviewWorkspace() {
               <TabsContent value="compare" className="m-0 p-4"><ComparePanel pkg={pkg} packageId={packageId} /></TabsContent>
               <TabsContent value="language" className="m-0 p-4"><LanguageReviewTab detail={languageReview} onRun={handleRunLanguage} isRunning={runLanguage.isPending} /></TabsContent>
               <TabsContent value="claims" className="m-0 p-4"><ClaimsComplianceTab detail={claimsAnalysis} onRun={handleRunClaims} isRunning={runClaims.isPending} /></TabsContent>
-              <TabsContent value="document" className="m-0 p-4 h-full"><DocumentAiTab packageId={packageId} /></TabsContent>
             </div>
           </Tabs>
 
