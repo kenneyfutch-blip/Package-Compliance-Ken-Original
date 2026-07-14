@@ -635,9 +635,6 @@ function NavContent({
                 ? ({
                     "--accent": "142 70% 27%",
                     "--muted": "142 72% 33%",
-                    // Fold the bottom-right corner, matching the search box.
-                    clipPath:
-                      "polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%)",
                   } as React.CSSProperties)
                 : undefined
             }
