@@ -1,15 +1,26 @@
 import * as React from "react"
 import { useLocation } from "wouter"
 import { cn } from "@/lib/utils"
-import { useAssistantChat } from "@workspace/api-client-react"
+import { useAssistantChat, useAssistantExtract } from "@workspace/api-client-react"
 import type { AssistantToolSuggestion } from "@workspace/api-client-react"
-import { X, ArrowUp, Plus, ArrowRight } from "lucide-react"
+import { X, ArrowUp, Plus, ArrowRight, FileText, Loader2 } from "lucide-react"
+import {
+  extractAttachmentText,
+  ATTACHMENT_ACCEPT,
+  type RunOcr,
+} from "@/lib/attachment-extract"
 
 type ChatMessage = {
   role: "user" | "assistant"
   content: string
+  // Full content actually sent to the model — may embed extracted document text
+  // that we don't want to render in the user's chat bubble.
+  apiContent?: string
+  attachments?: string[]
   suggestions?: AssistantToolSuggestion[]
 }
+
+type Attachment = { name: string; text: string }
 
 const EXAMPLE_PROMPTS = [
   "What warnings are required on cleaning product labels?",
@@ -30,8 +41,44 @@ export function AssistantPanel({
   const [input, setInput] = React.useState("")
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const [attachments, setAttachments] = React.useState<Attachment[]>([])
+  const [attachError, setAttachError] = React.useState<string | null>(null)
+  const [attaching, setAttaching] = React.useState(false)
 
   const chat = useAssistantChat()
+  const extract = useAssistantExtract()
+
+  const runOcr: RunOcr = React.useCallback(
+    async (imageDataUrl) => {
+      const r = await extract.mutateAsync({ data: { imageDataUrl } })
+      return r.text ?? ""
+    },
+    [extract],
+  )
+
+  const handleFiles = React.useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return
+      setAttachError(null)
+      setAttaching(true)
+      try {
+        for (const file of Array.from(files)) {
+          try {
+            const text = await extractAttachmentText(file, runOcr)
+            setAttachments((prev) => [...prev, { name: file.name, text }])
+          } catch (err) {
+            setAttachError(
+              err instanceof Error ? err.message : `Couldn't read ${file.name}.`,
+            )
+          }
+        }
+      } finally {
+        setAttaching(false)
+      }
+    },
+    [runOcr],
+  )
 
   // Keep the transcript pinned to the latest message.
   React.useEffect(() => {
@@ -48,21 +95,41 @@ export function AssistantPanel({
   const send = React.useCallback(
     (raw: string) => {
       const text = raw.trim()
-      if (!text || chat.isPending) return
+      if ((!text && attachments.length === 0) || chat.isPending || attaching)
+        return
+
+      const display = text || "Please review the attached document."
+      const apiContent =
+        attachments.length > 0
+          ? [
+              display,
+              ...attachments.map(
+                (a) => `--- Attached document: ${a.name} ---\n${a.text}`,
+              ),
+            ].join("\n\n")
+          : display
+      const attachedNames = attachments.map((a) => a.name)
 
       const nextMessages: ChatMessage[] = [
         ...messages,
-        { role: "user", content: text },
+        {
+          role: "user",
+          content: display,
+          apiContent,
+          attachments: attachedNames.length ? attachedNames : undefined,
+        },
       ]
       setMessages(nextMessages)
       setInput("")
+      setAttachments([])
+      setAttachError(null)
 
       chat.mutate(
         {
           data: {
             messages: nextMessages.map((m) => ({
               role: m.role,
-              content: m.content,
+              content: m.apiContent ?? m.content,
             })),
           },
         },
@@ -90,7 +157,7 @@ export function AssistantPanel({
         },
       )
     },
-    [messages, chat],
+    [messages, chat, attachments, attaching],
   )
 
   const onSubmit = (e: React.FormEvent) => {
@@ -184,6 +251,19 @@ export function AssistantPanel({
                     )}
                   >
                     <p className="whitespace-pre-wrap">{m.content}</p>
+                    {m.attachments && m.attachments.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {m.attachments.map((n, j) => (
+                          <span
+                            key={j}
+                            className="flex items-center gap-1 rounded bg-black/25 px-1.5 py-0.5 text-[11px]"
+                          >
+                            <FileText className="h-3 w-3 shrink-0" />
+                            <span className="max-w-[160px] truncate">{n}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     {m.suggestions && m.suggestions.length > 0 && (
                       <div className="mt-3 space-y-2">
                         {m.suggestions.map((s) => (
@@ -224,10 +304,36 @@ export function AssistantPanel({
 
         {/* Composer — styled after the reference "Ask anything" box */}
         <div className="shrink-0 p-3">
+          {attachError && (
+            <p className="mb-2 px-1 text-xs text-red-400">{attachError}</p>
+          )}
           <form
             onSubmit={onSubmit}
             className="rounded-2xl border border-white/10 bg-white/[0.06] p-2.5"
           >
+            {attachments.length > 0 && (
+              <div className="mb-1.5 flex flex-wrap gap-1.5 px-1">
+                {attachments.map((a, i) => (
+                  <span
+                    key={i}
+                    className="flex items-center gap-1 rounded-md bg-white/10 px-2 py-1 text-xs text-white/80"
+                  >
+                    <FileText className="h-3 w-3 shrink-0 text-green-400" />
+                    <span className="max-w-[140px] truncate">{a.name}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAttachments((prev) => prev.filter((_, j) => j !== i))
+                      }
+                      aria-label={`Remove ${a.name}`}
+                      className="text-white/40 hover:text-white"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
             <textarea
               ref={inputRef}
               value={input}
@@ -239,16 +345,42 @@ export function AssistantPanel({
                 }
               }}
               rows={2}
-              placeholder="Ask anything..."
+              placeholder="Ask a question or attach a document..."
               className="w-full resize-none bg-transparent px-1.5 text-sm text-white placeholder:text-white/40 focus:outline-none"
             />
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ATTACHMENT_ACCEPT}
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                void handleFiles(e.target.files)
+                e.target.value = ""
+              }}
+            />
             <div className="mt-1 flex items-center justify-between">
-              <span className="flex h-7 w-7 items-center justify-center rounded-full text-white/40">
-                <Plus className="h-4 w-4" />
-              </span>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={attaching}
+                aria-label="Add documents"
+                title="Add documents"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-white/40 transition-colors hover:bg-white/10 hover:text-white/80 disabled:opacity-50"
+              >
+                {attaching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+              </button>
               <button
                 type="submit"
-                disabled={!input.trim() || chat.isPending}
+                disabled={
+                  (!input.trim() && attachments.length === 0) ||
+                  chat.isPending ||
+                  attaching
+                }
                 aria-label="Send"
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-green-600 text-white transition-colors hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/40"
               >

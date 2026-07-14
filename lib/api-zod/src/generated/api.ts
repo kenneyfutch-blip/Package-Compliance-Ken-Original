@@ -2499,6 +2499,21 @@ export const AssistantChatResponse = zod.object({
 
 
 /**
+ * @summary Transcribe an attached image into text for the AI assistant. Available to any authenticated user (unlike /ocr, which is gated to package editors), so assistant attachments work for every role.
+ */
+
+
+
+export const AssistantExtractBody = zod.object({
+  "imageDataUrl": zod.string().min(1).describe('Data URL of the artwork image (data:image\/...;base64,...)')
+})
+
+export const AssistantExtractResponse = zod.object({
+  "text": zod.string()
+})
+
+
+/**
  * @summary Ask the AI compliance copilot a question about this package
  */
 export const AskCopilotParams = zod.object({

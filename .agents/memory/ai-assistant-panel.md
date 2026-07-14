@@ -19,5 +19,13 @@ The list of recommendable tools (label/href/description) lives in the AI system 
 The assistant reuses the existing `copilot` `AiWorkload` for usage tracking instead of adding a new workload value.
 **Why:** adding an `AiWorkload` member ripples through the union + label maps; reuse avoids that churn. Revisit only if assistant cost needs to be broken out separately from copilot.
 
+## Document attachments ("add documents")
+The composer's `+` attaches files whose text is extracted client-side then injected into the outgoing chat message as context. Extraction by type: text files read directly; PDFs via pdfjs text layer (no AI round-trip; scanned/no-text PDFs are rejected with a friendly message — no rasterize-to-OCR fallback); images downscaled then OCR'd server-side. The chat message keeps `content` (display-safe, shown in the bubble) separate from `apiContent` (display + `--- Attached document ---` blocks) and sends `apiContent ?? content` for every turn so document context survives across the conversation without dumping raw text into the UI.
+
+## New AI/OCR endpoints must join the strict AI rate limiter
+The app's rate limiting is centralized: a single dispatcher matches request paths against `AI_POST_PATHS` regexes in `rateLimit.ts` and routes matches to the strict `aiLimiter`; everything else falls through to a much looser general limit. There is **no** per-route limiter middleware.
+**Why:** a new AI/OCR endpoint (e.g. the assistant's image-extract route) that is open to all authed users but *not* added to `AI_POST_PATHS` silently gets the loose limit → cost/DoS abuse vector. This was caught in review for `/assistant/extract`.
+**How to apply:** whenever you add a POST endpoint that calls an LLM or multimodal/OCR model, add its path to `AI_POST_PATHS` in the same change.
+
 ## Auth / suppliers
 `POST /assistant/chat` sits behind the global `requireAuth` only — no `requirePermission` — so it's open to all authed users incl. `supplier_user`. Safe because it reads no tenant business data (static catalog + caller messages; orgId used only for telemetry). Worst case a supplier is suggested a page they can't open (UX noise). If that matters, filter the catalog by permission.

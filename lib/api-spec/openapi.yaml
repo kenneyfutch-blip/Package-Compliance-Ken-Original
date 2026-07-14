@@ -1207,6 +1207,40 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /assistant/extract:
+    post:
+      operationId: assistantExtract
+      tags: [assistant]
+      summary: >-
+        Transcribe an attached image into text for the AI assistant. Available
+        to any authenticated user (unlike /ocr, which is gated to package
+        editors), so assistant attachments work for every role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OcrExtractInput"
+      responses:
+        "200":
+          description: Extracted text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrExtractResult"
+        "400":
+          description: Invalid image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "502":
+          description: Extraction unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
   /packages/{id}/copilot:
     post:
       operationId: askCopilot

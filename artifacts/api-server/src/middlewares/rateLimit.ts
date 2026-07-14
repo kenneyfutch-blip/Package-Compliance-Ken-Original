@@ -61,6 +61,9 @@ const AI_POST_PATHS: RegExp[] = [
   /^\/api\/packages\/(bulk-analyze|bulk-language-review)$/,
   /^\/api\/policies$/,
   /^\/api\/policies\/[^/]+\/reprocess$/,
+  // AI assistant: chat is an LLM call and extract is multimodal OCR — both are
+  // open to every authenticated user, so they must ride the strict AI limiter.
+  /^\/api\/assistant\/(chat|extract)$/,
 ];
 
 const UPLOAD_POST_PATHS: RegExp[] = [/^\/api\/storage\/uploads\/request-url$/];

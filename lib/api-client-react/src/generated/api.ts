@@ -3948,6 +3948,77 @@ export const useAssistantChat = <TError = ErrorType<ApiError>,
       return useMutation(getAssistantChatMutationOptions(options));
     }
 
+export const getAssistantExtractUrl = () => {
+
+
+
+
+  return `/api/assistant/extract`
+}
+
+/**
+ * @summary Transcribe an attached image into text for the AI assistant. Available to any authenticated user (unlike /ocr, which is gated to package editors), so assistant attachments work for every role.
+ */
+export const assistantExtract = async (ocrExtractInput: OcrExtractInput, options?: RequestInit): Promise<OcrExtractResult> => {
+
+  return customFetch<OcrExtractResult>(getAssistantExtractUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(ocrExtractInput)
+  }
+);}
+
+
+
+
+
+export const getAssistantExtractMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assistantExtract>>, TError,{data: BodyType<OcrExtractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assistantExtract>>, TError,{data: BodyType<OcrExtractInput>}, TContext> => {
+
+const mutationKey = ['assistantExtract'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assistantExtract>>, {data: BodyType<OcrExtractInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  assistantExtract(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssistantExtractMutationResult = NonNullable<Awaited<ReturnType<typeof assistantExtract>>>
+    export type AssistantExtractMutationBody = BodyType<OcrExtractInput>
+    export type AssistantExtractMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Transcribe an attached image into text for the AI assistant. Available to any authenticated user (unlike /ocr, which is gated to package editors), so assistant attachments work for every role.
+ */
+export const useAssistantExtract = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assistantExtract>>, TError,{data: BodyType<OcrExtractInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assistantExtract>>,
+        TError,
+        {data: BodyType<OcrExtractInput>},
+        TContext
+      > => {
+      return useMutation(getAssistantExtractMutationOptions(options));
+    }
+
 export const getAskCopilotUrl = (id: number,) => {
 
 
