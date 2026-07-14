@@ -1166,7 +1166,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               onClick={() => setAssistantOpen((v) => !v)}
               aria-pressed={assistantOpen}
               data-tour="ai-assistant"
-              className="pba-rainbow-dark hidden sm:flex gap-2 px-3 text-green-400 hover:text-green-300"
+              className="pba-rainbow-dark hidden sm:flex gap-2 px-3 text-white hover:text-white"
             >
               <Sparkles className="w-4 h-4" />
               Ask AI
