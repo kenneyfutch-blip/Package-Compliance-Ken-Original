@@ -71,8 +71,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useListNotifications } from "@workspace/api-client-react"
+import {
+  useListNotifications,
+  useGetReviewPresence,
+  getGetReviewPresenceQueryKey,
+} from "@workspace/api-client-react"
 import { usePermissions } from "@/lib/access"
+import { PresenceStrip } from "@/components/presence-indicators"
 import { useFavorites } from "@/lib/favorites"
 import { requiredPermFor } from "@/lib/permissions"
 import { OnboardingTour } from "@/components/training/onboarding-tour"
@@ -889,6 +894,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme()
   const [, navigate] = useLocation()
   const { data: notifications = [] } = useListNotifications()
+  const { me } = usePermissions()
+  const canSeePresence = !!me && me.roleKey !== "supplier_user"
+  const { data: presence } = useGetReviewPresence({
+    query: {
+      enabled: canSeePresence,
+      refetchInterval: canSeePresence ? 10_000 : false,
+      queryKey: getGetReviewPresenceQueryKey(),
+    },
+  })
+  const onlineCount = presence?.length ?? 0
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [q, setQ] = React.useState("")
   const unreadCount = notifications.filter((n) => !n.read && !n.archived).length
@@ -945,6 +960,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <TopNavMenus />
           </div>
           <div className="flex items-center gap-2">
+            {canSeePresence && onlineCount > 0 && (
+              <div
+                className="hidden lg:flex items-center mr-1"
+                title={`${onlineCount} reviewer${onlineCount === 1 ? "" : "s"} online`}
+              >
+                <PresenceStrip presence={presence} max={5} />
+              </div>
+            )}
             <Link href="/upload">
               <Button size="sm" className="hidden sm:flex gap-2">
                 <Upload className="w-4 h-4" />
