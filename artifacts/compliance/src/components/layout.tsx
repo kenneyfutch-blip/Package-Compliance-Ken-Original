@@ -612,8 +612,8 @@ function NavContent({
         // The section holding the active page is always open; otherwise honor the
         // user's explicit choice, falling back to the section's sensible default.
         const open = sectionActive || (overrides[section.id] ?? section.defaultOpen ?? true)
-        // Give the "My Work" section a light grey backing so it visually breaks
-        // up the long navigation list.
+        // Give the "My Work" section a soft Dollar Tree green backing so it
+        // visually breaks up the long navigation list.
         const isMyWork = section.id === "my-work"
         return (
           <div
@@ -621,7 +621,7 @@ function NavContent({
             data-tour={`nav-${section.id}`}
             className={cn(
               idx > 0 && !isMyWork && "mt-3 border-t border-border/60 pt-3",
-              isMyWork && "mt-3 rounded-lg bg-muted/60 px-1 py-1.5",
+              isMyWork && "mt-3 rounded-lg bg-sidebar border border-sidebar-border px-1 py-1.5",
             )}
           >
             <button
