@@ -639,6 +639,17 @@ function NavContent({
               // then force a true-black background.
               isMyWork && "dark mt-3 rounded-lg bg-black border border-white/15 px-1 py-1.5",
             )}
+            // Recolor the hover/active fills in this block to a neutral light
+            // grey (the dark palette's --accent/--muted are blue-slate). This
+            // covers both the section header hover and each nav row hover/active.
+            style={
+              isMyWork
+                ? ({
+                    "--accent": "0 0% 38%",
+                    "--muted": "0 0% 30%",
+                  } as React.CSSProperties)
+                : undefined
+            }
           >
             <button
               type="button"
