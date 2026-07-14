@@ -3,6 +3,8 @@ import { useQueryClient } from "@tanstack/react-query"
 import {
   useListSpecialists,
   useListDepartments,
+  useListLinkableUsers,
+  getListLinkableUsersQueryKey,
   useCreateSpecialist,
   useUpdateSpecialist,
   useAddSpecialistCertification,
@@ -40,6 +42,7 @@ type FormState = {
   jobTitle: string
   email: string
   employeeId: string
+  userId: string
   departmentId: string
   managerName: string
   location: string
@@ -60,7 +63,7 @@ type FormState = {
 }
 
 const emptyForm: FormState = {
-  name: "", jobTitle: "", email: "", employeeId: "", departmentId: "none",
+  name: "", jobTitle: "", email: "", employeeId: "", userId: "none", departmentId: "none",
   managerName: "", location: "", role: "Reviewer", status: "active",
   expertise: "", regions: "", productCategories: "",
   routingPriority: 0, expertiseRating: 3, escalationLevel: 1, maxActiveReviews: 5,
@@ -74,6 +77,7 @@ function fromSpecialist(s: Specialist): FormState {
     jobTitle: s.jobTitle ?? "",
     email: s.email ?? "",
     employeeId: s.employeeId ?? "",
+    userId: s.userId ? String(s.userId) : "none",
     departmentId: s.departmentId ? String(s.departmentId) : "none",
     managerName: s.managerName ?? "",
     location: s.location ?? "",
@@ -100,6 +104,7 @@ function toInput(f: FormState): SpecialistInput {
     jobTitle: f.jobTitle.trim() || null,
     email: f.email.trim() || null,
     employeeId: f.employeeId.trim() || null,
+    userId: f.userId === "none" ? null : Number(f.userId),
     departmentId: f.departmentId === "none" ? null : Number(f.departmentId),
     managerName: f.managerName.trim() || null,
     location: f.location.trim() || null,
@@ -132,6 +137,10 @@ export default function SpecialistsDirectory() {
   const canWrite = has("specialists:write")
   const { data: specialists = [], isLoading } = useListSpecialists()
   const { data: departments = [] } = useListDepartments()
+  // Only fetch linkable accounts for users who can actually edit the link.
+  const { data: linkableUsers = [] } = useListLinkableUsers({
+    query: { enabled: canWrite, queryKey: getListLinkableUsersQueryKey() },
+  })
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListSpecialistsQueryKey() })
 
   const createMut = useCreateSpecialist({ mutation: { onSuccess: invalidate } })
@@ -288,7 +297,23 @@ export default function SpecialistsDirectory() {
               <Field label="Manager"><Input value={form.managerName} onChange={(e) => set("managerName", e.target.value)} /></Field>
               <Field label="Role / title in workflow"><Input value={form.role} onChange={(e) => set("role", e.target.value)} placeholder="Compliance Reviewer & Approver" /></Field>
               <Field label="Location"><Input value={form.location} onChange={(e) => set("location", e.target.value)} /></Field>
+              <Field label="Linked user account">
+                <Select value={form.userId} onValueChange={(v) => set("userId", v)}>
+                  <SelectTrigger><SelectValue placeholder="Not linked" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not linked</SelectItem>
+                    {linkableUsers.map((u) => (
+                      <SelectItem key={u.id} value={String(u.id)}>
+                        {u.name}{u.email ? ` (${u.email})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
             </div>
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Link this profile to a login account to make the specialist assignable in the review picker.
+            </p>
 
             <Field label="Areas of expertise (comma separated)">
               <Input value={form.expertise} onChange={(e) => set("expertise", e.target.value)} placeholder="Packaging Compliance, Final Approvals" />

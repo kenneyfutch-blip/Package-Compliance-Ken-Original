@@ -90,6 +90,19 @@ export function AssignmentDialog({
   const teamNum = teamId === NO_TEAM ? undefined : Number(teamId)
   const assigneeNum = assigneeId === UNASSIGNED ? undefined : Number(assigneeId)
 
+  // The roster is the Specialist Directory (linked, active reviewers). If a saved
+  // assignment points at someone no longer in it, inject a labeled fallback so the
+  // Select shows who currently holds the role instead of rendering blank.
+  const rosterWith = (currentId: string, name: string | null | undefined) => {
+    if (currentId === UNASSIGNED) return activeUsers
+    const id = Number(currentId)
+    if (activeUsers.some((u) => u.id === id)) return activeUsers
+    return [{ id, name: `${name ?? "Former reviewer"} (not in directory)` }, ...activeUsers]
+  }
+  const assigneeOptions = rosterWith(assigneeId, assignment?.assigneeName)
+  const backupOptions = rosterWith(backupId, assignment?.backupName)
+  const managerOptions = rosterWith(managerId, assignment?.managerName)
+
   const recommendParams = {
     ...(assigneeNum !== undefined ? { assigneeUserId: assigneeNum } : {}),
     ...(teamNum !== undefined ? { teamId: teamNum } : {}),
@@ -147,7 +160,7 @@ export function AssignmentDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
-                  {activeUsers.map((u) => (
+                  {assigneeOptions.map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -193,7 +206,7 @@ export function AssignmentDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={UNASSIGNED}>None</SelectItem>
-                  {activeUsers.map((u) => (
+                  {backupOptions.map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -205,7 +218,7 @@ export function AssignmentDialog({
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value={UNASSIGNED}>None</SelectItem>
-                  {activeUsers.map((u) => (
+                  {managerOptions.map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
                   ))}
                 </SelectContent>

@@ -7,7 +7,7 @@
  */
 
 export interface ApprovalDecisionInput {
-  /** approve | approve_with_comments | needs_revision | reject | escalate */
+  /** approve | approve_with_comments | needs_revision | reject | escalate | reset */
   decision: string;
   note?: string;
   versionId?: number;

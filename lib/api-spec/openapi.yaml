@@ -132,6 +132,19 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/Specialist" }
+  /specialists/linkable-users:
+    get:
+      operationId: listLinkableUsers
+      tags: [team-management]
+      summary: Active user accounts a specialist profile can be linked to
+      responses:
+        "200":
+          description: Linkable user accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/LinkableUser" }
   /specialists/{id}:
     get:
       operationId: getSpecialist
@@ -4228,6 +4241,13 @@ components:
         notes: { type: [string, "null"] }
         userId: { type: [integer, "null"] }
       required: [name]
+    LinkableUser:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: [string, "null"] }
+      required: [id, name]
     DepartmentMember:
       type: object
       properties:

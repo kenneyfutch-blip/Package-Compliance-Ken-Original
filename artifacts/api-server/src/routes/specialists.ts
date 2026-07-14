@@ -5,10 +5,11 @@ import {
   specialistCertificationsTable,
   departmentsTable,
   reviewAssignmentsTable,
+  usersTable,
   type SpecialistProfileRow,
   type SpecialistCertificationRow,
 } from "@workspace/db";
-import { and, asc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { requirePermission, orgId } from "../lib/rbac/context";
 import { writeAudit } from "../lib/audit";
 import { departmentInOrg, userInOrg } from "../lib/orgRefs";
@@ -316,6 +317,35 @@ router.get(
         b.availableCapacity - a.availableCapacity,
     );
     res.json(list);
+  },
+);
+
+// GET /specialists/linkable-users — active org user accounts a specialist
+// profile can be linked to (so reviews assigned to that specialist route to a
+// real login). Gated on specialists:write — the same permission the link edit
+// needs — so managing the directory doesn't also require admin users:read.
+// Declared before "/specialists/:id" so the literal path isn't captured by :id.
+router.get(
+  "/specialists/linkable-users",
+  requirePermission("specialists:write"),
+  async (req: Request, res: Response): Promise<void> => {
+    const org = orgId(req);
+    const users = await db
+      .select({
+        id: usersTable.id,
+        name: usersTable.name,
+        email: usersTable.email,
+      })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.organizationId, org),
+          eq(usersTable.active, true),
+          isNull(usersTable.supplierId),
+        ),
+      )
+      .orderBy(asc(usersTable.name));
+    res.json(users);
   },
 );
 

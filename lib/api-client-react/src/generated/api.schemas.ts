@@ -113,6 +113,13 @@ export interface SpecialistInput {
   userId?: number | null;
 }
 
+export interface LinkableUser {
+  id: number;
+  name: string;
+  /** @nullable */
+  email?: string | null;
+}
+
 export interface DepartmentMember {
   id: number;
   name: string;
@@ -2248,7 +2255,7 @@ export interface ReviewTaskUpdate {
 }
 
 export interface ApprovalDecisionInput {
-  /** approve | approve_with_comments | needs_revision | reject | escalate */
+  /** approve | approve_with_comments | needs_revision | reject | escalate | reset */
   decision: string;
   note?: string;
   versionId?: number;

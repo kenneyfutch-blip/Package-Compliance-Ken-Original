@@ -4,10 +4,11 @@ import {
   packagesTable,
   teamsTable,
   usersTable,
+  specialistProfilesTable,
   type PackageRow,
   type ReviewAssignmentRow,
 } from "@workspace/db";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { AssignPackageReviewBody, BulkAssignReviewsBody, HeartbeatPresenceBody } from "@workspace/api-zod";
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 import { packageConds, canAccessPackage, opsTeamScope } from "../lib/rbac/scope";
@@ -227,33 +228,49 @@ router.get(
   },
 );
 
-// GET /reviews/assignable — minimal people + teams list to populate the
-// assignment picker. Gated on packages:write (the same permission the assign
-// action itself requires) so any reviewer who can assign work can load it,
-// without granting admin-tier users:read / teams:read. Returns ids + names
-// only, org-scoped, and excludes external supplier accounts.
+// GET /reviews/assignable — the people + teams that can own a review, used to
+// populate the assignment picker. The assignable roster IS the Specialist
+// Directory: only specialists whose profile is linked to an active org user
+// account appear. The option `id` is that linked user id (assignments reference
+// users), and the label is the directory name so the picker mirrors the
+// directory. Gated on packages:write (the same permission the assign action
+// requires) so any reviewer who can assign work can load it, without granting
+// admin-tier users:read / teams:read. Org-scoped; supplier accounts excluded.
 router.get(
   "/reviews/assignable",
   requirePermission("packages:write"),
   async (req: Request, res: Response): Promise<void> => {
     if (blockSupplierUsers(req, res)) return;
     const org = orgId(req);
-    const [users, teams] = await Promise.all([
+    const [reviewers, teams] = await Promise.all([
       db
-        .select({ id: usersTable.id, name: usersTable.name })
-        .from(usersTable)
+        .select({ id: usersTable.id, name: specialistProfilesTable.name })
+        .from(specialistProfilesTable)
+        .innerJoin(
+          usersTable,
+          eq(usersTable.id, specialistProfilesTable.userId),
+        )
         .where(
           and(
+            eq(specialistProfilesTable.organizationId, org),
+            eq(specialistProfilesTable.status, "active"),
             eq(usersTable.organizationId, org),
             eq(usersTable.active, true),
             isNull(usersTable.supplierId),
           ),
-        ),
+        )
+        .orderBy(asc(specialistProfilesTable.name)),
       db
         .select({ id: teamsTable.id, name: teamsTable.name })
         .from(teamsTable)
         .where(eq(teamsTable.organizationId, org)),
     ]);
+    // A user could be linked from more than one directory profile; collapse to
+    // one option per user id so the picker never shows duplicates.
+    const seen = new Set<number>();
+    const users = reviewers.filter((r) =>
+      seen.has(r.id) ? false : (seen.add(r.id), true),
+    );
     res.json({ users, teams });
   },
 );

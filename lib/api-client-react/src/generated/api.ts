@@ -83,6 +83,7 @@ import type {
   LanguageQualityStats,
   LanguageReviewDetail,
   LanguageReviewSummary,
+  LinkableUser,
   ListAiUsageRequestsParams,
   ListAuditEventsParams,
   ListFdaRecallsParams,
@@ -445,6 +446,83 @@ export function useQuerySpecialistDirectory<TData = Awaited<ReturnType<typeof qu
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getQuerySpecialistDirectoryQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListLinkableUsersUrl = () => {
+
+
+
+
+  return `/api/specialists/linkable-users`
+}
+
+/**
+ * @summary Active user accounts a specialist profile can be linked to
+ */
+export const listLinkableUsers = async ( options?: RequestInit): Promise<LinkableUser[]> => {
+
+  return customFetch<LinkableUser[]>(getListLinkableUsersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLinkableUsersQueryKey = () => {
+    return [
+    `/api/specialists/linkable-users`
+    ] as const;
+    }
+
+
+export const getListLinkableUsersQueryOptions = <TData = Awaited<ReturnType<typeof listLinkableUsers>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLinkableUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLinkableUsersQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLinkableUsers>>> = ({ signal }) => listLinkableUsers({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLinkableUsers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLinkableUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listLinkableUsers>>>
+export type ListLinkableUsersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Active user accounts a specialist profile can be linked to
+ */
+
+export function useListLinkableUsers<TData = Awaited<ReturnType<typeof listLinkableUsers>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLinkableUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLinkableUsersQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -187,6 +187,17 @@ export const QuerySpecialistDirectoryResponseItem = zod.object({
 export const QuerySpecialistDirectoryResponse = zod.array(QuerySpecialistDirectoryResponseItem)
 
 
+/**
+ * @summary Active user accounts a specialist profile can be linked to
+ */
+export const ListLinkableUsersResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "email": zod.string().nullish()
+})
+export const ListLinkableUsersResponse = zod.array(ListLinkableUsersResponseItem)
+
+
 export const GetSpecialistParams = zod.object({
   "id": zod.coerce.number()
 })
@@ -5076,7 +5087,7 @@ export const CreateApprovalDecisionParams = zod.object({
 })
 
 export const CreateApprovalDecisionBody = zod.object({
-  "decision": zod.string().describe('approve | approve_with_comments | needs_revision | reject | escalate'),
+  "decision": zod.string().describe('approve | approve_with_comments | needs_revision | reject | escalate | reset'),
   "note": zod.string().optional(),
   "versionId": zod.number().optional()
 })

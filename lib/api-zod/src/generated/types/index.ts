@@ -110,6 +110,7 @@ export * from './languageReview';
 export * from './languageReviewDetail';
 export * from './languageReviewPackage';
 export * from './languageReviewSummary';
+export * from './linkableUser';
 export * from './listAiUsageRequestsParams';
 export * from './listAuditEventsParams';
 export * from './listFdaRecallsCategory';

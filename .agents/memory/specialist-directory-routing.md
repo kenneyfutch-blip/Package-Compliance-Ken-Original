@@ -40,6 +40,25 @@ org). Permissions are the exception: they're derived from code
 (`PERMISSIONS`/`permissionsForRole`), so new grants apply automatically via
 `seedReference` with no data seeding needed.
 
+## The assignable-reviewer roster IS the Specialist Directory
+`GET /reviews/assignable` (the source for the review Assignee/Backup/Manager
+pickers) derives its `users` list from specialist profiles INNER JOINed to users
+on `specialistProfiles.userId`, filtered to org + specialist `status='active'` +
+active non-supplier user, deduped by user id. Option `id` = the linked user id
+(assignments reference users, not specialist ids); label = the directory name.
+So a specialist is only assignable once its profile is **linked to a login
+account** — set via the "Linked user account" field on the specialist form,
+whose options come from `GET /specialists/linkable-users` (gated `specialists:write`,
+so directory management doesn't require admin `users:read`).
+**Why:** the picker must mirror the directory the org curates, and assignments
+must still resolve to a real login. Seeded specialist names historically had
+`userId=null`, so before linking, the picker is empty by design.
+**How to apply:** assign-side validation (`bulk-assign`, engine) still checks the
+target is any active org user, NOT specialist linkage — the two can diverge. The
+AssignmentDialog injects a "(not in directory)" fallback option for a saved
+assignee/backup/manager no longer in the roster so the Select never renders blank.
+Response shape of `/reviews/assignable` is unchanged (`{users,teams}` of `{id,name}`).
+
 ## clearDemo must clear non-cascade org-FK tables before deleting the org
 `clearDemo` deletes `organizations`, but a few tables have a **non-cascade org
 FK** and will raise a FK violation if not cleared first. Confirmed set via
