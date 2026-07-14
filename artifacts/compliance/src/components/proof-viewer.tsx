@@ -58,6 +58,10 @@ type Props = {
   showHuman: boolean
   onToggleAi: () => void
   onToggleHuman: () => void
+  /** When true, the AI-markers toggle is disabled — e.g. Google Document AI OCR
+   *  is not configured yet, so AI pin positions cannot be trusted. */
+  aiToggleDisabled?: boolean
+  aiToggleDisabledReason?: string
   /** Revert the most recent markup the reviewer added this session. */
   onUndo: () => void
   canUndo: boolean
@@ -112,6 +116,7 @@ export function ProofViewer(props: Props) {
     fileUrl, fileType, pageCount, annotations, selectedId, activeTool, onToolChange,
     onSelect, onCreate, onDeleteSelected, onDuplicateSelected,
     showAi, showHuman, onToggleAi, onToggleHuman,
+    aiToggleDisabled, aiToggleDisabledReason,
     onUndo, canUndo, undoPending,
   } = props
 
@@ -275,7 +280,18 @@ export function ProofViewer(props: Props) {
           {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </Button>
         <div className="h-6 w-px bg-border mx-1" />
-        <Button variant={showAi ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5 text-xs" onClick={onToggleAi} title={aiCount ? "Show / hide AI markers" : "No AI markers on this artwork"}>
+        <Button
+          variant={showAi ? "secondary" : "ghost"}
+          size="sm"
+          className="h-8 gap-1.5 text-xs"
+          onClick={onToggleAi}
+          disabled={aiToggleDisabled}
+          title={
+            aiToggleDisabled
+              ? (aiToggleDisabledReason ?? "AI annotations are unavailable")
+              : aiCount ? "Show / hide AI markers" : "No AI markers on this artwork"
+          }
+        >
           {showAi ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />} AI
           <span className="rounded bg-black/10 px-1 text-[10px] tabular-nums dark:bg-white/15">{aiCount}</span>
         </Button>

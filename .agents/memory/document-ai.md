@@ -18,6 +18,11 @@ Document extraction runs through an `OcrProvider` interface + registry (`lib/doc
 **Why:** user wanted OCR done by their OpenAI model, not Google, but keep Google wired for future. Also Google was never configured (no `GOOGLE_*` secrets) so OCR had been a silent no-op — OpenAI default makes extraction actually run.
 **How to apply:** the `/document-ai/status` shape is unchanged, but its four `*Configured` booleans are Google-credential flags — the OpenAI provider returns them ALL `false` (truthful) and every UI card (`document-ai-status-card`, `document-ai-tab`, `admin/integrations`) branches on `status.engine === "google-document-ai"` to hide the Google credential checklist for non-Google engines. Keep UI provider-aware; never hardcode "Google Document AI" copy again.
 
+## `/document-ai/status.configured` = ACTIVE provider, not Google-specific
+`extractionStatus()` (status route) returns `getActiveProvider().status()`. The default OpenAI Vision provider hardcodes `configured: true`, so a bare `status.configured` check is TRUE even when Google Document AI has zero credentials. Any UI feature that must gate on "Google Document AI specifically is set up" (e.g. the review-workspace AI-annotation toggle — AI pin geometry is only trustworthy from Google word boxes) must check `status.engine === "google-document-ai" && status.configured === true`, NOT `configured` alone.
+**Why:** gating on bare `configured` opened the AI-annotation toggle under the default OpenAI engine, surfacing untrustworthy synthetic pins — the exact thing the gate was meant to prevent (see proof-annotation-accuracy.md).
+**How to apply:** the generated `DocumentAiStatus` exposes `{ configured: boolean; engine: string }`; both nav/card UIs already branch on `engine === "google-document-ai"` — follow that pattern for any new Google-only gate. UI gate is layered: force marker visibility off + disable the toggle + no-op the handler when not ready.
+
 ## Three-service separation (do not merge)
 - **Extraction** = Google Document AI (the only thing that produces OCR text + page coords + components).
 - **Reasoning** = OpenAI `analyzePackaging` (reads `packages.extractedText`).
