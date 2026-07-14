@@ -642,7 +642,7 @@ function NavContent({
               // this block to the app's dark palette so all descendant text,
               // icons, hover and active states flip to light-on-dark coherently,
               // then force a true-black background.
-              isMyWork && "dark mt-3 rounded-lg bg-black border border-white/15 px-1 py-1.5",
+              isMyWork && "dark mt-1.5 rounded-lg bg-black border border-white/15 px-1 py-1.5",
             )}
             // Recolor the hover/active fills in this block to Dollar Tree green
             // (the dark palette's --accent/--muted are blue-slate). --accent is
