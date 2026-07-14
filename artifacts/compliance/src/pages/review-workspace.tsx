@@ -159,6 +159,18 @@ export default function ReviewWorkspace() {
 
   const [tool, setTool] = React.useState<MarkupTool>("hand")
   const [selectedId, setSelectedId] = React.useState<number | null>(null)
+  const [activeTab, setActiveTab] = React.useState("findings")
+  // Clicking a marker on the artwork jumps the sidebar to that item's report:
+  // an AI reference dot opens the Findings tab (and FindingsPanel scrolls its
+  // finding into view); a reviewer pin opens Comments. This makes the dots act
+  // like links to their actual report instead of silently highlighting.
+  const handleSelect = React.useCallback((id: number | null) => {
+    setSelectedId(id)
+    if (id == null) return
+    const ann = pkg?.annotations.find((a) => a.id === id)
+    if (!ann) return
+    setActiveTab(ann.source === "ai" ? "findings" : "comments")
+  }, [pkg])
   const [showAi, setShowAi] = React.useState(true)
   const [showHuman, setShowHuman] = React.useState(true)
   const [activeVersionId, setActiveVersionId] = React.useState<number | null>(null)
@@ -473,7 +485,7 @@ export default function ReviewWorkspace() {
             selectedId={selectedId}
             activeTool={tool}
             onToolChange={setTool}
-            onSelect={setSelectedId}
+            onSelect={handleSelect}
             onCreate={handleCreate}
             onDeleteSelected={handleDeleteSelected}
             onDuplicateSelected={handleDuplicateSelected}
@@ -489,7 +501,7 @@ export default function ReviewWorkspace() {
 
         {/* Sidebar */}
         <div className="w-1/2 min-w-0 flex flex-col bg-card border border-border rounded-xl overflow-hidden">
-          <Tabs defaultValue="findings" className="flex-1 flex flex-col min-h-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <TabsList className="w-full justify-start rounded-none border-b border-border h-auto p-0 bg-muted/20 gap-4 px-4 overflow-x-auto shrink-0">
               <TooltipProvider delayDuration={150}>
                 {[
@@ -718,6 +730,19 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
   ]
   const annForViolation = (vid: number) => pkg.annotations.find((a) => a.violationId === vid)
 
+  // Scroll the selected finding into view when a reference dot on the artwork is
+  // clicked (the tab has just switched to Findings, so this may run on mount).
+  const selectedRef = React.useRef<HTMLButtonElement | null>(null)
+  React.useEffect(() => {
+    if (selectedId == null) return
+    const el = selectedRef.current
+    if (!el) return
+    const raf = requestAnimationFrame(() =>
+      el.scrollIntoView({ behavior: "smooth", block: "nearest" }),
+    )
+    return () => cancelAnimationFrame(raf)
+  }, [selectedId])
+
   if (pkg.violations.length === 0) {
     if (pkg.status === "AI Review") {
       return <AnalysisProgress pkg={pkg} />
@@ -747,7 +772,7 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
               ? null
               : v.recommendation || (!v.detectedText ? v.suggestedText : null) || null
             return (
-              <button key={v.id} type="button" onClick={() => ann && onSelect(ann.id)}
+              <button key={v.id} type="button" ref={selected ? selectedRef : undefined} onClick={() => ann && onSelect(ann.id)}
                 className={cn("w-full text-left p-3 rounded-lg border bg-card space-y-1.5 transition-colors", selected ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground/40")}>
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex items-center gap-2 min-w-0">
