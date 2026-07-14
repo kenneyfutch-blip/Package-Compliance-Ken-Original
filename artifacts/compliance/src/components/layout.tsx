@@ -1020,7 +1020,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   onChange={(e) => setQ(e.target.value)}
                   onFocus={() => setSearchOpen(true)}
                   placeholder="Search packages, SKU, vendor..."
-                  className="w-full h-9 rounded-full bg-neutral-900 border border-neutral-700 pl-9 pr-4 text-sm text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-neutral-500 transition-all"
+                  className="w-full h-9 rounded-md bg-neutral-900 border border-neutral-700 pl-9 pr-4 text-sm text-white placeholder:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-neutral-500 transition-all"
                 />
               </form>
               {searchOpen && (
