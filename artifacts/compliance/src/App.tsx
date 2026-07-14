@@ -259,6 +259,9 @@ function AppRoutes() {
         <Route path="/packages/active">
           <ActiveReviews />
         </Route>
+        <Route path="/packages/needs-review">
+          <PackagesView title="Needs Review" subtitle="Packages awaiting a compliance reviewer." statusFilter="Needs Review" emptyText="Nothing waiting for review." />
+        </Route>
         <Route path="/packages/approved">
           <PackagesView title="Approved Packages" subtitle="Packages cleared for production." statusFilter="Approved" emptyText="No packages approved yet." />
         </Route>

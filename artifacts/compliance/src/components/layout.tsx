@@ -7,6 +7,7 @@ import {
   Upload,
   Layers,
   ListChecks,
+  Inbox,
   FileText,
   Scale,
   Building2,
@@ -129,6 +130,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { name: "All Packages", href: "/packages", icon: Box },
       { name: "Active Reviews", href: "/packages/active", icon: ListChecks },
+      { name: "Needs Review", href: "/packages/needs-review", icon: Inbox },
       { name: "Approved", href: "/packages/approved", icon: ShieldCheck },
       { name: "Rejected", href: "/packages/rejected", icon: AlertTriangle },
       { name: "Archived", href: "/packages/archived", icon: History },
