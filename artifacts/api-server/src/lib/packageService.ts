@@ -78,7 +78,12 @@ export async function detectPageCount(
 export function gradeToStatus(complianceStatus: string): string {
   if (complianceStatus === "Passed") return "Approved";
   if (complianceStatus === "Failed") return "Needs Revision";
-  return "AI Review";
+  // A middling / "Needs Review" analysis result is a real terminal outcome that
+  // routes to a human. It must NOT map to "AI Review" — that string is reserved
+  // for the transient "queued/analyzing" holding state the review page polls on,
+  // so returning it here would strand a fully-analyzed package in a permanent
+  // "Analyzing…" spinner. Route it to the first-class "Needs Review" status.
+  return "Needs Review";
 }
 
 export async function loadRegulations() {

@@ -27,6 +27,19 @@ function writes a system audit (`writeSystemAudit`) instead of a request-scoped 
 Retried jobs re-running OCR is safe because extraction is content-hash cached
 (`Complete` by `packageId + sourceHash`).
 
+**`"AI Review"` is a RESERVED transient string — never a terminal outcome.** Once it
+became the "queued/analyzing" holding state the review page polls on, nothing that runs
+*after* analysis may leave a package on it. `gradeToStatus` (packageService.ts) must map
+every analyzer `complianceStatus` to a terminal status: `Passed→Approved`,
+`Failed→Needs Revision`, and everything else (incl. `"Needs Review"`, the analyzer's
+default) → `"Needs Review"`. Returning `"AI Review"` for a middling result strands a
+fully-analyzed package in a permanent "Analyzing…" spinner.
+**Why:** the analyzer emits `complianceStatus ∈ {Passed, Failed, Needs Review}` (coerced
+in ai.ts, default "Needs Review"); the middling bucket is the common case, so any
+terminal string collision here hits most real uploads, not an edge case. Any time a
+status string is repurposed as a transient/polled state, sweep every writer that could
+still emit it as a terminal value.
+
 **The invariant that matters:** a package must never be left in `"AI Review"` with no
 job that will complete it. Four exit paths enforce this — break any one and packages
 hang in a permanent "Analyzing…" limbo:
