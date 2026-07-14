@@ -2,15 +2,17 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import {
   db,
   packagesTable,
-  regulationsTable,
   languageReviewsTable,
   languageFindingsTable,
-  glossaryEntriesTable,
   type PackageRow,
   type LanguageFindingRow,
 } from "@workspace/db";
 import { eq, and, or, ilike, gte, lte, desc, inArray, isNotNull, type SQL } from "drizzle-orm";
-import { analyzeLanguage, type LanguageReviewResult } from "../lib/language-ai";
+import {
+  analyzeAndPersistLanguageReview,
+  loadLanguageContext,
+  type LanguageReviewRun,
+} from "../lib/language-review";
 import { logger } from "../lib/logger";
 import { requirePermission, orgId } from "../lib/rbac/context";
 import { packageConds } from "../lib/rbac/scope";
@@ -94,25 +96,6 @@ function mapReview(row: typeof languageReviewsTable.$inferSelect) {
   };
 }
 
-async function loadRegulations() {
-  return db.select().from(regulationsTable);
-}
-
-// The org's active Approved Language & Glossary entries, fed to the review engine
-// so it reasons against authoritative wording (required statements, approved
-// claims, defined terms, prohibited language).
-async function loadApprovedLanguage(organizationId: number) {
-  return db
-    .select()
-    .from(glossaryEntriesTable)
-    .where(
-      and(
-        eq(glossaryEntriesTable.organizationId, organizationId),
-        eq(glossaryEntriesTable.status, "active"),
-      ),
-    );
-}
-
 // Count how many times each suggested fix has previously been approved across
 // the org, so reviewers see the historical resolution rate for a finding.
 async function historicalUsageMap(
@@ -154,117 +137,21 @@ async function historicalUsageMap(
   return map;
 }
 
-// Persist a language review result: replace prior findings, write the review
-// aggregate, denormalize the score onto the package, and append an audit event.
-async function persistReview(
+// Append an audit event for a completed language review with the real
+// authenticated actor for this request (background runs use writeSystemAudit).
+async function auditLanguageReview(
   req: Request,
   pkg: PackageRow,
-  result: LanguageReviewResult,
-  organizationId: number,
-): Promise<number> {
-  const counts = {
-    critical: 0,
-    major: 0,
-    minor: 0,
-    Spelling: 0,
-    Grammar: 0,
-    Context: 0,
-    Regulatory: 0,
-    "Marketing Claim": 0,
-    "Brand Language": 0,
-  } as Record<string, number>;
-  for (const f of result.findings) {
-    if (f.severity === "critical") counts.critical += 1;
-    else if (f.severity === "major") counts.major += 1;
-    else if (f.severity === "minor") counts.minor += 1;
-    counts[f.issueType] = (counts[f.issueType] ?? 0) + 1;
-  }
-
-  // Replace prior reviews/findings atomically so concurrent re-runs can never
-  // leave a mix of old and new rows (latest-only semantics).
-  const reviewId = await db.transaction(async (tx) => {
-    await tx
-      .delete(languageFindingsTable)
-      .where(eq(languageFindingsTable.packageId, pkg.id));
-    await tx
-      .delete(languageReviewsTable)
-      .where(eq(languageReviewsTable.packageId, pkg.id));
-
-    const [review] = await tx
-      .insert(languageReviewsTable)
-      .values({
-        organizationId,
-        packageId: pkg.id,
-        score: result.score,
-        confidence: result.confidence,
-        status: "Complete",
-        summary: result.summary,
-        issueCount: result.findings.length,
-        criticalCount: counts.critical,
-        majorCount: counts.major,
-        minorCount: counts.minor,
-        spellingCount: counts.Spelling,
-        grammarCount: counts.Grammar,
-        contextCount: counts.Context,
-        regulatoryCount: counts.Regulatory,
-        marketingCount: counts["Marketing Claim"],
-        brandCount: counts["Brand Language"],
-      })
-      .returning();
-
-    if (result.findings.length > 0) {
-      await tx.insert(languageFindingsTable).values(
-        result.findings.map((f) => ({
-          organizationId,
-          reviewId: review!.id,
-          packageId: pkg.id,
-          issueType: f.issueType,
-          severity: f.severity,
-          originalText: f.originalText,
-          suggestedText: f.suggestedText,
-          reason: f.reason,
-          regulationReference: f.regulationReference,
-          confidenceScore: f.confidenceScore,
-          claimRiskScore: f.claimRiskScore,
-          reviewFlags: f.reviewFlags,
-          bboxX: f.bbox?.x ?? null,
-          bboxY: f.bbox?.y ?? null,
-          bboxW: f.bbox?.w ?? null,
-          bboxH: f.bbox?.h ?? null,
-          status: "Open",
-        })),
-      );
-    }
-
-    await tx
-      .update(packagesTable)
-      .set({
-        languageScore: result.score,
-        languageIssueCount: result.findings.length,
-        languageCriticalCount: counts.critical,
-        languageAnalyzedAt: new Date(),
-      })
-      .where(eq(packagesTable.id, pkg.id));
-
-    return review!.id;
-  });
-
+  run: LanguageReviewRun,
+): Promise<void> {
   await writeAudit(req, {
     action: "Language review completed",
     entityType: "language_review",
-    entityId: reviewId,
+    entityId: run.persisted.reviewId,
     packageId: pkg.id,
-    detail: `Language score ${result.score}, ${result.findings.length} finding(s) (${counts.critical} critical).`,
-    regulationRefs: Array.from(
-      new Set(
-        result.findings
-          .map((f) => f.regulationReference)
-          .filter((r): r is string => Boolean(r)),
-      ),
-    ),
+    detail: `Language score ${run.result.score}, ${run.persisted.findingCount} finding(s) (${run.persisted.criticalCount} critical).`,
+    regulationRefs: run.persisted.regulationRefs,
   });
-
-  return reviewId;
 }
 
 async function buildDetail(req: Request, pkg: PackageRow) {
@@ -330,12 +217,8 @@ router.post(
       return;
     }
     try {
-      const [regulations, approvedLanguage] = await Promise.all([
-        loadRegulations(),
-        loadApprovedLanguage(orgId(req)),
-      ]);
-      const result = await analyzeLanguage(pkg, regulations, approvedLanguage);
-      await persistReview(req, pkg, result, orgId(req));
+      const run = await analyzeAndPersistLanguageReview(pkg, orgId(req));
+      await auditLanguageReview(req, pkg, run);
     } catch (err) {
       logger.error({ err }, "Language review failed");
       res.status(502).json({ error: "AI language review failed. Please retry." });
@@ -368,14 +251,13 @@ router.post(
 
     let processed = 0;
     let failed = 0;
-    const [regulations, approvedLanguage] = await Promise.all([
-      loadRegulations(),
-      loadApprovedLanguage(orgId(req)),
-    ]);
+    // Load the analysis context once and reuse it for every package so a bulk run
+    // never reloads regulations/glossary per item.
+    const ctx = await loadLanguageContext(orgId(req));
     for (const pkg of pkgs) {
       try {
-        const result = await analyzeLanguage(pkg, regulations, approvedLanguage);
-        await persistReview(req, pkg, result, orgId(req));
+        const run = await analyzeAndPersistLanguageReview(pkg, orgId(req), ctx);
+        await auditLanguageReview(req, pkg, run);
         processed += 1;
       } catch (err) {
         logger.error({ err, id: pkg.id }, "Bulk language review item failed");

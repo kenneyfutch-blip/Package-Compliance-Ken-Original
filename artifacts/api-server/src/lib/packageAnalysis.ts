@@ -15,6 +15,7 @@ import {
 } from "./memory/engine";
 import { gatherEcfrIntelligence, formatEcfrForPrompt } from "./ecfr";
 import { autoAssignReview } from "./reviews/engine";
+import { runLanguageReview } from "./language-review";
 import { matchTeamName } from "./reviews/routing";
 import { enqueueJob } from "./jobs/queue";
 import { pokeJobWorker } from "./jobs/worker";
@@ -233,6 +234,21 @@ export async function runPackageAnalysis(
     });
   } catch (err) {
     logger.error({ err, packageId: pkg.id }, "Auto-assignment after analysis failed");
+  }
+
+  // Run the AI Language Review (spelling / grammar / context / regulatory /
+  // marketing / brand) as part of the initial upload analysis so the Language
+  // Quality panel is populated on first upload — no manual "Language Review"
+  // re-run needed. Non-fatal: a language-review failure must never strand the
+  // package or fail the compliance job that already succeeded above.
+  try {
+    await runLanguageReview({
+      pkg,
+      organizationId: p.organizationId,
+      actor: p.actorName ?? "System",
+    });
+  } catch (err) {
+    logger.error({ err, packageId: pkg.id }, "Background language review failed");
   }
 
   return {
