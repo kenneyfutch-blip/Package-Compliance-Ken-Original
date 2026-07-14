@@ -925,6 +925,16 @@ function TopNavMenus() {
   )
 }
 
+// Suggested "quick finds" surfaced under the global search when it is focused.
+// Each runs a search against the packages list (always a valid destination).
+const QUICK_FINDS = [
+  { label: "Critical violations", term: "critical", icon: Activity },
+  { label: "Pending review", term: "pending", icon: Compass },
+  { label: "Passed packages", term: "passed", icon: Star },
+  { label: "High-risk items", term: "high risk", icon: TrendingUp },
+  { label: "Recent submissions", term: "recent", icon: ScrollText },
+] as const
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme()
   const [, navigate] = useLocation()
@@ -941,13 +951,33 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const onlineCount = presence?.length ?? 0
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const [q, setQ] = React.useState("")
+  const [searchOpen, setSearchOpen] = React.useState(false)
+  const searchRef = React.useRef<HTMLDivElement>(null)
   const unreadCount = notifications.filter((n) => !n.read && !n.archived).length
 
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark")
 
+  // Close the quick-finds dropdown when clicking outside the search box.
+  React.useEffect(() => {
+    if (!searchOpen) return
+    const onDown = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", onDown)
+    return () => document.removeEventListener("mousedown", onDown)
+  }, [searchOpen])
+
+  const runSearch = (term: string) => {
+    setQ(term)
+    setSearchOpen(false)
+    navigate(`/packages${term.trim() ? `?q=${encodeURIComponent(term.trim())}` : ""}`)
+  }
+
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    navigate(`/packages${q.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`)
+    runSearch(q)
   }
 
   return (
@@ -982,16 +1012,60 @@ export function Shell({ children }: { children: React.ReactNode }) {
               </SheetContent>
             </Sheet>
 
-            <form onSubmit={submitSearch} className="hidden sm:flex relative w-full max-w-md">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search packages, SKU, vendor..."
-                className="w-full h-9 bg-accent/50 border border-border rounded-md pl-9 pr-4 text-sm focus:outline-none focus:ring-1 focus:ring-primary transition-all"
-              />
-            </form>
+            <div ref={searchRef} className="hidden sm:block relative w-full max-w-md">
+              <form onSubmit={submitSearch} className="relative">
+                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none z-10" />
+                <input
+                  type="text"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  onFocus={() => setSearchOpen(true)}
+                  placeholder="Search packages, SKU, vendor..."
+                  className="w-full h-9 rounded-full bg-neutral-900 border border-neutral-700 pl-9 pr-4 text-sm text-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-neutral-500 transition-all"
+                />
+              </form>
+              {searchOpen && (
+                <div className="absolute left-0 right-0 top-full mt-2 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden">
+                  {q.trim() && (
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        runSearch(q.trim())
+                      }}
+                      className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-accent border-b border-border"
+                    >
+                      <Search className="w-4 h-4 shrink-0 text-muted-foreground" />
+                      <span>
+                        Search for <span className="font-semibold">"{q.trim()}"</span>
+                      </span>
+                    </button>
+                  )}
+                  <p className="px-3.5 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Suggested quick finds
+                  </p>
+                  <div className="pb-1.5">
+                    {QUICK_FINDS.map((f) => {
+                      const Icon = f.icon
+                      return (
+                        <button
+                          key={f.label}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            runSearch(f.term)
+                          }}
+                          className="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-left hover:bg-accent"
+                        >
+                          <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
+                          {f.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
             <TopNavMenus />
           </div>
           <div className="flex items-center gap-2">
