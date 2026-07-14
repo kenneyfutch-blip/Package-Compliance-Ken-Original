@@ -633,7 +633,11 @@ function NavContent({
             className={cn(
               idx > 0 && !isMyWork && section.id !== "home" && "mt-3 border-t border-border/60 pt-3",
               section.id === "home" && "mt-2",
-              isMyWork && "mt-3 rounded-lg bg-sidebar border border-sidebar-border px-1 py-1.5",
+              // Black backing with white text for the "My Work" section: scope
+              // this block to the app's dark palette so all descendant text,
+              // icons, hover and active states flip to light-on-dark coherently,
+              // then force a true-black background.
+              isMyWork && "dark mt-3 rounded-lg bg-black border border-white/15 px-1 py-1.5",
             )}
           >
             <button
