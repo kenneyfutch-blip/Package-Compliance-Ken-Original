@@ -12,9 +12,9 @@ type ChatMessage = {
 }
 
 const EXAMPLE_PROMPTS = [
+  "What warnings are required on cleaning product labels?",
+  "Does an 'all natural' claim need substantiation?",
   "How do I start reviewing a new package?",
-  "Where can I check a supplier's compliance record?",
-  "Which tool audits marketing claims?",
   "Where do I find FDA recalls?",
 ]
 
@@ -143,13 +143,13 @@ export function AssistantPanel({
           {messages.length === 0 ? (
             <div className="flex h-full flex-col justify-center">
               <h2 className="text-2xl font-semibold leading-tight">
-                Let's find your
+                How can I
                 <br />
-                <span className="text-green-500">right tool</span>
+                <span className="text-green-500">help you?</span>
               </h2>
               <p className="mt-2 text-sm text-white/50">
-                Ask me what you're trying to do and I'll point you to the tool
-                for the job.
+                Ask a compliance question or tell me what you're trying to do —
+                I'll answer and point you to the right tool.
               </p>
               <div className="mt-5 space-y-2">
                 {EXAMPLE_PROMPTS.map((p) => (
