@@ -185,10 +185,9 @@ function HeroPreview() {
 
 export default function Landing() {
   return (
-    <div className="min-h-[100dvh] bg-zinc-100 p-3 sm:p-4 lg:p-6">
-      <div className="dark overflow-hidden rounded-3xl bg-background text-foreground shadow-2xl ring-1 ring-black/10">
+    <div className="dark min-h-[100dvh] bg-background text-foreground">
       {/* Nav */}
-      <header className="border-b border-border/70 bg-background/80 backdrop-blur-md">
+      <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
           <div className="flex items-center gap-2.5 font-bold tracking-tight">
             <span className="flex items-center justify-center rounded-md bg-white p-1 ring-1 ring-black/5">
@@ -267,7 +266,7 @@ export default function Landing() {
       </section>
 
       {/* Stats */}
-      <section className="border-y border-border bg-white/[0.03]">
+      <section className="border-y border-border bg-muted/40">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-6 py-10 lg:grid-cols-4">
           {STATS.map((s) => (
             <div key={s.label} className="text-center">
@@ -316,7 +315,7 @@ export default function Landing() {
       </section>
 
       {/* Tools */}
-      <section id="tools" className="scroll-mt-20 border-y border-border bg-white/[0.03]">
+      <section id="tools" className="scroll-mt-20 border-y border-border bg-muted/40">
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="max-w-2xl">
             <Eyebrow>
@@ -430,7 +429,6 @@ export default function Landing() {
           <span>© {new Date().getFullYear()} Dollar Tree · Internal use only</span>
         </div>
       </footer>
-      </div>
     </div>
   )
 }
