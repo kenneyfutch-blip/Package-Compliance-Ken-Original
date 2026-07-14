@@ -11,7 +11,7 @@ import {
 } from "@workspace/db";
 import { ObjectStorageService, ObjectNotFoundError } from "../objectStorage";
 import { orgId } from "../rbac/context";
-import { writeAudit } from "../audit";
+import { writeAudit, writeSystemAudit } from "../audit";
 import { logger } from "../logger";
 import { getActiveProvider } from "./providers/registry";
 import type { OcrProvider } from "./providers/types";
@@ -166,7 +166,11 @@ export async function listExtractions(
  * on genuinely new/changed source documents or an explicit reprocess.
  */
 export async function runExtraction(params: {
-  req: Request;
+  // req is optional: request-scoped callers (upload / reprocess) pass it for org
+  // scoping + audit identity; the background analysis job passes organizationId
+  // explicitly instead so OCR can run with no Express request.
+  req?: Request;
+  organizationId?: number;
   pkg: PackageRow;
   proof?: ProofRow;
   force?: boolean;
@@ -225,7 +229,8 @@ export async function runExtraction(params: {
     }
   }
 
-  const organizationId = orgId(req);
+  const organizationId =
+    params.organizationId ?? (req ? orgId(req) : pkg.organizationId);
   const version = proof?.version ?? 1;
 
   const [pending] = await db
@@ -285,13 +290,18 @@ export async function runExtraction(params: {
       })
       .where(eq(packagesTable.id, pkg.id));
 
-    await writeAudit(req, {
+    const extractionAudit = {
       action: "Document extracted",
       entityType: "package",
       entityId: pkg.id,
       packageId: pkg.id,
       detail: `${provider.label} extracted ${result.pageCount} page(s) and ${result.components.length} component(s) from ${source.name}.`,
-    });
+    };
+    if (req) {
+      await writeAudit(req, extractionAudit);
+    } else if (organizationId != null) {
+      await writeSystemAudit(organizationId, extractionAudit);
+    }
 
     return { outcome: "Complete", extraction: completed! };
   } catch (err) {

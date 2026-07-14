@@ -364,10 +364,11 @@ router.post(
     let current = inserted;
 
     // Extraction layer. If the client already supplied artwork text — a PDF text
-    // layer read in-browser, an image OCR result, or pasted copy — trust it and
-    // SKIP the OCR provider. Re-running Vision OCR here just duplicates work and
-    // is the slow part of "Analyzing…". Only invoke the provider when we have no
-    // text to work from.
+    // layer read in-browser, an image OCR result, or pasted copy — record it as
+    // "Provided". Otherwise DO NOT run the OCR provider here: transcribing a
+    // scanned PDF / image with Vision is slow and would block the upload. That
+    // OCR now runs inside the background analysis job (see runPackageAnalysis),
+    // so every upload stays fast while the AI still reads the artwork.
     if (data.extractedText && data.extractedText.trim()) {
       const now = new Date();
       await db
@@ -375,21 +376,6 @@ router.post(
         .set({ extractionStatus: "Provided", extractedAt: now })
         .where(eq(packagesTable.id, inserted.id));
       current = { ...inserted, extractionStatus: "Provided", extractedAt: now };
-    } else {
-      // No supplied text: the active OCR provider runs on new-package upload.
-      // When it is not configured, this is a no-op.
-      try {
-        const run = await runExtraction({ req, pkg: inserted });
-        if (run.outcome === "Complete" || run.outcome === "Cached") {
-          const [afterExtract] = await db
-            .select()
-            .from(packagesTable)
-            .where(eq(packagesTable.id, inserted.id));
-          if (afterExtract) current = afterExtract;
-        }
-      } catch (err) {
-        logger.error({ err }, "Document extraction failed on create");
-      }
     }
 
     // Reasoning + assignment now run in the BACKGROUND so the upload returns
@@ -397,7 +383,12 @@ router.post(
     // items that escalate to the reasoning tier, multi-minute — AI analysis.
     // The package enters "AI Review"; a durable job analyzes it and routes it to
     // a team, and the review page polls until the results land.
-    if (current.extractedText && current.extractedText.trim()) {
+    // Enqueue the background job when there is text to analyze OR artwork to OCR
+    // first. Metadata-only packages (no text, no artwork) have nothing to defer,
+    // so they fall through to synchronous manual assignment below.
+    const hasText = !!(current.extractedText && current.extractedText.trim());
+    const hasArtwork = !!(current.artworkUrl && current.artworkUrl.trim());
+    if (hasText || hasArtwork) {
       const ctx = getAuthContext(req);
       const supplierId =
         ctx.roleKey === "supplier_user" ? (ctx.supplierId ?? -1) : null;
@@ -446,8 +437,8 @@ router.post(
         }
       }
     } else {
-      // No text to analyze (e.g. a scanned PDF with no OCR): there is no
-      // background analysis to defer to, so route it for manual handling now.
+      // Metadata-only package: no text and no artwork to OCR, so there is nothing
+      // for the background job to do. Route it for manual handling now.
       try {
         const ctx = getAuthContext(req);
         await autoAssignReview({

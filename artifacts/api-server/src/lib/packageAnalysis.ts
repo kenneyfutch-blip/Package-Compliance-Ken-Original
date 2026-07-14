@@ -6,6 +6,7 @@ import {
   applyAnalysis,
 } from "./packageService";
 import { analyzePackaging } from "./ai";
+import { runExtraction } from "./document-ai/service";
 import { retrieveRelevantPolicies, formatPoliciesForPrompt } from "./policies/engine";
 import {
   retrieveSimilarFindings,
@@ -96,7 +97,7 @@ export interface PackageAnalysisResult {
 export async function runPackageAnalysis(
   p: PackageAnalysisPayload,
 ): Promise<PackageAnalysisResult> {
-  const [pkg] = await db
+  let [pkg] = await db
     .select()
     .from(packagesTable)
     .where(eq(packagesTable.id, p.packageId));
@@ -109,11 +110,55 @@ export async function runPackageAnalysis(
     );
   }
 
-  const text = pkg.extractedText?.trim();
+  let text = pkg.extractedText?.trim();
+  // No client-supplied text (a scanned/flattened PDF or an image with no
+  // selectable text layer). Read the artwork with the OCR provider NOW — this is
+  // the slow step deliberately kept OUT of the upload request so uploads stay
+  // fast. Runs req-free via the explicit organizationId.
   if (!text) {
-    // Nothing to analyze (e.g. a scanned PDF with no OCR text). Not an error:
-    // leave the package for manual handling rather than retrying forever.
-    logger.warn({ packageId: pkg.id }, "Package analysis skipped: no extracted text");
+    try {
+      await runExtraction({ pkg, organizationId: p.organizationId });
+      const [refreshed] = await db
+        .select()
+        .from(packagesTable)
+        .where(eq(packagesTable.id, pkg.id));
+      if (refreshed) {
+        pkg = refreshed;
+        text = refreshed.extractedText?.trim();
+      }
+    } catch (err) {
+      logger.error({ err, packageId: pkg.id }, "Background OCR failed");
+    }
+  }
+  if (!text) {
+    // Still nothing readable after OCR: don't strand the package in "AI Review".
+    // Route it for manual handling instead of retrying analysis forever.
+    logger.warn(
+      { packageId: pkg.id },
+      "Package analysis skipped: no extracted text after OCR",
+    );
+    await db
+      .update(packagesTable)
+      .set({ status: "Needs Review" })
+      .where(eq(packagesTable.id, pkg.id))
+      .catch(() => {});
+    try {
+      await autoAssignReview({
+        organizationId: p.organizationId,
+        packageId: pkg.id,
+        category: pkg.category,
+        teamName: matchTeamName(pkg.category),
+        priority: "normal",
+        actorUserId: p.actorUserId ?? null,
+        actorName: p.actorName ?? "System",
+        packageName: pkg.name,
+      });
+    } catch (err) {
+      logger.error(
+        { err, packageId: pkg.id },
+        "Auto-assignment after empty OCR failed",
+      );
+    }
     return { analyzed: false };
   }
 
