@@ -29,18 +29,18 @@ export function PoweredByAi({ className }: { className?: string }) {
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-border px-2 py-0.5 text-[10px] font-medium text-foreground cursor-default select-none",
+              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-medium text-neutral-900 cursor-default select-none",
               className,
             )}
           >
-            <Sparkles className="w-2.5 h-2.5 shrink-0" />
-            <span className="hidden text-muted-foreground sm:inline">Powered by</span>
-            <span>{label} {model}</span>
+            <Sparkles className="w-3 h-3 text-neutral-900 shrink-0" />
+            <span className="hidden text-neutral-500 sm:inline">Powered by</span>
+            <span className="text-neutral-900">{label} {model}</span>
           </span>
         </TooltipTrigger>
-        <TooltipContent className="max-w-[16rem] border border-border bg-foreground text-background">
+        <TooltipContent className="max-w-[15rem] border border-neutral-700 bg-neutral-900 text-white">
           <p className="text-xs font-medium">Powered by {label} · {model}</p>
-          <p className="mt-0.5 text-[11px] text-background/70">
+          <p className="mt-0.5 text-[11px] leading-snug text-neutral-400">
             Compliance analysis, findings, risk score and fix recommendations all run
             on your model across every speed tier.
           </p>
