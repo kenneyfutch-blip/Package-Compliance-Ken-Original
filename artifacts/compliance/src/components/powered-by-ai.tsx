@@ -49,3 +49,35 @@ export function PoweredByAi({ className }: { className?: string }) {
     </TooltipProvider>
   )
 }
+
+/**
+ * Companion badge shown alongside {@link PoweredByAi}. Reuses the same rainbow
+ * styling but with a fixed "Claude Agent AI" label.
+ */
+export function PoweredByClaude({ className }: { className?: string }) {
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            className={cn(
+              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium text-white cursor-default select-none",
+              className,
+            )}
+          >
+            <Sparkles className="w-3 h-3 text-white shrink-0" />
+            <span className="hidden text-white/70 sm:inline">Powered by</span>
+            <span className="text-white">Claude Agent AI</span>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs border border-neutral-700 bg-neutral-900 text-neutral-100">
+          <p className="font-medium">Powered by Claude Agent AI</p>
+          <p className="mt-0.5 text-xs text-neutral-400">
+            Agentic review assistance for compliance analysis, findings and fix
+            recommendations.
+          </p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  )
+}
