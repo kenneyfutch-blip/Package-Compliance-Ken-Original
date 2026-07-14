@@ -57,13 +57,7 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card
-          className="hover-elevate transition-all"
-          style={{
-            clipPath:
-              "polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%)",
-          }}
-        >
+        <Card className="hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Reviewed</CardTitle>
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
@@ -78,13 +72,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         
-        <Card
-          className="hover-elevate transition-all"
-          style={{
-            clipPath:
-              "polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%)",
-          }}
-        >
+        <Card className="hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Passed</CardTitle>
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-success/10">
@@ -101,13 +89,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card
-          className="hover-elevate transition-all"
-          style={{
-            clipPath:
-              "polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%)",
-          }}
-        >
+        <Card className="hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Critical Violations</CardTitle>
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/10">
@@ -122,13 +104,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card
-          className="hover-elevate transition-all"
-          style={{
-            clipPath:
-              "polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%)",
-          }}
-        >
+        <Card className="hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Compliance Velocity</CardTitle>
             <span className="flex h-8 w-8 items-center justify-center rounded-md bg-warning/10">
