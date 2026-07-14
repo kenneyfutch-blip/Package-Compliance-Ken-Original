@@ -8299,7 +8299,7 @@ components:
       properties:
         decision:
           type: string
-          description: approve | approve_with_comments | needs_revision | reject | escalate
+          description: approve | approve_with_comments | needs_revision | reject | escalate | reset
         note:
           type: string
         versionId:

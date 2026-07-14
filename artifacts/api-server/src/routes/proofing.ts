@@ -564,6 +564,7 @@ const DECISION_MAP: Record<string, { approval: string; status: string; label: st
   },
   reject: { approval: "Rejected", status: "Rejected", label: "Rejected" },
   escalate: { approval: "Escalated", status: "Escalated", label: "Escalated" },
+  reset: { approval: "Pending", status: "Needs Review", label: "Reset to pending" },
 };
 
 // POST /packages/:id/approvals

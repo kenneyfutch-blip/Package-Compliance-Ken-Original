@@ -1284,6 +1284,7 @@ const DECISION_LABELS: Record<string, string> = {
   needs_revision: "Needs revision",
   reject: "Rejected",
   escalate: "Escalated",
+  reset: "Reset to pending",
 }
 
 function ApprovalBar({ pkg, packageId, onChange }: { pkg: Pkg; packageId: number; onChange: () => void }) {
@@ -1378,6 +1379,9 @@ function ApprovalBar({ pkg, packageId, onChange }: { pkg: Pkg; packageId: number
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => act("approve_with_comments")}><CheckCircle className="w-4 h-4 mr-2" /> Approve with comments</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => act("escalate")}><Gavel className="w-4 h-4 mr-2" /> Escalate</DropdownMenuItem>
+                {pkg.approvalStatus !== "Pending" && (
+                  <DropdownMenuItem onClick={() => act("reset")}><RotateCcw className="w-4 h-4 mr-2" /> Reset to pending</DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
