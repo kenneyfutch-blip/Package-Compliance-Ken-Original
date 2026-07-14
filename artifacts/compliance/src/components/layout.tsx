@@ -2,6 +2,7 @@ import * as React from "react"
 import { Link, useLocation } from "wouter"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/components/theme-provider"
+import { PoweredByAi, PoweredByClaude } from "@/components/powered-by-ai"
 import {
   LayoutDashboard,
   Upload,
@@ -621,11 +622,18 @@ function NavContent({
         // visually breaks up the long navigation list.
         const isMyWork = section.id === "my-work"
         return (
+          <React.Fragment key={section.id}>
+            {section.id === "home" && (
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 px-3 pt-3 border-t border-border/60">
+                <PoweredByAi />
+                <PoweredByClaude />
+              </div>
+            )}
           <div
-            key={section.id}
             data-tour={`nav-${section.id}`}
             className={cn(
-              idx > 0 && !isMyWork && "mt-3 border-t border-border/60 pt-3",
+              idx > 0 && !isMyWork && section.id !== "home" && "mt-3 border-t border-border/60 pt-3",
+              section.id === "home" && "mt-2",
               isMyWork && "mt-3 rounded-lg bg-sidebar border border-sidebar-border px-1 py-1.5",
             )}
           >
@@ -681,6 +689,7 @@ function NavContent({
               </div>
             )}
           </div>
+          </React.Fragment>
         )
       })}
     </nav>

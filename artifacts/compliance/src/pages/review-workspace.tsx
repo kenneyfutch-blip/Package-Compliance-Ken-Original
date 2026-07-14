@@ -45,7 +45,6 @@ import {
   extractMentions, relativeTime, HUMAN_MARKUP_COLOR, fileTypeFromName, servingUrl,
 } from "@/lib/proof-utils"
 import { cn } from "@/lib/utils"
-import { PoweredByAi, PoweredByClaude } from "@/components/powered-by-ai"
 import { hasDistinctFix } from "@/lib/compliance"
 import { LanguageReviewTab } from "@/components/language-review-tab"
 import { ClaimsComplianceTab } from "@/components/claims-compliance-tab"
@@ -484,8 +483,6 @@ export default function ReviewWorkspace() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <PoweredByAi className="ml-1 hidden md:inline-flex" />
-          <PoweredByClaude className="ml-1 hidden md:inline-flex" />
         </div>
       </div>
 

@@ -262,7 +262,7 @@
 .pba-rainbow {
   border: 1.5px solid transparent;
   background:
-    linear-gradient(#000000, #000000) padding-box,
+    linear-gradient(#ffffff, #ffffff) padding-box,
     conic-gradient(
       from var(--pba-angle),
       #ff0040, #ff8000, #ffe000, #00e05a, #00d0ff, #4060ff, #a000ff, #ff00a0, #ff0040

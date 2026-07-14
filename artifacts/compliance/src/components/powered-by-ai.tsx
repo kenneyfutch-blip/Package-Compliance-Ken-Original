@@ -29,13 +29,13 @@ export function PoweredByAi({ className }: { className?: string }) {
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium text-white cursor-default select-none",
+              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-medium text-neutral-900 cursor-default select-none",
               className,
             )}
           >
-            <Sparkles className="w-3 h-3 text-white shrink-0" />
-            <span className="hidden text-white/70 sm:inline">Powered by</span>
-            <span className="text-white">{label} {active.model}</span>
+            <Sparkles className="w-3 h-3 text-neutral-900 shrink-0" />
+            <span className="hidden text-neutral-500 sm:inline">Powered by</span>
+            <span className="text-neutral-900">{label} {active.model}</span>
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs border border-neutral-700 bg-neutral-900 text-neutral-100">
@@ -61,13 +61,13 @@ export function PoweredByClaude({ className }: { className?: string }) {
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium text-white cursor-default select-none",
+              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-medium text-neutral-900 cursor-default select-none",
               className,
             )}
           >
-            <Sparkles className="w-3 h-3 text-white shrink-0" />
-            <span className="hidden text-white/70 sm:inline">Powered by</span>
-            <span className="text-white">Claude Agent AI</span>
+            <Sparkles className="w-3 h-3 text-neutral-900 shrink-0" />
+            <span className="hidden text-neutral-500 sm:inline">Powered by</span>
+            <span className="text-neutral-900">Claude Agent AI</span>
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs border border-neutral-700 bg-neutral-900 text-neutral-100">
