@@ -87,7 +87,7 @@ function ArtworkPreview({
           src={src!}
           alt={`${name} artwork`}
           loading="lazy"
-          className="h-full w-full object-contain"
+          className="h-full w-full object-contain bg-white"
           onError={() => setBroken(true)}
         />
       ) : showThumb ? (

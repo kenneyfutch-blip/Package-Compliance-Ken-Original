@@ -379,7 +379,7 @@ export default function UploadPage() {
         {artwork ? (
           <div className="border border-border rounded-xl p-4 bg-card flex items-center gap-4">
             <div className="w-20 h-20 rounded-lg border border-border bg-accent/40 flex items-center justify-center overflow-hidden shrink-0">
-              {artwork.preview ? <img src={artwork.preview} alt="preview" className="w-full h-full object-contain" /> : <FileText className="w-8 h-8 text-muted-foreground" />}
+              {artwork.preview ? <img src={artwork.preview} alt="preview" className="w-full h-full object-contain bg-white" /> : <FileText className="w-8 h-8 text-muted-foreground" />}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">

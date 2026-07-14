@@ -31,6 +31,20 @@ relied on via an ambient nix runtime path, or it won't exist in the autoscale
 deployment. Spawn it with an argv array (never a shell string) so filenames
 can't inject.
 
+## Convention: rendered artwork always previews on white
+Every surface that shows *rendered* package artwork must letterbox it on
+`bg-white` — so PNG/JPG, PDF-rendered thumbnails, and the ProofViewer page all
+match regardless of file type or theme. Applies to: the package-card
+`ArtworkPreview` (packages.tsx), the upload confirmation mini-preview
+(upload.tsx), and the ProofViewer proof page (proof-viewer.tsx).
+**Why:** `object-contain` letterboxes against whatever is behind it; if one
+branch omits `bg-white` it falls back to the container (`bg-muted`), so images
+showed gray bars while PDFs showed white bars — visibly inconsistent cards.
+**How to apply:** put `bg-white` on the `<img>`/canvas branch, NOT the container.
+Leave the *non-rendered* states (no-preview / `.indd` / broken-image / file-icon
+fallback) on the themed `bg-muted`/accent so their muted-foreground icons stay
+legible in dark mode. Do not "simplify" by pushing bg-white onto the container.
+
 ## Auth invariant (applies beyond thumbnails)
 When an endpoint reads private object-storage bytes from a path stored in a DB
 record (e.g. a version's `fileUrl`), scoping the **parent** record to the caller
