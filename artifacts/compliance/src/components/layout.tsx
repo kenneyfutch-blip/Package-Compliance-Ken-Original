@@ -592,26 +592,6 @@ function NavContent({
       // resets --foreground to white regardless, so it always stays legible.
       className="flex-1 overflow-y-auto py-4 px-3 [--foreground:0_0%_0%] dark:[--foreground:0_0%_98%]"
     >
-      {favoriteItems.length > 0 && (
-        <div className="mb-3 border-b border-border/60 pb-3">
-          <div className="flex items-center gap-2 px-3 py-2">
-            <Star className="w-3.5 h-3.5 shrink-0 text-amber-500 fill-amber-500" aria-hidden />
-            <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-foreground">
-              Favorites
-            </span>
-          </div>
-          <div className="mt-1 mb-1 space-y-1">
-            {favoriteItems.map((item) => (
-              <NavRow
-                key={`fav-${item.href}`}
-                item={item}
-                active={isItemActive(location, item.href)}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </div>
-        </div>
-      )}
       {visibleSections.map((section, idx) => {
         // "/" is canonically owned by the Home section. The Compliance section
         // carries a convenience shortcut ("Compliance Dashboard") to the same
@@ -711,6 +691,28 @@ function NavContent({
               </div>
             )}
           </div>
+          {/* Favorites populate directly under Home, ahead of the Packages
+              section — not hoisted to the very top of the navigation. */}
+          {section.id === "home" && favoriteItems.length > 0 && (
+            <div className="mt-3 border-t border-border/60 pt-3">
+              <div className="flex items-center gap-2 px-3 py-2">
+                <Star className="w-3.5 h-3.5 shrink-0 text-amber-500 fill-amber-500" aria-hidden />
+                <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-foreground">
+                  Favorites
+                </span>
+              </div>
+              <div className="mt-1 mb-1 space-y-1">
+                {favoriteItems.map((item) => (
+                  <NavRow
+                    key={`fav-${item.href}`}
+                    item={item}
+                    active={isItemActive(location, item.href)}
+                    onNavigate={onNavigate}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
           </React.Fragment>
         )
       })}
