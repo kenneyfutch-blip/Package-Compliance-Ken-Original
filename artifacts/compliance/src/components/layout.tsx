@@ -645,14 +645,15 @@ function NavContent({
               // then force a true-black background.
               isMyWork && "dark mt-3 rounded-lg bg-black border border-white/15 px-1 py-1.5",
             )}
-            // Recolor the hover/active fills in this block to a neutral light
-            // grey (the dark palette's --accent/--muted are blue-slate). This
-            // covers both the section header hover and each nav row hover/active.
+            // Recolor the hover/active fills in this block to Dollar Tree green
+            // (the dark palette's --accent/--muted are blue-slate). --accent is
+            // the hover fill, --muted the active/selected fill; both keep white
+            // text legible. Covers the section header and each nav row.
             style={
               isMyWork
                 ? ({
-                    "--accent": "0 0% 38%",
-                    "--muted": "0 0% 30%",
+                    "--accent": "142 70% 27%",
+                    "--muted": "142 72% 33%",
                   } as React.CSSProperties)
                 : undefined
             }
