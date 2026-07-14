@@ -712,7 +712,7 @@ function NavContent({
 
 function Brand() {
   return (
-    <Link href="/" className="flex items-center gap-2 tracking-tight min-w-0">
+    <Link href="/" className="flex items-center gap-2 tracking-tight min-w-0 pr-3">
       <span className="flex items-center justify-center rounded-md bg-white p-1 ring-1 ring-black/5 shrink-0">
         <img
           src={`${import.meta.env.BASE_URL}dollar-tree-logo.png`}
