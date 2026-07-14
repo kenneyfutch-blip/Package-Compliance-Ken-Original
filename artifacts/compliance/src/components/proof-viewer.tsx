@@ -225,8 +225,10 @@ export function ProofViewer(props: Props) {
 
   return (
     <div className={cn(
-      "flex flex-col bg-accent/30 border border-border overflow-hidden",
-      fullscreen ? "fixed inset-0 z-50 h-screen w-screen rounded-none" : "h-full rounded-xl",
+      "flex flex-col border border-border overflow-hidden",
+      fullscreen
+        ? "fixed inset-0 z-50 h-screen w-screen rounded-none bg-background/70 backdrop-blur-md"
+        : "h-full rounded-xl bg-accent/30",
     )}>
       {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b border-border bg-card shrink-0 flex-wrap">
