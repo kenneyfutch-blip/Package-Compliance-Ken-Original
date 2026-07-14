@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import {
   packagesTable,
+  packageVersionsTable,
   violationsTable,
   auditEventsTable,
   reportsTable,
@@ -49,7 +50,8 @@ import {
 } from "../lib/policies/engine";
 import { logger } from "../lib/logger";
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
-import { packageConds, canAccessPackage } from "../lib/rbac/scope";
+import { packageConds, canAccessPackage, canAccessObjectOwner } from "../lib/rbac/scope";
+import { resolveObjectOwner } from "./storage";
 import { writeAudit } from "../lib/audit";
 import { autoAssignReview, completeReview } from "../lib/reviews/engine";
 import { matchTeamName } from "../lib/reviews/routing";
@@ -62,6 +64,15 @@ import {
 } from "../lib/memory/engine";
 import { readArchivedAuditForPackage } from "../lib/maintenance/archive";
 import { gatherEcfrIntelligence, formatEcfrForPrompt } from "../lib/ecfr";
+import { ObjectStorageService } from "../lib/objectStorage";
+import {
+  renderPdfThumbnail,
+  getCachedThumbnail,
+  setCachedThumbnail,
+  ThumbnailError,
+} from "../lib/thumbnail";
+
+const objectStorage = new ObjectStorageService();
 
 const router: IRouter = Router();
 
@@ -486,6 +497,108 @@ router.get(
     const pkg = await loadOwnedPackage(req, res, id);
     if (!pkg) return;
     res.json(await buildDetail(pkg));
+  },
+);
+
+// GET /packages/:id/thumbnail
+// Server-rendered artwork preview for package cards. Rasterizes page 1 of the
+// current version's source file (PDF, extensionless legacy uploads, or a
+// PDF-compatible .ai) to a small PNG, cached by content hash. Images are served
+// as-is; anything unrenderable (.indd, corrupt) returns 404 so the card falls
+// back to a typed placeholder. Auth rides on the browser session cookie, same as
+// the object-serving route, so plain <img src> tags work.
+router.get(
+  "/packages/:id/thumbnail",
+  requirePermission("packages:read"),
+  async (req: Request, res: Response): Promise<void> => {
+    const id = requireId(req.params["id"], res);
+    if (id === null) return;
+    const pkg = await loadOwnedPackage(req, res, id);
+    if (!pkg) return;
+
+    const [version] = await db
+      .select({
+        fileUrl: packageVersionsTable.fileUrl,
+        fileHash: packageVersionsTable.fileHash,
+        previewUrl: packageVersionsTable.previewUrl,
+      })
+      .from(packageVersionsTable)
+      .where(
+        and(
+          eq(packageVersionsTable.packageId, id),
+          eq(packageVersionsTable.isCurrent, true),
+        ),
+      )
+      .limit(1);
+
+    // Prefer an explicitly attached preview export; otherwise render the source
+    // artwork itself.
+    const sourceUrl =
+      version?.previewUrl ?? version?.fileUrl ?? pkg.artworkUrl ?? null;
+
+    // Only object-storage uploads reach this endpoint. Seed artwork served by
+    // the web app (/artwork/...) is always an image shown directly by the card.
+    if (!sourceUrl || !sourceUrl.startsWith("/objects/")) {
+      res.status(404).json({ error: "No renderable artwork" });
+      return;
+    }
+
+    // Defense-in-depth: authorize the object itself with the SAME owner-scoping
+    // as /storage/objects/*, not just the package. This guards against a version
+    // record whose file path is out of the caller's tenant/supplier scope (bad
+    // migration, legacy data) ever being read here. Deny-by-default -> 404.
+    const owner = await resolveObjectOwner(sourceUrl);
+    if (!owner || !canAccessObjectOwner(req, owner)) {
+      res.status(404).json({ error: "No renderable artwork" });
+      return;
+    }
+
+    const cacheKey = version?.fileHash ?? sourceUrl;
+    const cached = getCachedThumbnail(cacheKey);
+    if (cached) {
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "private, max-age=86400");
+      res.end(cached);
+      return;
+    }
+
+    try {
+      const file = await objectStorage.getObjectEntityFile(sourceUrl);
+      const { buffer, contentType } =
+        await objectStorage.downloadObjectBytes(file);
+
+      // Defensive: if the source is already an image, serve it directly. The
+      // card normally renders images itself and won't call this endpoint.
+      if (contentType.startsWith("image/")) {
+        res.setHeader("Content-Type", contentType);
+        res.setHeader("Cache-Control", "private, max-age=86400");
+        res.end(buffer);
+        return;
+      }
+
+      const isPdf =
+        contentType === "application/pdf" ||
+        buffer.subarray(0, 5).toString("latin1") === "%PDF-";
+      if (!isPdf) {
+        res.status(404).json({ error: "Not renderable" });
+        return;
+      }
+
+      const png = await renderPdfThumbnail(buffer);
+      setCachedThumbnail(cacheKey, png);
+      res.setHeader("Content-Type", "image/png");
+      res.setHeader("Cache-Control", "private, max-age=86400");
+      res.end(png);
+    } catch (err) {
+      // Missing/unrenderable artwork is expected for some source types; return
+      // 404 so the card shows its placeholder instead of a broken state.
+      if (!(err instanceof ThumbnailError)) {
+        logger.error({ err, packageId: id }, "thumbnail error");
+      } else {
+        logger.warn({ err, packageId: id }, "thumbnail render failed");
+      }
+      res.status(404).json({ error: "Thumbnail unavailable" });
+    }
   },
 );
 

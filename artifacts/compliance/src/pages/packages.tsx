@@ -1,6 +1,4 @@
-import { useState, useEffect, useRef } from "react"
-import * as pdfjsLib from "pdfjs-dist"
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
+import { useState, useEffect } from "react"
 import {
   useListPackages,
   useUpdatePackage,
@@ -28,8 +26,6 @@ import {
   FileText,
 } from "lucide-react"
 import { servingUrl, fileTypeFromName } from "@/lib/proof-utils"
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
 import { gradeColor, riskBand } from "@/lib/compliance"
 import { usePermissions } from "@/lib/access"
 import { useToast } from "@/hooks/use-toast"
@@ -62,70 +58,27 @@ interface Props {
 // same URL resolver the review workspace uses so object-storage, seed, and
 // public artwork all render. Falls back to a typed placeholder for PDFs / vector
 // source files (.ai/.indd) and for missing or broken images.
-// Renders the first page of a PDF to a canvas so the package card shows the real
-// artwork proof instead of a generic placeholder. Falls back (via onFail) to the
-// placeholder if the file isn't actually a readable PDF.
-function PdfThumbnail({ src, onFail }: { src: string; onFail: () => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [ready, setReady] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    setReady(false)
-    const loadingTask = pdfjsLib.getDocument(src)
-    let renderTask: pdfjsLib.RenderTask | null = null
-    ;(async () => {
-      try {
-        const doc = await loadingTask.promise
-        if (cancelled) return
-        const page = await doc.getPage(1)
-        if (cancelled) return
-        const base = page.getViewport({ scale: 1 })
-        const scale = Math.min(2, 480 / base.width)
-        const viewport = page.getViewport({ scale })
-        const canvas = canvasRef.current
-        if (!canvas) return
-        const ctx = canvas.getContext("2d")
-        if (!ctx) return
-        canvas.width = viewport.width
-        canvas.height = viewport.height
-        renderTask = page.render({ canvasContext: ctx, viewport })
-        await renderTask.promise
-        if (!cancelled) setReady(true)
-      } catch {
-        if (!cancelled) onFail()
-      }
-    })()
-    return () => {
-      cancelled = true
-      try { renderTask?.cancel() } catch { /* noop */ }
-      // destroy() aborts an in-flight getDocument and frees the document +
-      // worker resources — important since the list can hold many cards.
-      void loadingTask.destroy().catch(() => { /* noop */ })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [src])
-
-  return (
-    <div className="flex h-full w-full items-center justify-center bg-white">
-      {!ready && <Loader2 className="absolute h-6 w-6 animate-spin text-muted-foreground/40" />}
-      <canvas ref={canvasRef} className="max-h-full max-w-full" />
-    </div>
-  )
-}
-
-function ArtworkPreview({ url, name }: { url: string | null | undefined; name: string }) {
+function ArtworkPreview({
+  id,
+  url,
+  name,
+}: {
+  id: number
+  url: string | null | undefined
+  name: string
+}) {
   const [broken, setBroken] = useState(false)
-  const [pdfFailed, setPdfFailed] = useState(false)
   const src = servingUrl(url)
   const type = url ? fileTypeFromName(url) : "other"
   const isImage = type === "png" || type === "jpg"
   const isTrackedOnly = type === "ai" || type === "indd"
   const showImage = Boolean(src) && isImage && !broken
-  // Render a PDF thumbnail for PDFs and for legacy extensionless uploads (type
-  // "other"), which in this app are almost always PDF artwork proofs. Native
-  // source files (.ai/.indd) can't be rasterized in the browser.
-  const showPdf = Boolean(src) && !isImage && !isTrackedOnly && !pdfFailed
+  // Non-image artwork (PDFs, legacy extensionless uploads, and PDF-compatible
+  // .ai files) is rasterized to a PNG once by the server and cached, so the card
+  // just loads a plain <img>. .indd can't be rendered, so it goes straight to
+  // the typed placeholder; if the server can't render an .ai it returns 404 and
+  // onError falls back to the placeholder too.
+  const showThumb = Boolean(url) && !isImage && type !== "indd" && !broken
 
   return (
     <div className="relative aspect-[16/9] w-full overflow-hidden rounded-t-md border-b border-border bg-muted">
@@ -137,8 +90,14 @@ function ArtworkPreview({ url, name }: { url: string | null | undefined; name: s
           className="h-full w-full object-contain"
           onError={() => setBroken(true)}
         />
-      ) : showPdf ? (
-        <PdfThumbnail src={src!} onFail={() => setPdfFailed(true)} />
+      ) : showThumb ? (
+        <img
+          src={`/api/packages/${id}/thumbnail`}
+          alt={`${name} artwork`}
+          loading="lazy"
+          className="h-full w-full object-contain bg-white"
+          onError={() => setBroken(true)}
+        />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-muted-foreground">
           {isTrackedOnly ? (
@@ -364,7 +323,7 @@ export default function PackagesView({
                 className="flex flex-col hover-elevate transition-all border-t-4 overflow-hidden"
                 style={{ borderTopColor: band.border }}
               >
-                <ArtworkPreview url={pkg.artworkUrl} name={pkg.name} />
+                <ArtworkPreview id={pkg.id} url={pkg.artworkUrl} name={pkg.name} />
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
                     <div>
