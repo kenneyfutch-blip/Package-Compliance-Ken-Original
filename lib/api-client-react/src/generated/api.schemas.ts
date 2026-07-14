@@ -1806,6 +1806,34 @@ export interface CopilotAnswer {
   citations: Citation[];
 }
 
+export type AssistantMessageRole = typeof AssistantMessageRole[keyof typeof AssistantMessageRole];
+
+
+export const AssistantMessageRole = {
+  user: 'user',
+  assistant: 'assistant',
+} as const;
+
+export interface AssistantMessage {
+  role: AssistantMessageRole;
+  content: string;
+}
+
+export interface AssistantChatInput {
+  messages: AssistantMessage[];
+}
+
+export interface AssistantToolSuggestion {
+  label: string;
+  href: string;
+  reason?: string;
+}
+
+export interface AssistantChatAnswer {
+  answer: string;
+  suggestions: AssistantToolSuggestion[];
+}
+
 export interface BulkAnalyzeInput {
   ids: number[];
 }

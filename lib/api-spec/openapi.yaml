@@ -1182,6 +1182,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /assistant/chat:
+    post:
+      operationId: assistantChat
+      tags: [assistant]
+      summary: Ask the AI assistant for help finding the right tool
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistantChatInput"
+      responses:
+        "200":
+          description: Assistant answer with tool suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistantChatAnswer"
+        "502":
+          description: Assistant unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
   /packages/{id}/copilot:
     post:
       operationId: askCopilot
@@ -7199,6 +7224,54 @@ components:
       required:
         - answer
         - citations
+
+    AssistantMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+      required:
+        - role
+        - content
+
+    AssistantChatInput:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssistantMessage"
+      required:
+        - messages
+
+    AssistantToolSuggestion:
+      type: object
+      properties:
+        label:
+          type: string
+        href:
+          type: string
+        reason:
+          type: string
+      required:
+        - label
+        - href
+
+    AssistantChatAnswer:
+      type: object
+      properties:
+        answer:
+          type: string
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssistantToolSuggestion"
+      required:
+        - answer
+        - suggestions
 
     BulkAnalyzeInput:
       type: object

@@ -743,6 +743,113 @@ Answer the question using the context above. Cite the specific regulations you r
 }
 
 // ---------------------------------------------------------------------------
+// General-purpose "find the right tool" assistant
+// ---------------------------------------------------------------------------
+
+export type AssistantToolSuggestionOut = {
+  label: string;
+  href: string;
+  reason: string;
+};
+
+export type AssistantChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+// Curated catalog of tools the assistant can point users to. Kept in sync with
+// the left-nav sections in the web app. The model may ONLY recommend hrefs that
+// appear here (enforced below), so every suggestion resolves to a real page.
+const ASSISTANT_TOOL_CATALOG: { label: string; href: string; desc: string }[] = [
+  { label: "New Package", href: "/upload", desc: "Upload packaging artwork/PDF to start a new AI compliance review." },
+  { label: "All Packages", href: "/packages", desc: "Browse, search and filter every package in the system." },
+  { label: "Active Reviews", href: "/packages/active", desc: "Packages currently under AI review or assigned to a specialist." },
+  { label: "Needs Review", href: "/packages/needs-review", desc: "Packages flagged for human attention." },
+  { label: "Violations Center", href: "/ai/violations", desc: "See all detected compliance violations across packages." },
+  { label: "Claim Reviews", href: "/ai/claims", desc: "Audit marketing claims (e.g. 'natural', 'eco-friendly') for compliance." },
+  { label: "Language Review", href: "/ai/language", desc: "AI copy/language review for tone, grammar and required disclosures." },
+  { label: "Recommended Fixes", href: "/ai/fixes", desc: "AI-suggested corrections for flagged packaging." },
+  { label: "Compliance Heatmaps", href: "/ai/heatmaps", desc: "Visualize where compliance risk concentrates." },
+  { label: "Compliance Memory", href: "/ai/memory", desc: "Search past findings, decisions and fixes." },
+  { label: "Regulatory Library", href: "/regulations", desc: "Federal/state regulations knowledge base (FDA, FTC, CPSC, etc.)." },
+  { label: "FDA Recalls", href: "/regulatory/recalls", desc: "Look up recent FDA enforcement and recall data." },
+  { label: "Vendor Directory", href: "/suppliers", desc: "Manage suppliers/vendors and their compliance status." },
+  { label: "Vendor Scorecards", href: "/suppliers/scorecards", desc: "Compare supplier compliance performance." },
+  { label: "Resource Center", href: "/resources", desc: "Central hub for policies, SOPs and approved language." },
+  { label: "SOP Documents", href: "/resources/sop", desc: "Standard operating procedure documents and versions." },
+  { label: "Approved Language", href: "/resources/glossary", desc: "Glossary of pre-approved copy and terms." },
+  { label: "Compliance Reports", href: "/reports", desc: "Generate and export compliance reports." },
+  { label: "Trend Analysis", href: "/reports/trends", desc: "Analyze compliance trends over time." },
+  { label: "My Reviews", href: "/reviews", desc: "Your assigned reviews." },
+  { label: "My Tasks", href: "/my-work", desc: "Your personal task queue." },
+  { label: "Training & Help", href: "/training/getting-started", desc: "Guides, tutorials and support." },
+];
+
+export async function askAssistant(
+  organizationId: number,
+  messages: AssistantChatMessage[],
+): Promise<{ answer: string; suggestions: AssistantToolSuggestionOut[] }> {
+  const catalog = ASSISTANT_TOOL_CATALOG.map(
+    (t) => `- ${t.label} [${t.href}]: ${t.desc}`,
+  ).join("\n");
+
+  const system = `You are the AI assistant for a packaging compliance review platform used by retail compliance specialists. Your job is to help users figure out WHICH tool in the app to use for what they are trying to do, and to answer general questions about packaging compliance workflows. Be warm, concise and practical.
+
+You can ONLY recommend tools from this catalog (use the exact href):
+${catalog}
+
+Guidance:
+- When the user describes a goal, recommend the 1-3 most relevant tools as suggestions, each with the exact href from the catalog and a one-line reason.
+- If nothing in the catalog fits, return an empty suggestions array and still answer helpfully.
+- Never invent hrefs or tools that are not in the catalog.
+- Keep the answer under 120 words.
+Respond ONLY with valid minified JSON: {"answer":string,"suggestions":[{"label":string,"href":string,"reason":string}]}. Do not use emojis.`;
+
+  const trimmed = messages.slice(-10).map((m) => ({
+    role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+    content: String(m.content ?? "").slice(0, 4000),
+  }));
+
+  const { client, model } = await resolveAiClientForTier("standard");
+  const response = await trackDirectUsage(
+    {
+      workload: "copilot",
+      model,
+      tier: "standard",
+      reviewType: WORKLOAD_LABELS.copilot,
+      organizationId,
+    },
+    () =>
+      client.chat.completions.create({
+        model,
+        messages: [{ role: "system", content: system }, ...trimmed],
+        response_format: { type: "json_object" },
+        max_completion_tokens: 1024,
+      }),
+  );
+
+  const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
+  const allowed = new Set(ASSISTANT_TOOL_CATALOG.map((t) => t.href));
+  const suggestions: AssistantToolSuggestionOut[] = Array.isArray(parsed?.suggestions)
+    ? parsed.suggestions
+        .map((s: any) => ({
+          label: String(s?.label ?? ""),
+          href: String(s?.href ?? ""),
+          reason: String(s?.reason ?? ""),
+        }))
+        .filter((s: AssistantToolSuggestionOut) => allowed.has(s.href) && s.label)
+        .slice(0, 3)
+    : [];
+
+  return {
+    answer: String(
+      parsed?.answer ?? "I could not generate a response. Please try again.",
+    ),
+    suggestions,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Version comparison
 // ---------------------------------------------------------------------------
 

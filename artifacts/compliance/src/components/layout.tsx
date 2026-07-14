@@ -3,6 +3,7 @@ import { Link, useLocation } from "wouter"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/components/theme-provider"
 import { PoweredByAi } from "@/components/powered-by-ai"
+import { AssistantPanel } from "@/components/assistant-panel"
 import {
   LayoutDashboard,
   Upload,
@@ -957,6 +958,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   })
   const onlineCount = presence?.length ?? 0
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  const [assistantOpen, setAssistantOpen] = React.useState(false)
   const [q, setQ] = React.useState("")
   const [searchOpen, setSearchOpen] = React.useState(false)
   const searchRef = React.useRef<HTMLDivElement>(null)
@@ -1010,7 +1012,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden flex-col md:flex-row">
+    <div className="flex h-screen w-full overflow-hidden">
+      {/* Main app column — shrinks as the AI assistant panel slides in from the
+          right, producing a split-screen rather than an overlay. */}
+      <div className="flex flex-1 min-w-0 bg-background overflow-hidden flex-col md:flex-row">
       {/* Desktop Sidebar */}
       <aside data-tour="sidebar" className="hidden md:flex flex-col w-64 border-r border-border bg-card">
         <div className="h-16 flex items-center px-4 border-b border-border bg-card">
@@ -1155,6 +1160,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 New Package
               </Button>
             </Link>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setAssistantOpen((v) => !v)}
+              aria-pressed={assistantOpen}
+              data-tour="ai-assistant"
+              className="hidden sm:flex gap-2 border-green-600/40 text-green-700 hover:bg-green-600/10 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400"
+            >
+              <Sparkles className="w-4 h-4" />
+              Ask AI
+            </Button>
             <FavoritesMenu />
             <Button variant="ghost" size="icon" onClick={toggleTheme} title="Toggle theme">
               {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -1173,6 +1189,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <OnboardingTour />
+      </div>
+      <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </div>
   )
 }

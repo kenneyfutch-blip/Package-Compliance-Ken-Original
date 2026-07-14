@@ -34,6 +34,7 @@ import routingRulesRouter from "./routing-rules";
 import reviewStagesRouter from "./review-stages";
 import escalationRulesRouter from "./escalation-rules";
 import workloadRouter from "./workload";
+import assistantRouter from "./assistant";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -75,5 +76,6 @@ router.use(routingRulesRouter);
 router.use(reviewStagesRouter);
 router.use(escalationRulesRouter);
 router.use(workloadRouter);
+router.use(assistantRouter);
 
 export default router;

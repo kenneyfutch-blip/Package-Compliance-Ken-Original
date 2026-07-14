@@ -35,6 +35,8 @@ import type {
   AssignableReviewers,
   AssignmentListItem,
   AssignmentRecommendation,
+  AssistantChatAnswer,
+  AssistantChatInput,
   AuditEvent,
   BulkActionInput,
   BulkActionResult,
@@ -3873,6 +3875,77 @@ export const useReprocessPackage = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getReprocessPackageMutationOptions(options));
+    }
+
+export const getAssistantChatUrl = () => {
+
+
+
+
+  return `/api/assistant/chat`
+}
+
+/**
+ * @summary Ask the AI assistant for help finding the right tool
+ */
+export const assistantChat = async (assistantChatInput: AssistantChatInput, options?: RequestInit): Promise<AssistantChatAnswer> => {
+
+  return customFetch<AssistantChatAnswer>(getAssistantChatUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(assistantChatInput)
+  }
+);}
+
+
+
+
+
+export const getAssistantChatMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assistantChat>>, TError,{data: BodyType<AssistantChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof assistantChat>>, TError,{data: BodyType<AssistantChatInput>}, TContext> => {
+
+const mutationKey = ['assistantChat'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assistantChat>>, {data: BodyType<AssistantChatInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  assistantChat(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssistantChatMutationResult = NonNullable<Awaited<ReturnType<typeof assistantChat>>>
+    export type AssistantChatMutationBody = BodyType<AssistantChatInput>
+    export type AssistantChatMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Ask the AI assistant for help finding the right tool
+ */
+export const useAssistantChat = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assistantChat>>, TError,{data: BodyType<AssistantChatInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof assistantChat>>,
+        TError,
+        {data: BodyType<AssistantChatInput>},
+        TContext
+      > => {
+      return useMutation(getAssistantChatMutationOptions(options));
     }
 
 export const getAskCopilotUrl = (id: number,) => {

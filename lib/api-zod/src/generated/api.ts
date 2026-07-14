@@ -2479,6 +2479,26 @@ export const ReprocessPackageResponse = zod.object({
 
 
 /**
+ * @summary Ask the AI assistant for help finding the right tool
+ */
+export const AssistantChatBody = zod.object({
+  "messages": zod.array(zod.object({
+  "role": zod.enum(['user', 'assistant']),
+  "content": zod.string()
+}))
+})
+
+export const AssistantChatResponse = zod.object({
+  "answer": zod.string(),
+  "suggestions": zod.array(zod.object({
+  "label": zod.string(),
+  "href": zod.string(),
+  "reason": zod.string().optional()
+}))
+})
+
+
+/**
  * @summary Ask the AI compliance copilot a question about this package
  */
 export const AskCopilotParams = zod.object({
