@@ -1046,7 +1046,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
                   onChange={(e) => setQ(e.target.value)}
                   onFocus={() => setSearchOpen(true)}
                   placeholder="Search packages, SKU, vendor..."
-                  className="w-full h-9 rounded-md rounded-br-none bg-black border border-neutral-700 pl-9 pr-4 text-sm text-white placeholder:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-neutral-500 transition-all"
+                  className="w-full h-9 rounded-md bg-black border border-neutral-700 pl-9 pr-4 text-sm text-white placeholder:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-neutral-500 transition-all"
+                  // Chamfer the bottom-right corner for a "folded page" look.
+                  style={{
+                    clipPath:
+                      "polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%)",
+                  }}
                 />
               </form>
               {searchOpen && (
