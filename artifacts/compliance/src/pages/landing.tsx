@@ -197,7 +197,7 @@ export default function Landing() {
                 className="h-9 w-auto object-contain"
               />
             </span>
-            <span className="hidden border-l border-border pl-2.5 text-sm sm:inline">Packaging Compliance AI</span>
+            <span className="hidden border-l border-border pl-2.5 text-sm sm:inline">Compliance Intelligence</span>
           </div>
           <nav className="hidden items-center gap-7 text-sm font-medium text-muted-foreground md:flex">
             <a href="#capabilities" className="transition-colors hover:text-foreground">Capabilities</a>
@@ -220,16 +220,17 @@ export default function Landing() {
           <div>
             <span className="pba-rainbow inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold text-foreground">
               <Sparkles className="h-3.5 w-3.5 text-green-600" />
-              AI + Agentic compliance platform
+              Dollar Tree · AI Compliance Intelligence
             </span>
             <h1 className="mt-6 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-              Ship compliant packaging,
-              <span className="block text-green-600">faster and with confidence.</span>
+              Dollar Tree Compliance Intelligence,
+              <span className="block text-green-600">built for the way your team works.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              An agentic AI platform that reads your packaging artwork, checks it against
-              every relevant federal regulation, grades the risk, and routes the review to
-              the right specialist — before anything reaches the shelf.
+              The internal AI platform that reads your packaging artwork, analyzes it against
+              every relevant federal regulation, and routes the work to the right specialist —
+              designed to optimize associate productivity and compliance analysis across
+              Dollar Tree, before anything reaches the shelf.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link
@@ -287,8 +288,9 @@ export default function Landing() {
               AI that does the compliance legwork for you
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
-              Purpose-built AI agents handle intake, review, routing and escalation — so your
-              specialists spend their time on judgment calls, not busywork.
+              Purpose-built AI handles intake, analysis, routing and escalation — so Dollar Tree
+              associates spend their time on judgment calls, not busywork, and every review moves
+              faster with fewer things slipping through.
             </p>
           </div>
 
@@ -393,10 +395,10 @@ export default function Landing() {
           <div className="pointer-events-none absolute -bottom-16 -left-16 h-64 w-64 rounded-full bg-black/10 blur-3xl" />
           <div className="relative">
             <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
-              Compliance, on autopilot
+              Compliance intelligence, on autopilot
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-white/80">
-              Sign in to start reviewing packaging with AI on your side.
+              Sign in to start optimizing compliance analysis and team productivity with AI on your side.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
@@ -422,7 +424,7 @@ export default function Landing() {
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
             <img src={`${basePath}/dollar-tree-icon.png`} alt="" className="h-5 w-5 object-contain" />
-            <span>Packaging Compliance AI</span>
+            <span>Dollar Tree Compliance Intelligence</span>
           </div>
           <span>© {new Date().getFullYear()} Dollar Tree · Internal use only</span>
         </div>
