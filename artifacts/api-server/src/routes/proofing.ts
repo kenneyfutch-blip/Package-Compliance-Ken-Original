@@ -41,6 +41,7 @@ import {
   detectPageCount,
 } from "../lib/packageService";
 import { generateProofPdf } from "../lib/proofPdf";
+import { renderPdfThumbnail } from "../lib/thumbnail";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -646,26 +647,46 @@ router.post(
 async function loadArtworkBytes(
   artworkUrl: string | null,
 ): Promise<{ bytes: Uint8Array; type: "png" | "jpg" } | null> {
-  if (!artworkUrl) return null;
-  const type: "png" | "jpg" | null =
-    inferFileType(artworkUrl) === "jpg"
-      ? "jpg"
-      : inferFileType(artworkUrl) === "png"
-        ? "png"
-        : null;
-  if (!type) return null;
+  // Only dereference already-shape-validated references (object path or seed
+  // /artwork/ file). Reject traversal/scheme/absolute URLs up front so a crafted
+  // artworkUrl can never read an arbitrary server file into the export.
+  if (!artworkUrl || !isSafeStoredFileUrl(artworkUrl)) return null;
+  const fileType = inferFileType(artworkUrl);
+  // Raster images embed directly; PDF and PDF-compatible vector files (.ai) are
+  // rasterized to PNG below. InDesign (.indd) has no server-side renderer, so it
+  // is skipped rather than producing a broken image.
+  if (
+    fileType !== "png" &&
+    fileType !== "jpg" &&
+    fileType !== "pdf" &&
+    fileType !== "ai"
+  ) {
+    return null;
+  }
   try {
+    let raw: Uint8Array;
     if (artworkUrl.startsWith("/objects/")) {
       const file = await objectStorage.getObjectEntityFile(artworkUrl);
       const response = await objectStorage.downloadObject(file);
-      const buf = new Uint8Array(await response.arrayBuffer());
-      return { bytes: buf, type };
+      raw = new Uint8Array(await response.arrayBuffer());
+    } else {
+      // Seed artwork under /artwork/. Canonicalize and fail closed if the
+      // resolved path escapes the public directory (defense in depth).
+      const filePath = path.resolve(COMPLIANCE_PUBLIC, artworkUrl.replace(/^\//, ""));
+      if (
+        filePath !== COMPLIANCE_PUBLIC &&
+        !filePath.startsWith(COMPLIANCE_PUBLIC + path.sep)
+      ) {
+        return null;
+      }
+      raw = new Uint8Array(await readFile(filePath));
     }
-    // Seed artwork lives in the compliance app's public directory.
-    const rel = artworkUrl.replace(/^\//, "");
-    const filePath = path.join(COMPLIANCE_PUBLIC, rel);
-    const bytes = await readFile(filePath);
-    return { bytes: new Uint8Array(bytes), type };
+    if (fileType === "png") return { bytes: raw, type: "png" };
+    if (fileType === "jpg") return { bytes: raw, type: "jpg" };
+    // pdf / ai: rasterize page 1 to a PNG so pdf-lib can embed it. Render at a
+    // higher resolution than card thumbnails since this fills a full PDF page.
+    const png = await renderPdfThumbnail(Buffer.from(raw), { maxDimPx: 1400 });
+    return { bytes: new Uint8Array(png), type: "png" };
   } catch (err) {
     logger.warn({ err, artworkUrl }, "Could not load artwork for proof export");
     return null;
