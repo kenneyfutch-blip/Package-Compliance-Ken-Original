@@ -2,7 +2,7 @@ import * as React from "react"
 import { Link, useLocation } from "wouter"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/components/theme-provider"
-import { PoweredByAi, PoweredByClaude } from "@/components/powered-by-ai"
+import { PoweredByAi } from "@/components/powered-by-ai"
 import {
   LayoutDashboard,
   Upload,
@@ -624,9 +624,8 @@ function NavContent({
         return (
           <React.Fragment key={section.id}>
             {section.id === "home" && (
-              <div className="mt-3 flex flex-wrap items-center gap-1.5 px-3 pt-3 border-t border-border/60">
-                <PoweredByAi />
-                <PoweredByClaude />
+              <div className="mt-2 mb-1">
+                <PoweredByAi className="w-full justify-center" />
               </div>
             )}
           <div

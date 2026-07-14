@@ -485,6 +485,27 @@ export async function seedDemo() {
         "reference seed instead.",
     );
   }
+  // Data-loss guardrail: the demo seed calls clearDemo(), which performs a FULL
+  // wipe of every tenant-scoped table (packages, versions, reviews, uploads,
+  // cached analysis, audit, suppliers, ...). Refuse to run when the database
+  // already holds work, so routine feature development can never silently
+  // destroy real uploads or in-progress reviews. Set FORCE_DEMO_RESEED=1 to
+  // intentionally reset a scratch database.
+  const existing = await db
+    .select({ id: packagesTable.id })
+    .from(packagesTable)
+    .limit(1);
+  if (existing.length > 0 && process.env.FORCE_DEMO_RESEED !== "1") {
+    throw new Error(
+      "Refusing to reseed demo data: the database already contains packages. " +
+        "The demo seed performs a FULL wipe of all tenant data (packages, " +
+        "reviews, uploads, cached analysis, audit trail). To intentionally " +
+        "reset a scratch database, re-run with FORCE_DEMO_RESEED=1. To only add " +
+        "missing reference data without deleting anything, run " +
+        "`pnpm run seed:reference`.",
+    );
+  }
+
   logger.info("Seeding demo data...");
 
   // Reference data (permissions, roles, regulations, AI provider) must exist
