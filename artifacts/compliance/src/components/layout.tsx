@@ -76,6 +76,8 @@ import {
   useListNotifications,
   useGetReviewPresence,
   getGetReviewPresenceQueryKey,
+  useListPackages,
+  getListPackagesQueryKey,
 } from "@workspace/api-client-react"
 import { usePermissions } from "@/lib/access"
 import { PresenceStrip } from "@/components/presence-indicators"
@@ -968,10 +970,32 @@ export function Shell({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener("mousedown", onDown)
   }, [searchOpen])
 
+  // Debounce the query so autocomplete only fires after the user pauses typing.
+  const [debouncedQ, setDebouncedQ] = React.useState("")
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q.trim()), 200)
+    return () => clearTimeout(t)
+  }, [q])
+  const { data: searchMatches = [], isFetching: searchFetching } = useListPackages(
+    { search: debouncedQ },
+    {
+      query: {
+        enabled: searchOpen && debouncedQ.length >= 2,
+        queryKey: getListPackagesQueryKey({ search: debouncedQ }),
+      },
+    },
+  )
+  const suggestions = searchMatches.slice(0, 6)
+
   const runSearch = (term: string) => {
     setQ(term)
     setSearchOpen(false)
     navigate(`/packages${term.trim() ? `?q=${encodeURIComponent(term.trim())}` : ""}`)
+  }
+
+  const openPackage = (id: number | string) => {
+    setSearchOpen(false)
+    navigate(`/reviews/${id}`)
   }
 
   const submitSearch = (e: React.FormEvent) => {
@@ -1024,7 +1048,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 />
               </form>
               {searchOpen && (
-                <div className="absolute left-0 right-0 top-full mt-2 rounded-xl border border-border bg-popover shadow-lg z-50 overflow-hidden">
+                <div className="absolute left-0 right-0 top-full mt-2 max-h-[70vh] overflow-y-auto rounded-xl border border-border bg-popover shadow-lg z-50">
                   {q.trim() && (
                     <button
                       type="button"
@@ -1035,33 +1059,71 @@ export function Shell({ children }: { children: React.ReactNode }) {
                       className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-sm text-left hover:bg-accent border-b border-border"
                     >
                       <Search className="w-4 h-4 shrink-0 text-muted-foreground" />
-                      <span>
+                      <span className="truncate">
                         Search for <span className="font-semibold">"{q.trim()}"</span>
                       </span>
                     </button>
                   )}
-                  <p className="px-3.5 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Suggested quick finds
-                  </p>
-                  <div className="pb-1.5">
-                    {QUICK_FINDS.map((f) => {
-                      const Icon = f.icon
-                      return (
-                        <button
-                          key={f.label}
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            runSearch(f.term)
-                          }}
-                          className="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-left hover:bg-accent"
-                        >
-                          <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
-                          {f.label}
-                        </button>
-                      )
-                    })}
-                  </div>
+                  {q.trim() ? (
+                    // Live autocomplete: matching packages as you type.
+                    suggestions.length > 0 ? (
+                      <div className="py-1">
+                        <p className="px-3.5 pt-1.5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Packages
+                        </p>
+                        {suggestions.map((pkg) => (
+                          <button
+                            key={pkg.id}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              openPackage(pkg.id)
+                            }}
+                            className="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-left hover:bg-accent"
+                          >
+                            <Box className="w-4 h-4 shrink-0 text-muted-foreground" />
+                            <span className="flex min-w-0 flex-col leading-tight">
+                              <span className="truncate font-medium">{pkg.name}</span>
+                              <span className="truncate text-xs text-muted-foreground">
+                                {[pkg.sku, pkg.vendor].filter(Boolean).join(" · ")}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : debouncedQ.length >= 2 && !searchFetching ? (
+                      <p className="px-3.5 py-3 text-sm text-muted-foreground">
+                        No packages match "{q.trim()}"
+                      </p>
+                    ) : (
+                      <p className="px-3.5 py-3 text-sm text-muted-foreground">Searching…</p>
+                    )
+                  ) : (
+                    <>
+                      <p className="px-3.5 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Suggested quick finds
+                      </p>
+                      <div className="pb-1.5">
+                        {QUICK_FINDS.map((f) => {
+                          const Icon = f.icon
+                          return (
+                            <button
+                              key={f.label}
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault()
+                                runSearch(f.term)
+                              }}
+                              className="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-left hover:bg-accent"
+                            >
+                              <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
+                              {f.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
