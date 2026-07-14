@@ -643,7 +643,11 @@ function NavContent({
               type="button"
               onClick={() => toggle(section)}
               aria-expanded={open}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-left group hover:bg-accent/50 transition-colors"
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 rounded-md text-left group transition-colors",
+                // "My Work" header stays permanently in its green hover state.
+                isMyWork ? "bg-accent/50" : "hover:bg-accent/50",
+              )}
             >
               <span
                 className={cn(
