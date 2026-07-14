@@ -504,7 +504,7 @@ function NavGroupBlock({
         <span
           className={cn(
             "flex-1 text-[10px] font-semibold uppercase tracking-wider",
-            groupActive ? "text-foreground/90" : "text-muted-foreground",
+            groupActive ? "text-foreground" : "text-foreground",
           )}
         >
           {group.group}
@@ -584,12 +584,18 @@ function NavContent({
     }))
 
   return (
-    <nav className="flex-1 overflow-y-auto py-4 px-3">
+    <nav
+      className="flex-1 overflow-y-auto py-4 px-3"
+      // Make the left-nav font solid black instead of the dark-navy foreground.
+      // The dark-scoped "My Work" block resets --foreground to white, so its
+      // text stays legible on the black backing.
+      style={{ "--foreground": "0 0% 0%" } as React.CSSProperties}
+    >
       {favoriteItems.length > 0 && (
         <div className="mb-3 border-b border-border/60 pb-3">
           <div className="flex items-center gap-2 px-3 py-2">
             <Star className="w-3.5 h-3.5 shrink-0 text-amber-500 fill-amber-500" aria-hidden />
-            <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-foreground/80">
+            <span className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-foreground">
               Favorites
             </span>
           </div>
@@ -660,7 +666,7 @@ function NavContent({
               <span
                 className={cn(
                   "flex-1 text-[11px] font-semibold uppercase tracking-wider",
-                  sectionActive ? "text-foreground" : "text-foreground/80",
+                  sectionActive ? "text-foreground" : "text-foreground",
                 )}
               >
                 {section.label}
