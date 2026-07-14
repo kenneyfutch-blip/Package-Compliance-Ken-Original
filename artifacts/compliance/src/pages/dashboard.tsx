@@ -57,10 +57,12 @@ export default function Dashboard() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="hover-elevate transition-all border-l-4 border-l-primary">
+        <Card className="hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Reviewed</CardTitle>
-            <BarChart2 className="h-4 w-4 text-primary" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary/10">
+              <BarChart2 className="h-4 w-4 text-primary" />
+            </span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.totalPackages.toLocaleString()}</div>
@@ -70,10 +72,12 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         
-        <Card className="hover-elevate transition-all border-l-4 border-l-success">
+        <Card className="hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Passed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-success" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-success/10">
+              <CheckCircle className="h-4 w-4 text-success" />
+            </span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.passed.toLocaleString()}</div>
@@ -85,10 +89,12 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="hover-elevate transition-all border-l-4 border-l-destructive">
+        <Card className="hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Critical Violations</CardTitle>
-            <ShieldAlert className="h-4 w-4 text-destructive" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-destructive/10">
+              <ShieldAlert className="h-4 w-4 text-destructive" />
+            </span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.criticalViolations.toLocaleString()}</div>
@@ -98,10 +104,12 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="hover-elevate transition-all border-l-4 border-l-warning">
+        <Card className="hover-elevate transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Compliance Velocity</CardTitle>
-            <Clock className="h-4 w-4 text-warning" />
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-warning/10">
+              <Clock className="h-4 w-4 text-warning" />
+            </span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats?.complianceVelocity}/day</div>
