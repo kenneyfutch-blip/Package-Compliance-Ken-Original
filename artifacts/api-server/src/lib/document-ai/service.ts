@@ -14,7 +14,12 @@ import { orgId } from "../rbac/context";
 import { writeAudit, writeSystemAudit } from "../audit";
 import { logger } from "../logger";
 import { getActiveProvider } from "./providers/registry";
-import type { OcrProvider } from "./providers/types";
+import type { OcrProvider, OcrExtractionResult } from "./providers/types";
+import {
+  extractPdfTextLayer,
+  PDF_TEXT_LAYER_ENGINE_ID,
+  PDF_TEXT_LAYER_LABEL,
+} from "./pdf-text-layer";
 
 const objectStorage = new ObjectStorageService();
 
@@ -229,6 +234,24 @@ export async function runExtraction(params: {
     }
   }
 
+  // Digital-PDF fast path: read the embedded text layer with pdftotext instead
+  // of paying for an AI Vision OCR round-trip. Only scanned/image PDFs (no
+  // usable text layer) and non-PDF files fall through to the OCR provider. This
+  // is the biggest bulk-throughput/cost lever. Kill-switch: PDF_TEXT_LAYER_SHORTCUT=off.
+  let textLayerResult: OcrExtractionResult | null = null;
+  if (
+    source.mimeType === "application/pdf" &&
+    process.env.PDF_TEXT_LAYER_SHORTCUT !== "off"
+  ) {
+    textLayerResult = await extractPdfTextLayer(source.bytes);
+    logger.debug(
+      { packageId: pkg.id, path: textLayerResult ? "text-layer" : "vision-fallback" },
+      "PDF extraction path selected",
+    );
+  }
+  const engineId = textLayerResult ? PDF_TEXT_LAYER_ENGINE_ID : provider.id;
+  const engineLabel = textLayerResult ? PDF_TEXT_LAYER_LABEL : provider.label;
+
   const organizationId =
     params.organizationId ?? (req ? orgId(req) : pkg.organizationId);
   const version = proof?.version ?? 1;
@@ -244,7 +267,7 @@ export async function runExtraction(params: {
       sourceType: source.type,
       sourceName: source.name,
       status: "Processing",
-      engine: provider.id,
+      engine: engineId,
     })
     .returning();
 
@@ -254,10 +277,12 @@ export async function runExtraction(params: {
     .where(eq(packagesTable.id, pkg.id));
 
   try {
-    const result = await provider.process({
-      content: source.bytes,
-      mimeType: source.mimeType,
-    });
+    const result =
+      textLayerResult ??
+      (await provider.process({
+        content: source.bytes,
+        mimeType: source.mimeType,
+      }));
     const now = new Date();
 
     const [completed] = await db
@@ -285,7 +310,7 @@ export async function runExtraction(params: {
         extractedText: result.text,
         extractionStatus: "Complete",
         extractionConfidence: result.confidence,
-        extractionEngine: provider.id,
+        extractionEngine: engineId,
         extractedAt: now,
       })
       .where(eq(packagesTable.id, pkg.id));
@@ -295,7 +320,7 @@ export async function runExtraction(params: {
       entityType: "package",
       entityId: pkg.id,
       packageId: pkg.id,
-      detail: `${provider.label} extracted ${result.pageCount} page(s) and ${result.components.length} component(s) from ${source.name}.`,
+      detail: `${engineLabel} extracted ${result.pageCount} page(s) and ${result.components.length} component(s) from ${source.name}.`,
     };
     if (req) {
       await writeAudit(req, extractionAudit);
