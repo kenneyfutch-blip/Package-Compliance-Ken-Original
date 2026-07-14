@@ -682,7 +682,7 @@ function AnalysisProgress({ pkg }: { pkg: Pkg }) {
       <div className="text-center mb-6">
         <p className="font-medium text-foreground">Analyzing packaging…</p>
         <p className="text-xs text-muted-foreground mt-1">
-          A full compliance review usually takes 1–4 minutes. This page updates on its own — feel free to keep working elsewhere.
+          A full compliance review usually takes about 30 seconds. This page updates on its own — feel free to keep working elsewhere.
         </p>
       </div>
       <ol className="space-y-3">

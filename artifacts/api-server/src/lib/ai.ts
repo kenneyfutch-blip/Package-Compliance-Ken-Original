@@ -1,5 +1,5 @@
 import type { OcrData, Regulation, PackageRow } from "@workspace/db";
-import { resolveAiClientForTier } from "./ai-client";
+import { resolveAiClientForTier, resolveManagedFastClient } from "./ai-client";
 import {
   runTiered,
   readUsage,
@@ -12,6 +12,12 @@ import { cachedAiCall } from "./cache/ai-cache";
 // Prompt-version constants: bump when a workload's prompt changes so cached
 // results produced by the previous prompt are no longer served (see ai-cache).
 const ANALYSIS_PROMPT_VERSION = 3;
+
+// Hard wall-clock budget for the packaging compliance model call. Runs on the
+// managed fast model with no escalation, so the whole review lands in ~30s;
+// the recall/context steps before it are fast and non-fatal. If the model
+// overruns this, the call aborts and the job's retry/fallback handles it.
+const PACKAGING_ANALYSIS_DEADLINE_MS = 25_000;
 const COPILOT_PROMPT_VERSION = 1;
 
 /**
@@ -254,6 +260,16 @@ Respond with JSON of shape:
   const compute = async (): Promise<AnalysisResult> => {
     const { result, orchestration } = await runTiered<AnalysisResult>({
     workload: "packaging_analysis",
+    // Latency-critical: pin to the Replit-managed fast model (gpt-5.4-mini),
+    // never escalate, and cap the model call at a hard budget so a full review
+    // finishes in ~30s instead of the multi-minute heavy model. All regulatory
+    // context (regulations, compliance memory, internal standards, eCFR/FDA)
+    // and every accuracy safeguard (confidence-based downgrade, disclaimers,
+    // human-review flags) below are unchanged — only the model and time are.
+    initialTier: "fast",
+    escalates: false,
+    deadlineMs: PACKAGING_ANALYSIS_DEADLINE_MS,
+    resolveClient: () => resolveManagedFastClient(),
     context: {
       organizationId: pkg.organizationId,
       reviewType: WORKLOAD_LABELS.packaging_analysis,
@@ -276,16 +292,21 @@ Respond with JSON of shape:
           : undefined,
       };
     },
-    run: async ({ client, model, tier }) => {
-      const response = await client.chat.completions.create({
-        model,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: user },
-        ],
-        response_format: { type: "json_object" },
-        max_completion_tokens: tier === "reasoning" ? 16384 : 8192,
-      });
+    run: async ({ client, model, tier, signal }) => {
+      const response = await client.chat.completions.create(
+        {
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          response_format: { type: "json_object" },
+          max_completion_tokens: tier === "reasoning" ? 16384 : 8192,
+        },
+        // Abort at the time budget; skip the SDK's internal retries so they
+        // can't silently blow past the deadline.
+        { signal, maxRetries: 0 },
+      );
 
       const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
 

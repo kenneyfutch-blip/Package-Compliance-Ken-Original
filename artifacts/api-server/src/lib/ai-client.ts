@@ -157,3 +157,19 @@ export async function resolveAiClient(): Promise<ResolvedClient> {
   const { client, model, label } = await resolveAiClientForTier("standard");
   return { client, model, label };
 }
+
+/**
+ * Resolve a client pinned to the Replit-managed fast model (gpt-5.4-mini),
+ * bypassing whichever provider is active. Used for latency-critical workloads
+ * (e.g. packaging analysis under a hard time budget): the active engine may be
+ * a heavy/slow model with no fast tier configured, which can't finish in time.
+ */
+export function resolveManagedFastClient(): ResolvedTierClient {
+  return {
+    client: managedClient,
+    model: DEFAULT_TIER_MODELS.fast,
+    label: "Replit-managed OpenAI (fast)",
+    tier: "fast",
+    codename: TIER_CODENAMES.fast,
+  };
+}

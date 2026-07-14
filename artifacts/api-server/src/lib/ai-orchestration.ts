@@ -1,5 +1,9 @@
 import type OpenAI from "openai";
-import { resolveAiClientForTier, type AiTier } from "./ai-client";
+import {
+  resolveAiClientForTier,
+  type AiTier,
+  type ResolvedTierClient,
+} from "./ai-client";
 import { logger } from "./logger";
 import { recordAiUsage } from "./ai-usage";
 
@@ -125,6 +129,9 @@ export async function runTiered<T>(opts: {
     client: OpenAI;
     model: string;
     tier: AiTier;
+    // Abort signal set when a deadlineMs budget is active — pass it to the model
+    // request so a slow call is cancelled at the deadline.
+    signal?: AbortSignal;
   }) => Promise<TierAttempt<T>>;
   assess: (result: T) => TierAssessment;
   // Optional attribution + telemetry hooks for usage/cost logging. organizationId
@@ -137,10 +144,29 @@ export async function runTiered<T>(opts: {
   };
   // Extract a 0-100 compliance risk score from the final result, if meaningful.
   riskScoreOf?: (result: T) => number | null;
+  // Override the workload's default starting tier.
+  initialTier?: AiTier;
+  // Override whether this call may escalate a tier on low confidence/high risk.
+  escalates?: boolean;
+  // Override per-tier client/model resolution — e.g. pin a latency-critical
+  // workload to the managed fast model regardless of the active provider.
+  resolveClient?: (
+    tier: AiTier,
+  ) => Promise<ResolvedTierClient> | ResolvedTierClient;
+  // Hard wall-clock budget (ms) for the AI call(s). Each attempt is aborted if
+  // it would run past the remaining budget, and escalation is skipped when the
+  // budget can't fit another call — so the workload returns (or fails fast)
+  // within the budget instead of running for minutes.
+  deadlineMs?: number;
 }): Promise<{ result: T; orchestration: AiOrchestration }> {
   const { workload } = opts;
-  const initialTier = WORKLOAD_INITIAL_TIER[workload];
-  const canEscalate = WORKLOAD_ESCALATES[workload];
+  const initialTier = opts.initialTier ?? WORKLOAD_INITIAL_TIER[workload];
+  const canEscalate = opts.escalates ?? WORKLOAD_ESCALATES[workload];
+  const resolve = opts.resolveClient ?? resolveAiClientForTier;
+  const deadline = opts.deadlineMs != null ? Date.now() + opts.deadlineMs : null;
+  // Only escalate when a second call can plausibly finish in the remaining
+  // budget; otherwise keep the first (low-confidence) result.
+  const MIN_ESCALATION_BUDGET_MS = 8_000;
 
   const calls: AiCallRecord[] = [];
   let tier = initialTier;
@@ -154,13 +180,35 @@ export async function runTiered<T>(opts: {
 
   try {
     while (true) {
-      const resolved = await resolveAiClientForTier(tier);
+      const resolved = await resolve(tier);
+      // Bound this attempt to the remaining budget (if any) via an abort signal
+      // the caller passes to the model request, so a slow model can't overrun.
+      let signal: AbortSignal | undefined;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      if (deadline != null) {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) {
+          throw new Error(
+            `AI ${workload} exceeded its ${opts.deadlineMs}ms time budget`,
+          );
+        }
+        const controller = new AbortController();
+        signal = controller.signal;
+        timer = setTimeout(() => controller.abort(), remaining);
+        if (typeof timer.unref === "function") timer.unref();
+      }
       const start = Date.now();
-      const attempt = await opts.run({
-        client: resolved.client,
-        model: resolved.model,
-        tier,
-      });
+      let attempt: TierAttempt<T>;
+      try {
+        attempt = await opts.run({
+          client: resolved.client,
+          model: resolved.model,
+          tier,
+          signal,
+        });
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
       const durationMs = Date.now() - start;
       calls.push({
         tier,
@@ -180,10 +228,13 @@ export async function runTiered<T>(opts: {
       const belowConfidence =
         assessment.confidence != null &&
         assessment.confidence < CONFIDENCE_ESCALATION_THRESHOLD;
+      const budgetForEscalation =
+        deadline == null || deadline - Date.now() > MIN_ESCALATION_BUDGET_MS;
       const shouldEscalate =
         canEscalate &&
         escalations < MAX_ESCALATIONS &&
-        (belowConfidence || assessment.risky);
+        (belowConfidence || assessment.risky) &&
+        budgetForEscalation;
       const target = shouldEscalate ? nextTier(tier) : null;
 
       if (!target) break;
