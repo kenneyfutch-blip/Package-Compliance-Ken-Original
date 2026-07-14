@@ -22,7 +22,7 @@ const CAPABILITIES: { icon: LucideIcon; title: string; body: string }[] = [
   {
     icon: ScanText,
     title: "Autonomous artwork intake",
-    body: "Drop in artwork or a PDF and AI-powered OCR extracts every panel, claim, ingredient list, and nutrition fact — no manual transcription.",
+    body: "Drop in artwork or a PDF and AI-powered OCR extracts the panels, claims, ingredient lists, and nutrition facts — with no manual transcription.",
   },
   {
     icon: Sparkles,
@@ -108,7 +108,7 @@ const TOOL_GROUPS: { label: string; icon: LucideIcon; tools: Tool[] }[] = [
 
 const STEPS: { title: string; body: string }[] = [
   { title: "Upload", body: "Drop in packaging artwork or a PDF — the AI reads it instantly." },
-  { title: "Analyze", body: "Copy is extracted and checked against every relevant regulation." },
+  { title: "Analyze", body: "Copy is extracted and checked against the relevant regulations." },
   { title: "Route & grade", body: "Findings are graded, scored, and routed to the right specialist automatically." },
   { title: "Fix & approve", body: "Act on cited fixes and approve with a full audit trail behind you." },
 ]
@@ -228,7 +228,7 @@ export default function Landing() {
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
               The internal AI platform that reads your packaging artwork, analyzes it against
-              every relevant federal regulation, and routes the work to the right specialist —
+              the relevant federal regulations, and routes the work to the right specialist —
               designed to optimize associate productivity and compliance analysis across
               Dollar Tree, before anything reaches the shelf.
             </p>
@@ -397,7 +397,7 @@ export default function Landing() {
             <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">
               Compliance intelligence, on autopilot
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-white/80">
+            <p className="mx-auto mt-4 max-w-xl text-lg text-white/90">
               Sign in to start optimizing compliance analysis and team productivity with AI on your side.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -409,12 +409,12 @@ export default function Landing() {
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/70">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/90">
               <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4" /> Cited to regulation</span>
               <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4" /> Full audit trail</span>
               <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4" /> AI + human in the loop</span>
             </div>
-            <p className="mt-6 text-xs text-white/60">Access restricted to Dollar Tree associates.</p>
+            <p className="mt-6 text-xs text-white/75">Access restricted to Dollar Tree associates.</p>
           </div>
         </div>
       </section>
