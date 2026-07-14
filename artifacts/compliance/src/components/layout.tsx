@@ -585,11 +585,10 @@ function NavContent({
 
   return (
     <nav
-      className="flex-1 overflow-y-auto py-4 px-3"
-      // Make the left-nav font solid black instead of the dark-navy foreground.
-      // The dark-scoped "My Work" block resets --foreground to white, so its
-      // text stays legible on the black backing.
-      style={{ "--foreground": "0 0% 0%" } as React.CSSProperties}
+      // Left-nav font: solid black in light mode (instead of the dark-navy
+      // foreground), and white in dark mode. The dark-scoped "My Work" block
+      // resets --foreground to white regardless, so it always stays legible.
+      className="flex-1 overflow-y-auto py-4 px-3 [--foreground:0_0%_0%] dark:[--foreground:0_0%_98%]"
     >
       {favoriteItems.length > 0 && (
         <div className="mb-3 border-b border-border/60 pb-3">
