@@ -115,7 +115,7 @@ const STEPS: { title: string; body: string }[] = [
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-green-600/20 bg-green-600/5 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-green-700">
+    <span className="inline-flex items-center gap-2 rounded-full border border-green-500/25 bg-green-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-green-400">
       {children}
     </span>
   )
@@ -131,7 +131,7 @@ function HeroPreview() {
             <div className="text-sm font-semibold text-foreground">Conversation Hearts 7pc</div>
             <div className="text-xs text-muted-foreground">Confectionery · Version 1</div>
           </div>
-          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-700">Pending</span>
+          <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-medium text-amber-300">Pending</span>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-3">
@@ -145,7 +145,7 @@ function HeroPreview() {
           </div>
           <div className="rounded-lg border border-border bg-accent/40 p-3">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Fixes</div>
-            <div className="mt-0.5 text-2xl font-bold text-green-600">3</div>
+            <div className="mt-0.5 text-2xl font-bold text-green-400">3</div>
           </div>
         </div>
 
@@ -155,7 +155,7 @@ function HeroPreview() {
             <div className="min-w-0">
               <div className="truncate text-xs font-medium text-foreground">Nutrition claim needs substantiation</div>
               <div className="mt-0.5 flex items-center gap-1.5">
-                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">FDA</span>
+                <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-300">FDA</span>
                 <span className="text-[10px] text-muted-foreground">Confidence 84%</span>
               </div>
             </div>
@@ -165,7 +165,7 @@ function HeroPreview() {
             <div className="min-w-0">
               <div className="truncate text-xs font-medium text-foreground">Net quantity statement placement</div>
               <div className="mt-0.5 flex items-center gap-1.5">
-                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">FTC</span>
+                <span className="rounded bg-blue-500/15 px-1.5 py-0.5 text-[10px] font-medium text-blue-300">FTC</span>
                 <span className="text-[10px] text-muted-foreground">Confidence 91%</span>
               </div>
             </div>
@@ -173,7 +173,7 @@ function HeroPreview() {
         </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <span className="pba-rainbow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-foreground">
+          <span className="pba-rainbow-dark inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-foreground">
             <Sparkles className="h-3 w-3 text-green-600" /> Powered by AI
           </span>
           <span className="text-[11px] text-muted-foreground">Analyzed in 6s</span>
@@ -185,7 +185,7 @@ function HeroPreview() {
 
 export default function Landing() {
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground">
+    <div className="dark min-h-[100dvh] bg-background text-foreground">
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3.5">
@@ -218,13 +218,13 @@ export default function Landing() {
         <div className="pointer-events-none absolute -top-32 left-1/2 h-[32rem] w-[40rem] -translate-x-1/2 rounded-full bg-green-500/10 blur-[120px]" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-12 px-6 py-16 lg:grid-cols-2 lg:py-24">
           <div>
-            <span className="pba-rainbow inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold text-foreground">
+            <span className="pba-rainbow-dark inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold text-foreground">
               <Sparkles className="h-3.5 w-3.5 text-green-600" />
               Dollar Tree · AI Compliance Intelligence
             </span>
             <h1 className="mt-6 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
               Dollar Tree Compliance Intelligence,
-              <span className="block text-green-600">built for the way your team works.</span>
+              <span className="block text-green-400">built for the way your team works.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
               The internal AI platform that reads your packaging artwork, analyzes it against
@@ -270,7 +270,7 @@ export default function Landing() {
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-6 py-10 lg:grid-cols-4">
           {STATS.map((s) => (
             <div key={s.label} className="text-center">
-              <div className="text-2xl font-bold text-green-600 sm:text-3xl">{s.value}</div>
+              <div className="text-2xl font-bold text-green-400 sm:text-3xl">{s.value}</div>
               <div className="mt-1 text-sm text-muted-foreground">{s.label}</div>
             </div>
           ))}
