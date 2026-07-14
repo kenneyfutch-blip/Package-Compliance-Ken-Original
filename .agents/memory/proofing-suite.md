@@ -41,6 +41,12 @@ description: Object-storage uploads, proof/annotation/comment/decision model, an
 - Pin/box markup and the AI-violation overlay are enabled **only for image proofs**. For `application/pdf`, markup tools + AI overlay are disabled; PDFs get the embedded viewer + general comments + approval.
   - **Why:** annotation coords are normalized 0..1 to the rendered element; a scrolling/multi-page PDF iframe has no stable element↔page mapping, so overlay markup would be inaccurate. The schema keeps a `page` field for a future real PDF renderer.
 
+## Proof PDF export — artwork embedding & download
+- The export embeds the uploaded artwork on a page right after the executive summary. `loadArtworkBytes` embeds png/jpg directly and **rasterizes pdf/.ai page 1 to PNG via `renderPdfThumbnail` (poppler)** before embedding; `.indd` has no renderer so it is skipped. Before this, only png/jpg embedded, so PDF uploads (the common case) produced an export with no artwork at all.
+  - **Why:** pdf-lib can only embed png/jpg; packaging artwork is usually PDF. Reuse the same poppler path the package cards use.
+  - **How to apply:** `loadArtworkBytes` must gate on `isSafeStoredFileUrl` + a `path.resolve` boundary check (mirror `loadFileBytes`) before dereferencing — expanding which file types it reads widened a traversal surface (code review).
+- Exported proofs are served from UUID object paths with no extension, so opening the serve URL inline just renders the PDF in a browser tab — **nothing attachable to Teams/email**. Fix: `GET /storage/objects/*path?download=<name>` sets `Content-Disposition: attachment` (name sanitized to `[A-Za-z0-9._-]`, forces `application/pdf`); frontend uses `downloadProof()` (anchor `download`) instead of `window.open`. `?download` is opt-in so inline artwork preview is unaffected.
+
 ## Frontend wiring
 - Studio at `/proofing/:packageId`; `/proofing` is a package picker (`ProofingIndex`). Entry points: nav under Review Queue + a button in the review workspace header.
 - Serve proof images via `/api/storage/objects/<objectPath minus leading /objects/>` (root-relative — same origin as the app; cookies carry the Clerk session).

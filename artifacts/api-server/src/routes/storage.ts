@@ -299,6 +299,25 @@ router.get(
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
 
+    // Optional forced download. Stored objects live at UUID paths with no
+    // extension, so an inline view offers no real filename — the browser just
+    // renders the PDF in a tab, leaving nothing to drag into Teams/email. When
+    // `?download=<name>` is present we send it as an attachment with a clean
+    // filename. The name is sanitized to a safe charset to prevent header
+    // injection, and .pdf downloads are forced to application/pdf.
+    const requested = req.query.download;
+    if (typeof requested === "string" && requested.length > 0) {
+      const safe =
+        requested.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 128) || "download";
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${safe}"`,
+      );
+      if (safe.toLowerCase().endsWith(".pdf")) {
+        res.setHeader("Content-Type", "application/pdf");
+      }
+    }
+
     if (response.body) {
       const nodeStream = Readable.fromWeb(
         response.body as ReadableStream<Uint8Array>,

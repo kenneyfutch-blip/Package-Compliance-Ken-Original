@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { downloadProof } from "@/lib/proof-utils"
 import {
   Search, Loader2, BrainCircuit, Eye, CheckCircle, ShieldCheck, XCircle,
   UserPlus, FileDown, Languages,
@@ -58,7 +59,7 @@ export default function BulkQueuePage() {
   }
   const exportSelected = () => {
     ids.forEach((id) =>
-      exportProof.mutate({ id }, { onSuccess: (r) => { if (r?.url) window.open(r.url, "_blank") } }))
+      exportProof.mutate({ id }, { onSuccess: (r) => { if (r?.url) downloadProof(r.url, r.filename) } }))
   }
   const runLanguage = () => {
     if (ids.length === 0) return

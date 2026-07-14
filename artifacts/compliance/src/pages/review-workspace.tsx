@@ -44,6 +44,7 @@ import { EcfrRegulationsTab } from "@/components/ecfr-regulations-tab"
 import {
   type MarkupTool, findingClassMeta, priorityMeta, REVIEWERS,
   extractMentions, relativeTime, HUMAN_MARKUP_COLOR, fileTypeFromName, servingUrl,
+  downloadProof,
 } from "@/lib/proof-utils"
 import { cn } from "@/lib/utils"
 import { hasDistinctFix } from "@/lib/compliance"
@@ -451,7 +452,7 @@ export default function ReviewWorkspace() {
           </Button>
           <Button variant="outline" className="gap-2 h-9" disabled={exportProof.isPending}
             onClick={() => exportProof.mutate({ id: packageId }, {
-              onSuccess: (r) => { if (r?.url) window.open(r.url, "_blank") },
+              onSuccess: (r) => { if (r?.url) downloadProof(r.url, r.filename) },
             })}>
             {exportProof.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
             Export Proof

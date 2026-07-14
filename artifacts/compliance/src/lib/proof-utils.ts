@@ -1,5 +1,24 @@
 // Shared constants + helpers for the proofing & review suite.
 
+// Trigger a real file download for an exported proof. The server stores objects
+// at UUID paths, so opening the URL in a tab just renders the PDF inline with no
+// usable filename (you can't drag it into Teams/email). Appending `?download=`
+// makes the server send it as a named attachment; the anchor's `download`
+// attribute forces a save instead of navigation.
+export function downloadProof(url: string, filename: string): void {
+  const sep = url.includes("?") ? "&" : "?";
+  const href = filename
+    ? `${url}${sep}download=${encodeURIComponent(filename)}`
+    : url;
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = filename || "";
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 export const CURRENT_USER = {
   name: "Eleanor Shellstrop",
   role: "Compliance Manager",
