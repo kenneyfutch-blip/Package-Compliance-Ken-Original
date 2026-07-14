@@ -29,7 +29,7 @@ export function PoweredByAi({ className }: { className?: string }) {
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-medium text-neutral-900 cursor-default select-none",
+              "pba-rainbow inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-0.5 text-[11px] font-medium text-neutral-900 cursor-default select-none",
               className,
             )}
           >
