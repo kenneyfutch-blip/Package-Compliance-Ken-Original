@@ -6,7 +6,7 @@ import {
   applyAnalysis,
 } from "./packageService";
 import { analyzePackaging } from "./ai";
-import { runExtraction } from "./document-ai/service";
+import { runExtraction, type ExtractionRunResult } from "./document-ai/service";
 import { retrieveRelevantPolicies, formatPoliciesForPrompt } from "./policies/engine";
 import {
   retrieveSimilarFindings,
@@ -119,8 +119,9 @@ export async function runPackageAnalysis(
   // the slow step deliberately kept OUT of the upload request so uploads stay
   // fast. Runs req-free via the explicit organizationId.
   if (!text) {
+    let run: ExtractionRunResult | undefined;
     try {
-      await runExtraction({ pkg, organizationId: p.organizationId });
+      run = await runExtraction({ pkg, organizationId: p.organizationId });
       const [refreshed] = await db
         .select()
         .from(packagesTable)
@@ -130,7 +131,34 @@ export async function runPackageAnalysis(
         text = refreshed.extractedText?.trim();
       }
     } catch (err) {
-      logger.error({ err, packageId: pkg.id }, "Background OCR failed");
+      // OCR threw (object-store read blip, network, provider runtime error).
+      // Never swallow it — re-throw so the durable job queue retries with
+      // backoff. Swallowing strands the package needing a manual Reprocess.
+      logger.error(
+        { err, packageId: pkg.id },
+        "Background OCR threw; letting the job queue retry",
+      );
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+    // OCR returned but produced no text. Distinguish transient from permanent:
+    //  - Failed  = provider errored AFTER the source was resolved → always retry.
+    //  - Skipped = the source couldn't be resolved. Only retry when the artwork
+    //    is a stored object ("/objects/...") that *should* resolve — a transient
+    //    object-store read / upload-vs-analyze race (the case that was stranding
+    //    packages for a manual Reprocess). Remote, data-URL, or absent artwork
+    //    resolve to Skipped permanently (SSRF-blocked or nothing to fetch), so
+    //    retrying can't help — those fall through to the manual-review routing.
+    // Throwing lets handlePackageAnalysisJob retry up to maxAttempts, then route
+    // to manual review. NotConfigured / Unsupported are permanent (fall through).
+    const storedArtwork = (pkg.artworkUrl ?? "").startsWith("/objects/");
+    if (
+      !text &&
+      (run?.outcome === "Failed" ||
+        (run?.outcome === "Skipped" && storedArtwork))
+    ) {
+      throw new Error(
+        `Background OCR produced no text for package ${pkg.id} (outcome=${run.outcome}); retrying via job queue`,
+      );
     }
   }
   if (!text) {

@@ -48,9 +48,20 @@ hang in a permanent "Analyzing…" limbo:
    handler sets status to `"Needs Review"` before rethrowing.
 3. **Enqueue** failure in the create handler → the catch drops status to
    `"Needs Review"` and auto-assigns for manual handling (don't just log).
-4. **No text even after OCR** (unreadable scanned artwork) → the job itself moves status
-   to `"Needs Review"` and auto-assigns, then returns `analyzed:false` (not a throw, so
-   no retry storm).
+4. **No text even after OCR** → split by cause. A *transient* OCR failure — the provider
+   threw, or returned `Failed`, or returned `Skipped` for a stored `/objects/...` artwork
+   that *should* have resolved (an object-store read blip or an upload-vs-analyze race) —
+   must **throw** so the durable queue retries (bounded by `maxAttempts`), instead of
+   swallowing the error and stranding the package needing a manual Reprocess. A *permanent*
+   no-text result (`Unsupported`, `NotConfigured`, `Skipped` for remote/data-URL/absent
+   artwork, or `Complete` but genuinely empty) → the job moves status to `"Needs Review"`
+   and auto-assigns, returning `analyzed:false` (no throw, no retry storm — retrying can't
+   help). **Why:** the original code caught *every* OCR failure and returned normally, so
+   the job was marked completed and the queue never retried; a momentary source-resolution
+   hiccup on upload therefore left a fully-uploaded artwork package permanently showing
+   "No extraction" until a human clicked Reprocess. Retries are safe to re-run OCR because
+   the content-hash cache only returns `Complete` rows — a prior `Failed`/`Skipped` attempt
+   never short-circuits the retry.
 
 **Manual re-run must also background + dedupe.** The manual `POST /packages/:id/analyze`
 ("Re-run AI" button) originally ran analysis synchronously and blocked the HTTP request
@@ -72,3 +83,12 @@ synchronously at create. Supplier-scoped memory recall is preserved by passing
 `supplierId` through the job payload (supplier uploads must not recall other suppliers'
 findings). The worker polls every 10s; `pokeJobWorker()` is called after enqueue so
 analysis starts without the poll delay.
+
+**Document AI tab must reflect the in-flight state.** The extraction tab renders off the
+`document_extractions` record, which only exists once OCR *finishes*. During the normal
+background window (package `status === "AI Review"`) there is no record yet, so a static
+"No extraction has run — click Reprocess" empty state pushes users to Reprocess
+unnecessarily (and a Provided-text package analyzed on its own text layer never gets an
+OCR record at all). While `status === "AI Review"` the tab must show an "extraction
+running" state and poll (`refetchInterval`) so it populates on its own. An empty
+extraction record ≠ "nothing happened."

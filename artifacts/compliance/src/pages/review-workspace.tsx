@@ -542,7 +542,7 @@ export default function ReviewWorkspace() {
             </TabsList>
 
             <div className="flex-1 overflow-y-auto min-h-0">
-              <TabsContent value="document" className="m-0 p-4 h-full"><DocumentAiTab packageId={packageId} /></TabsContent>
+              <TabsContent value="document" className="m-0 p-4 h-full"><DocumentAiTab packageId={packageId} packageStatus={pkg.status} /></TabsContent>
               <TabsContent value="findings" className="m-0 p-4"><FindingsPanel pkg={pkg} selectedId={selectedId} onSelect={setSelectedId} /></TabsContent>
               <TabsContent value="comments" className="m-0 p-4"><CommentsPanel pkg={pkg} packageId={packageId} numbered={numbered} selectedId={selectedId} onSelect={setSelectedId} onChange={invalidate} onAddPin={() => setTool("pin")} /></TabsContent>
               <TabsContent value="tasks" className="m-0 p-4"><TasksPanel pkg={pkg} packageId={packageId} onChange={invalidate} /></TabsContent>

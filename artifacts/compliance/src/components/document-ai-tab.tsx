@@ -28,11 +28,19 @@ function statusVariant(status: string): { label: string; className: string } {
   }
 }
 
-export function DocumentAiTab({ packageId }: { packageId: number }) {
+export function DocumentAiTab({ packageId, packageStatus }: { packageId: number; packageStatus?: string }) {
   const queryClient = useQueryClient()
   const { data: status } = useGetDocumentAiStatus()
+  // The package sits in "AI Review" while the background job runs OCR + analysis.
+  const analyzing = packageStatus === "AI Review"
   const { data: extraction, isLoading } = useGetPackageExtraction(packageId, {
-    query: { enabled: !!packageId, queryKey: getGetPackageExtractionQueryKey(packageId) },
+    query: {
+      enabled: !!packageId,
+      queryKey: getGetPackageExtractionQueryKey(packageId),
+      // While analysis is in flight, poll so the extraction appears on its own
+      // the moment background OCR finishes — no manual Reprocess required.
+      refetchInterval: analyzing ? 4000 : false,
+    },
   })
   const reprocess = useReprocessPackage()
 
@@ -119,9 +127,19 @@ export function DocumentAiTab({ packageId }: { packageId: number }) {
       {/* No extraction yet */}
       {configured && !extraction && (
         <div className="text-center py-12 text-muted-foreground">
-          <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-          <p>No extraction has run for this package yet.</p>
-          <p className="text-sm mt-1">Upload a new version or click Reprocess to run Document AI.</p>
+          {analyzing ? (
+            <>
+              <Loader2 className="w-12 h-12 mx-auto mb-3 opacity-30 animate-spin" />
+              <p>Reading this artwork…</p>
+              <p className="text-sm mt-1">Document AI runs automatically in the background. This tab updates on its own — no need to click Reprocess.</p>
+            </>
+          ) : (
+            <>
+              <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
+              <p>No extraction has run for this package yet.</p>
+              <p className="text-sm mt-1">Upload a new version or click Reprocess to run Document AI.</p>
+            </>
+          )}
         </div>
       )}
 
