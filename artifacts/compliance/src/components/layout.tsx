@@ -57,6 +57,7 @@ import {
   LifeBuoy,
   BookMarked,
 } from "lucide-react"
+import { UserRound, Network, Workflow as WorkflowIcon, TrendingUp } from "lucide-react"
 import { useUser, useClerk } from "@clerk/react"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -223,6 +224,12 @@ const SECTIONS: NavSection[] = [
       { name: "Team Dashboard", href: "/operations/teams", icon: UsersRound },
       { name: "Assignments", href: "/admin/queue", icon: ClipboardList },
       { name: "Workload & SLA", href: "/operations/workload", icon: Gauge },
+      { name: "Specialist Directory", href: "/operations/specialists", icon: UserRound },
+      { name: "Departments", href: "/operations/departments", icon: Building2 },
+      { name: "Routing Rules", href: "/operations/routing-rules", icon: Network },
+      { name: "Escalation Matrix", href: "/operations/escalation", icon: TrendingUp },
+      { name: "Review Stages", href: "/operations/review-stages", icon: WorkflowIcon },
+      { name: "Specialist Workload", href: "/operations/specialist-workload", icon: Gauge },
     ],
   },
   {

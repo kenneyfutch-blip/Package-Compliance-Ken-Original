@@ -9,6 +9,910 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary List specialist directory profiles
+ */
+export const ListSpecialistsQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "departmentId": zod.coerce.number().optional()
+})
+
+export const ListSpecialistsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "employeeId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "departmentName": zod.string().nullish(),
+  "managerName": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "timeZone": zod.string().nullish(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "activeReviewer": zod.boolean(),
+  "acceptingAssignments": zod.boolean(),
+  "routingPriority": zod.number(),
+  "expertiseRating": zod.number(),
+  "backupReviewer": zod.boolean(),
+  "escalationLevel": zod.number(),
+  "approvalAuthority": zod.boolean(),
+  "maxActiveReviews": zod.number(),
+  "expertise": zod.array(zod.string()),
+  "regions": zod.array(zod.string()),
+  "productCategories": zod.array(zod.string()),
+  "notes": zod.string().nullish(),
+  "activeReviews": zod.number(),
+  "availableCapacity": zod.number(),
+  "certifications": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "issuer": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "documentObjectPath": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListSpecialistsResponse = zod.array(ListSpecialistsResponseItem)
+
+
+export const CreateSpecialistBody = zod.object({
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "employeeId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "managerName": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "timeZone": zod.string().nullish(),
+  "role": zod.string().optional(),
+  "status": zod.string().optional(),
+  "activeReviewer": zod.boolean().optional(),
+  "acceptingAssignments": zod.boolean().optional(),
+  "routingPriority": zod.number().optional(),
+  "expertiseRating": zod.number().optional(),
+  "backupReviewer": zod.boolean().optional(),
+  "escalationLevel": zod.number().optional(),
+  "approvalAuthority": zod.boolean().optional(),
+  "maxActiveReviews": zod.number().optional(),
+  "expertise": zod.array(zod.string()).optional(),
+  "regions": zod.array(zod.string()).optional(),
+  "productCategories": zod.array(zod.string()).optional(),
+  "notes": zod.string().nullish(),
+  "userId": zod.number().nullish()
+})
+
+export const CreateSpecialistResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "employeeId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "departmentName": zod.string().nullish(),
+  "managerName": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "timeZone": zod.string().nullish(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "activeReviewer": zod.boolean(),
+  "acceptingAssignments": zod.boolean(),
+  "routingPriority": zod.number(),
+  "expertiseRating": zod.number(),
+  "backupReviewer": zod.boolean(),
+  "escalationLevel": zod.number(),
+  "approvalAuthority": zod.boolean(),
+  "maxActiveReviews": zod.number(),
+  "expertise": zod.array(zod.string()),
+  "regions": zod.array(zod.string()),
+  "productCategories": zod.array(zod.string()),
+  "notes": zod.string().nullish(),
+  "activeReviews": zod.number(),
+  "availableCapacity": zod.number(),
+  "certifications": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "issuer": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "documentObjectPath": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Query the directory for routing decisions (AI routing knowledge base)
+ */
+export const QuerySpecialistDirectoryQueryParams = zod.object({
+  "expertise": zod.coerce.string().optional(),
+  "region": zod.coerce.string().optional(),
+  "productCategory": zod.coerce.string().optional(),
+  "availableOnly": zod.coerce.boolean().optional(),
+  "approvalAuthority": zod.coerce.boolean().optional(),
+  "minExpertiseRating": zod.coerce.number().optional(),
+  "escalationLevel": zod.coerce.number().optional()
+})
+
+export const QuerySpecialistDirectoryResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "employeeId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "departmentName": zod.string().nullish(),
+  "managerName": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "timeZone": zod.string().nullish(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "activeReviewer": zod.boolean(),
+  "acceptingAssignments": zod.boolean(),
+  "routingPriority": zod.number(),
+  "expertiseRating": zod.number(),
+  "backupReviewer": zod.boolean(),
+  "escalationLevel": zod.number(),
+  "approvalAuthority": zod.boolean(),
+  "maxActiveReviews": zod.number(),
+  "expertise": zod.array(zod.string()),
+  "regions": zod.array(zod.string()),
+  "productCategories": zod.array(zod.string()),
+  "notes": zod.string().nullish(),
+  "activeReviews": zod.number(),
+  "availableCapacity": zod.number(),
+  "certifications": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "issuer": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "documentObjectPath": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const QuerySpecialistDirectoryResponse = zod.array(QuerySpecialistDirectoryResponseItem)
+
+
+export const GetSpecialistParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSpecialistResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "employeeId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "departmentName": zod.string().nullish(),
+  "managerName": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "timeZone": zod.string().nullish(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "activeReviewer": zod.boolean(),
+  "acceptingAssignments": zod.boolean(),
+  "routingPriority": zod.number(),
+  "expertiseRating": zod.number(),
+  "backupReviewer": zod.boolean(),
+  "escalationLevel": zod.number(),
+  "approvalAuthority": zod.boolean(),
+  "maxActiveReviews": zod.number(),
+  "expertise": zod.array(zod.string()),
+  "regions": zod.array(zod.string()),
+  "productCategories": zod.array(zod.string()),
+  "notes": zod.string().nullish(),
+  "activeReviews": zod.number(),
+  "availableCapacity": zod.number(),
+  "certifications": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "issuer": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "documentObjectPath": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const UpdateSpecialistParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSpecialistBody = zod.object({
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "employeeId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "managerName": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "timeZone": zod.string().nullish(),
+  "role": zod.string().optional(),
+  "status": zod.string().optional(),
+  "activeReviewer": zod.boolean().optional(),
+  "acceptingAssignments": zod.boolean().optional(),
+  "routingPriority": zod.number().optional(),
+  "expertiseRating": zod.number().optional(),
+  "backupReviewer": zod.boolean().optional(),
+  "escalationLevel": zod.number().optional(),
+  "approvalAuthority": zod.boolean().optional(),
+  "maxActiveReviews": zod.number().optional(),
+  "expertise": zod.array(zod.string()).optional(),
+  "regions": zod.array(zod.string()).optional(),
+  "productCategories": zod.array(zod.string()).optional(),
+  "notes": zod.string().nullish(),
+  "userId": zod.number().nullish()
+})
+
+export const UpdateSpecialistResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "employeeId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "departmentName": zod.string().nullish(),
+  "managerName": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "timeZone": zod.string().nullish(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "activeReviewer": zod.boolean(),
+  "acceptingAssignments": zod.boolean(),
+  "routingPriority": zod.number(),
+  "expertiseRating": zod.number(),
+  "backupReviewer": zod.boolean(),
+  "escalationLevel": zod.number(),
+  "approvalAuthority": zod.boolean(),
+  "maxActiveReviews": zod.number(),
+  "expertise": zod.array(zod.string()),
+  "regions": zod.array(zod.string()),
+  "productCategories": zod.array(zod.string()),
+  "notes": zod.string().nullish(),
+  "activeReviews": zod.number(),
+  "availableCapacity": zod.number(),
+  "certifications": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "issuer": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "documentObjectPath": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const AddSpecialistCertificationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddSpecialistCertificationBody = zod.object({
+  "name": zod.string(),
+  "issuer": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "documentObjectPath": zod.string().nullish()
+})
+
+export const AddSpecialistCertificationResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "employeeId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "departmentName": zod.string().nullish(),
+  "managerName": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "timeZone": zod.string().nullish(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "activeReviewer": zod.boolean(),
+  "acceptingAssignments": zod.boolean(),
+  "routingPriority": zod.number(),
+  "expertiseRating": zod.number(),
+  "backupReviewer": zod.boolean(),
+  "escalationLevel": zod.number(),
+  "approvalAuthority": zod.boolean(),
+  "maxActiveReviews": zod.number(),
+  "expertise": zod.array(zod.string()),
+  "regions": zod.array(zod.string()),
+  "productCategories": zod.array(zod.string()),
+  "notes": zod.string().nullish(),
+  "activeReviews": zod.number(),
+  "availableCapacity": zod.number(),
+  "certifications": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "issuer": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "documentObjectPath": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const RemoveSpecialistCertificationParams = zod.object({
+  "id": zod.coerce.number(),
+  "certId": zod.coerce.number()
+})
+
+export const RemoveSpecialistCertificationResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "employeeId": zod.string().nullish(),
+  "photoUrl": zod.string().nullish(),
+  "jobTitle": zod.string().nullish(),
+  "departmentId": zod.number().nullish(),
+  "departmentName": zod.string().nullish(),
+  "managerName": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "timeZone": zod.string().nullish(),
+  "role": zod.string(),
+  "status": zod.string(),
+  "activeReviewer": zod.boolean(),
+  "acceptingAssignments": zod.boolean(),
+  "routingPriority": zod.number(),
+  "expertiseRating": zod.number(),
+  "backupReviewer": zod.boolean(),
+  "escalationLevel": zod.number(),
+  "approvalAuthority": zod.boolean(),
+  "maxActiveReviews": zod.number(),
+  "expertise": zod.array(zod.string()),
+  "regions": zod.array(zod.string()),
+  "productCategories": zod.array(zod.string()),
+  "notes": zod.string().nullish(),
+  "activeReviews": zod.number(),
+  "availableCapacity": zod.number(),
+  "certifications": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "issuer": zod.string().nullish(),
+  "effectiveDate": zod.string().nullish(),
+  "expirationDate": zod.string().nullish(),
+  "documentObjectPath": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const ListDepartmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "leaderUserId": zod.number().nullish(),
+  "leaderName": zod.string().nullish(),
+  "escalationOwnerUserId": zod.number().nullish(),
+  "escalationOwnerName": zod.string().nullish(),
+  "active": zod.boolean(),
+  "memberCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "role": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const ListDepartmentsResponse = zod.array(ListDepartmentsResponseItem)
+
+
+export const CreateDepartmentBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "leaderUserId": zod.number().nullish(),
+  "escalationOwnerUserId": zod.number().nullish(),
+  "active": zod.boolean().optional()
+})
+
+export const CreateDepartmentResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "leaderUserId": zod.number().nullish(),
+  "leaderName": zod.string().nullish(),
+  "escalationOwnerUserId": zod.number().nullish(),
+  "escalationOwnerName": zod.string().nullish(),
+  "active": zod.boolean(),
+  "memberCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "role": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const UpdateDepartmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateDepartmentBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "leaderUserId": zod.number().nullish(),
+  "escalationOwnerUserId": zod.number().nullish(),
+  "active": zod.boolean().optional()
+})
+
+export const UpdateDepartmentResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "leaderUserId": zod.number().nullish(),
+  "leaderName": zod.string().nullish(),
+  "escalationOwnerUserId": zod.number().nullish(),
+  "escalationOwnerName": zod.string().nullish(),
+  "active": zod.boolean(),
+  "memberCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "role": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+export const DeleteDepartmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteDepartmentResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "leaderUserId": zod.number().nullish(),
+  "leaderName": zod.string().nullish(),
+  "escalationOwnerUserId": zod.number().nullish(),
+  "escalationOwnerName": zod.string().nullish(),
+  "active": zod.boolean(),
+  "memberCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "role": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const DeleteDepartmentResponse = zod.array(DeleteDepartmentResponseItem)
+
+
+export const ListRoutingRulesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "priority": zod.number(),
+  "active": zod.boolean(),
+  "conditions": zod.array(zod.object({
+  "field": zod.string(),
+  "operator": zod.string(),
+  "value": zod.string()
+})),
+  "actionType": zod.string(),
+  "actionDepartmentId": zod.number().nullish(),
+  "actionSpecialistId": zod.number().nullish(),
+  "actionStageId": zod.number().nullish(),
+  "actionValue": zod.string().nullish(),
+  "actionLabel": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListRoutingRulesResponse = zod.array(ListRoutingRulesResponseItem)
+
+
+export const CreateRoutingRuleBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "priority": zod.number().optional(),
+  "active": zod.boolean().optional(),
+  "conditions": zod.array(zod.object({
+  "field": zod.string(),
+  "operator": zod.string(),
+  "value": zod.string()
+})).optional(),
+  "actionType": zod.string(),
+  "actionDepartmentId": zod.number().nullish(),
+  "actionSpecialistId": zod.number().nullish(),
+  "actionStageId": zod.number().nullish(),
+  "actionValue": zod.string().nullish()
+})
+
+export const CreateRoutingRuleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "priority": zod.number(),
+  "active": zod.boolean(),
+  "conditions": zod.array(zod.object({
+  "field": zod.string(),
+  "operator": zod.string(),
+  "value": zod.string()
+})),
+  "actionType": zod.string(),
+  "actionDepartmentId": zod.number().nullish(),
+  "actionSpecialistId": zod.number().nullish(),
+  "actionStageId": zod.number().nullish(),
+  "actionValue": zod.string().nullish(),
+  "actionLabel": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Evaluate routing rules against a set of facts
+ */
+export const PreviewRoutingBody = zod.object({
+  "facts": zod.array(zod.object({
+  "field": zod.string(),
+  "value": zod.string()
+}))
+})
+
+export const PreviewRoutingResponse = zod.object({
+  "matched": zod.boolean(),
+  "ruleId": zod.number().nullish(),
+  "ruleName": zod.string().nullish(),
+  "actionType": zod.string().nullish(),
+  "actionLabel": zod.string().nullish(),
+  "trace": zod.array(zod.object({
+  "ruleId": zod.number(),
+  "ruleName": zod.string(),
+  "matched": zod.boolean(),
+  "reason": zod.string()
+}))
+})
+
+
+export const UpdateRoutingRuleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateRoutingRuleBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "priority": zod.number().optional(),
+  "active": zod.boolean().optional(),
+  "conditions": zod.array(zod.object({
+  "field": zod.string(),
+  "operator": zod.string(),
+  "value": zod.string()
+})).optional(),
+  "actionType": zod.string(),
+  "actionDepartmentId": zod.number().nullish(),
+  "actionSpecialistId": zod.number().nullish(),
+  "actionStageId": zod.number().nullish(),
+  "actionValue": zod.string().nullish()
+})
+
+export const UpdateRoutingRuleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "priority": zod.number(),
+  "active": zod.boolean(),
+  "conditions": zod.array(zod.object({
+  "field": zod.string(),
+  "operator": zod.string(),
+  "value": zod.string()
+})),
+  "actionType": zod.string(),
+  "actionDepartmentId": zod.number().nullish(),
+  "actionSpecialistId": zod.number().nullish(),
+  "actionStageId": zod.number().nullish(),
+  "actionValue": zod.string().nullish(),
+  "actionLabel": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const DeleteRoutingRuleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteRoutingRuleResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullish(),
+  "priority": zod.number(),
+  "active": zod.boolean(),
+  "conditions": zod.array(zod.object({
+  "field": zod.string(),
+  "operator": zod.string(),
+  "value": zod.string()
+})),
+  "actionType": zod.string(),
+  "actionDepartmentId": zod.number().nullish(),
+  "actionSpecialistId": zod.number().nullish(),
+  "actionStageId": zod.number().nullish(),
+  "actionValue": zod.string().nullish(),
+  "actionLabel": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const DeleteRoutingRuleResponse = zod.array(DeleteRoutingRuleResponseItem)
+
+
+export const ListReviewStagesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "stageOrder": zod.number(),
+  "assignedTeamId": zod.number().nullish(),
+  "assignedTeamName": zod.string().nullish(),
+  "assignedDepartmentId": zod.number().nullish(),
+  "assignedDepartmentName": zod.string().nullish(),
+  "assignedSpecialistId": zod.number().nullish(),
+  "assignedSpecialistName": zod.string().nullish(),
+  "approvalAuthority": zod.string().nullish(),
+  "slaHours": zod.number(),
+  "escalationPath": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListReviewStagesResponse = zod.array(ListReviewStagesResponseItem)
+
+
+export const CreateReviewStageBody = zod.object({
+  "name": zod.string(),
+  "stageOrder": zod.number().optional(),
+  "assignedTeamId": zod.number().nullish(),
+  "assignedDepartmentId": zod.number().nullish(),
+  "assignedSpecialistId": zod.number().nullish(),
+  "approvalAuthority": zod.string().nullish(),
+  "slaHours": zod.number().optional(),
+  "escalationPath": zod.string().nullish(),
+  "active": zod.boolean().optional()
+})
+
+export const CreateReviewStageResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "stageOrder": zod.number(),
+  "assignedTeamId": zod.number().nullish(),
+  "assignedTeamName": zod.string().nullish(),
+  "assignedDepartmentId": zod.number().nullish(),
+  "assignedDepartmentName": zod.string().nullish(),
+  "assignedSpecialistId": zod.number().nullish(),
+  "assignedSpecialistName": zod.string().nullish(),
+  "approvalAuthority": zod.string().nullish(),
+  "slaHours": zod.number(),
+  "escalationPath": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const UpdateReviewStageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateReviewStageBody = zod.object({
+  "name": zod.string(),
+  "stageOrder": zod.number().optional(),
+  "assignedTeamId": zod.number().nullish(),
+  "assignedDepartmentId": zod.number().nullish(),
+  "assignedSpecialistId": zod.number().nullish(),
+  "approvalAuthority": zod.string().nullish(),
+  "slaHours": zod.number().optional(),
+  "escalationPath": zod.string().nullish(),
+  "active": zod.boolean().optional()
+})
+
+export const UpdateReviewStageResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "stageOrder": zod.number(),
+  "assignedTeamId": zod.number().nullish(),
+  "assignedTeamName": zod.string().nullish(),
+  "assignedDepartmentId": zod.number().nullish(),
+  "assignedDepartmentName": zod.string().nullish(),
+  "assignedSpecialistId": zod.number().nullish(),
+  "assignedSpecialistName": zod.string().nullish(),
+  "approvalAuthority": zod.string().nullish(),
+  "slaHours": zod.number(),
+  "escalationPath": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const DeleteReviewStageParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteReviewStageResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "stageOrder": zod.number(),
+  "assignedTeamId": zod.number().nullish(),
+  "assignedTeamName": zod.string().nullish(),
+  "assignedDepartmentId": zod.number().nullish(),
+  "assignedDepartmentName": zod.string().nullish(),
+  "assignedSpecialistId": zod.number().nullish(),
+  "assignedSpecialistName": zod.string().nullish(),
+  "approvalAuthority": zod.string().nullish(),
+  "slaHours": zod.number(),
+  "escalationPath": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const DeleteReviewStageResponse = zod.array(DeleteReviewStageResponseItem)
+
+
+export const ListEscalationRulesResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "matrixOrder": zod.number(),
+  "triggerType": zod.string(),
+  "triggerOperator": zod.string(),
+  "triggerValue": zod.string().nullish(),
+  "escalateToLevel": zod.number(),
+  "escalateToRole": zod.string().nullish(),
+  "escalateToSpecialistId": zod.number().nullish(),
+  "escalateToSpecialistName": zod.string().nullish(),
+  "escalateToDepartmentId": zod.number().nullish(),
+  "escalateToDepartmentName": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListEscalationRulesResponse = zod.array(ListEscalationRulesResponseItem)
+
+
+export const CreateEscalationRuleBody = zod.object({
+  "name": zod.string(),
+  "matrixOrder": zod.number().optional(),
+  "triggerType": zod.string(),
+  "triggerOperator": zod.string().optional(),
+  "triggerValue": zod.string().nullish(),
+  "escalateToLevel": zod.number().optional(),
+  "escalateToRole": zod.string().nullish(),
+  "escalateToSpecialistId": zod.number().nullish(),
+  "escalateToDepartmentId": zod.number().nullish(),
+  "active": zod.boolean().optional()
+})
+
+export const CreateEscalationRuleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "matrixOrder": zod.number(),
+  "triggerType": zod.string(),
+  "triggerOperator": zod.string(),
+  "triggerValue": zod.string().nullish(),
+  "escalateToLevel": zod.number(),
+  "escalateToRole": zod.string().nullish(),
+  "escalateToSpecialistId": zod.number().nullish(),
+  "escalateToSpecialistName": zod.string().nullish(),
+  "escalateToDepartmentId": zod.number().nullish(),
+  "escalateToDepartmentName": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const UpdateEscalationRuleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateEscalationRuleBody = zod.object({
+  "name": zod.string(),
+  "matrixOrder": zod.number().optional(),
+  "triggerType": zod.string(),
+  "triggerOperator": zod.string().optional(),
+  "triggerValue": zod.string().nullish(),
+  "escalateToLevel": zod.number().optional(),
+  "escalateToRole": zod.string().nullish(),
+  "escalateToSpecialistId": zod.number().nullish(),
+  "escalateToDepartmentId": zod.number().nullish(),
+  "active": zod.boolean().optional()
+})
+
+export const UpdateEscalationRuleResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "matrixOrder": zod.number(),
+  "triggerType": zod.string(),
+  "triggerOperator": zod.string(),
+  "triggerValue": zod.string().nullish(),
+  "escalateToLevel": zod.number(),
+  "escalateToRole": zod.string().nullish(),
+  "escalateToSpecialistId": zod.number().nullish(),
+  "escalateToSpecialistName": zod.string().nullish(),
+  "escalateToDepartmentId": zod.number().nullish(),
+  "escalateToDepartmentName": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+export const DeleteEscalationRuleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteEscalationRuleResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "matrixOrder": zod.number(),
+  "triggerType": zod.string(),
+  "triggerOperator": zod.string(),
+  "triggerValue": zod.string().nullish(),
+  "escalateToLevel": zod.number(),
+  "escalateToRole": zod.string().nullish(),
+  "escalateToSpecialistId": zod.number().nullish(),
+  "escalateToSpecialistName": zod.string().nullish(),
+  "escalateToDepartmentId": zod.number().nullish(),
+  "escalateToDepartmentName": zod.string().nullish(),
+  "active": zod.boolean(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const DeleteEscalationRuleResponse = zod.array(DeleteEscalationRuleResponseItem)
+
+
+/**
+ * @summary Per-specialist workload and capacity
+ */
+export const ListWorkloadResponseItem = zod.object({
+  "specialistId": zod.number(),
+  "name": zod.string(),
+  "role": zod.string(),
+  "departmentName": zod.string().nullish(),
+  "status": zod.string(),
+  "acceptingAssignments": zod.boolean(),
+  "activeReviews": zod.number(),
+  "maxActiveReviews": zod.number(),
+  "availableCapacity": zod.number(),
+  "pendingTasks": zod.number(),
+  "escalatedReviews": zod.number(),
+  "avgResolutionHours": zod.number().nullish()
+})
+export const ListWorkloadResponse = zod.array(ListWorkloadResponseItem)
+
+
+/**
  * Returns server health status
  * @summary Health check
  */

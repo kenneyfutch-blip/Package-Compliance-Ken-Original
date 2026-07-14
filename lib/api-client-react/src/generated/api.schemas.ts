@@ -5,6 +5,327 @@
  * Packaging Compliance AI API specification
  * OpenAPI spec version: 0.1.0
  */
+export interface Certification {
+  id: number;
+  name: string;
+  /** @nullable */
+  issuer?: string | null;
+  /** @nullable */
+  effectiveDate?: string | null;
+  /** @nullable */
+  expirationDate?: string | null;
+  /** @nullable */
+  documentObjectPath?: string | null;
+  createdAt: string;
+}
+
+export interface CertificationInput {
+  name: string;
+  /** @nullable */
+  issuer?: string | null;
+  /** @nullable */
+  effectiveDate?: string | null;
+  /** @nullable */
+  expirationDate?: string | null;
+  /** @nullable */
+  documentObjectPath?: string | null;
+}
+
+export interface Specialist {
+  id: number;
+  /** @nullable */
+  userId?: number | null;
+  name: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  employeeId?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
+  /** @nullable */
+  jobTitle?: string | null;
+  /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  departmentName?: string | null;
+  /** @nullable */
+  managerName?: string | null;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  timeZone?: string | null;
+  role: string;
+  status: string;
+  activeReviewer: boolean;
+  acceptingAssignments: boolean;
+  routingPriority: number;
+  expertiseRating: number;
+  backupReviewer: boolean;
+  escalationLevel: number;
+  approvalAuthority: boolean;
+  maxActiveReviews: number;
+  expertise: string[];
+  regions: string[];
+  productCategories: string[];
+  /** @nullable */
+  notes?: string | null;
+  activeReviews: number;
+  availableCapacity: number;
+  certifications: Certification[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SpecialistInput {
+  name: string;
+  /** @nullable */
+  email?: string | null;
+  /** @nullable */
+  employeeId?: string | null;
+  /** @nullable */
+  photoUrl?: string | null;
+  /** @nullable */
+  jobTitle?: string | null;
+  /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  managerName?: string | null;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  timeZone?: string | null;
+  role?: string;
+  status?: string;
+  activeReviewer?: boolean;
+  acceptingAssignments?: boolean;
+  routingPriority?: number;
+  expertiseRating?: number;
+  backupReviewer?: boolean;
+  escalationLevel?: number;
+  approvalAuthority?: boolean;
+  maxActiveReviews?: number;
+  expertise?: string[];
+  regions?: string[];
+  productCategories?: string[];
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  userId?: number | null;
+}
+
+export interface DepartmentMember {
+  id: number;
+  name: string;
+  role: string;
+}
+
+export interface Department {
+  id: number;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  leaderUserId?: number | null;
+  /** @nullable */
+  leaderName?: string | null;
+  /** @nullable */
+  escalationOwnerUserId?: number | null;
+  /** @nullable */
+  escalationOwnerName?: string | null;
+  active: boolean;
+  memberCount: number;
+  members: DepartmentMember[];
+  createdAt: string;
+}
+
+export interface DepartmentInput {
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  leaderUserId?: number | null;
+  /** @nullable */
+  escalationOwnerUserId?: number | null;
+  active?: boolean;
+}
+
+export interface RoutingCondition {
+  field: string;
+  operator: string;
+  value: string;
+}
+
+export interface RoutingRule {
+  id: number;
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  priority: number;
+  active: boolean;
+  conditions: RoutingCondition[];
+  actionType: string;
+  /** @nullable */
+  actionDepartmentId?: number | null;
+  /** @nullable */
+  actionSpecialistId?: number | null;
+  /** @nullable */
+  actionStageId?: number | null;
+  /** @nullable */
+  actionValue?: string | null;
+  /** @nullable */
+  actionLabel?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RoutingRuleInput {
+  name: string;
+  /** @nullable */
+  description?: string | null;
+  priority?: number;
+  active?: boolean;
+  conditions?: RoutingCondition[];
+  actionType: string;
+  /** @nullable */
+  actionDepartmentId?: number | null;
+  /** @nullable */
+  actionSpecialistId?: number | null;
+  /** @nullable */
+  actionStageId?: number | null;
+  /** @nullable */
+  actionValue?: string | null;
+}
+
+export interface RoutingFact {
+  field: string;
+  value: string;
+}
+
+export interface RoutingPreviewInput {
+  facts: RoutingFact[];
+}
+
+export interface RoutingTraceEntry {
+  ruleId: number;
+  ruleName: string;
+  matched: boolean;
+  reason: string;
+}
+
+export interface RoutingPreviewResult {
+  matched: boolean;
+  /** @nullable */
+  ruleId?: number | null;
+  /** @nullable */
+  ruleName?: string | null;
+  /** @nullable */
+  actionType?: string | null;
+  /** @nullable */
+  actionLabel?: string | null;
+  trace: RoutingTraceEntry[];
+}
+
+export interface ReviewStage {
+  id: number;
+  name: string;
+  stageOrder: number;
+  /** @nullable */
+  assignedTeamId?: number | null;
+  /** @nullable */
+  assignedTeamName?: string | null;
+  /** @nullable */
+  assignedDepartmentId?: number | null;
+  /** @nullable */
+  assignedDepartmentName?: string | null;
+  /** @nullable */
+  assignedSpecialistId?: number | null;
+  /** @nullable */
+  assignedSpecialistName?: string | null;
+  /** @nullable */
+  approvalAuthority?: string | null;
+  slaHours: number;
+  /** @nullable */
+  escalationPath?: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ReviewStageInput {
+  name: string;
+  stageOrder?: number;
+  /** @nullable */
+  assignedTeamId?: number | null;
+  /** @nullable */
+  assignedDepartmentId?: number | null;
+  /** @nullable */
+  assignedSpecialistId?: number | null;
+  /** @nullable */
+  approvalAuthority?: string | null;
+  slaHours?: number;
+  /** @nullable */
+  escalationPath?: string | null;
+  active?: boolean;
+}
+
+export interface EscalationRule {
+  id: number;
+  name: string;
+  matrixOrder: number;
+  triggerType: string;
+  triggerOperator: string;
+  /** @nullable */
+  triggerValue?: string | null;
+  escalateToLevel: number;
+  /** @nullable */
+  escalateToRole?: string | null;
+  /** @nullable */
+  escalateToSpecialistId?: number | null;
+  /** @nullable */
+  escalateToSpecialistName?: string | null;
+  /** @nullable */
+  escalateToDepartmentId?: number | null;
+  /** @nullable */
+  escalateToDepartmentName?: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EscalationRuleInput {
+  name: string;
+  matrixOrder?: number;
+  triggerType: string;
+  triggerOperator?: string;
+  /** @nullable */
+  triggerValue?: string | null;
+  escalateToLevel?: number;
+  /** @nullable */
+  escalateToRole?: string | null;
+  /** @nullable */
+  escalateToSpecialistId?: number | null;
+  /** @nullable */
+  escalateToDepartmentId?: number | null;
+  active?: boolean;
+}
+
+export interface WorkloadEntry {
+  specialistId: number;
+  name: string;
+  role: string;
+  /** @nullable */
+  departmentName?: string | null;
+  status: string;
+  acceptingAssignments: boolean;
+  activeReviews: number;
+  maxActiveReviews: number;
+  availableCapacity: number;
+  pendingTasks: number;
+  escalatedReviews: number;
+  /** @nullable */
+  avgResolutionHours?: number | null;
+}
+
 export interface Policy {
   id: number;
   name: string;
@@ -2461,6 +2782,21 @@ export interface SupportRequestUpdate {
   status?: string;
   adminResponse?: string;
 }
+
+export type ListSpecialistsParams = {
+status?: string;
+departmentId?: number;
+};
+
+export type QuerySpecialistDirectoryParams = {
+expertise?: string;
+region?: string;
+productCategory?: string;
+availableOnly?: boolean;
+approvalAuthority?: boolean;
+minExpertiseRating?: number;
+escalationLevel?: number;
+};
 
 export type GetAiUsageAnalyticsParams = {
 /**

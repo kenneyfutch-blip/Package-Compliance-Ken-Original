@@ -423,11 +423,15 @@ router.post(
 
     // Deadline handling: an ISO string sets an explicit deadline, null resets to
     // the priority SLA default, and an omitted/invalid value leaves it unchanged.
+    // data.dueAt is already coerced to a Date by the request schema
+    // (zod.coerce.date), so an invalid string would have failed validation
+    // upstream. null resets to the priority SLA default; undefined leaves it
+    // unchanged.
     let dueAt: Date | null | undefined;
     if (data.dueAt === null) {
       dueAt = null;
-    } else if (data.dueAt != null && !Number.isNaN(Date.parse(data.dueAt))) {
-      dueAt = new Date(data.dueAt);
+    } else if (data.dueAt != null) {
+      dueAt = data.dueAt;
     } else {
       dueAt = undefined;
     }

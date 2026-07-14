@@ -35,6 +35,11 @@ export function requiredPermFor(path: string): string | null {
   // Workload & SLA is manager-facing ownership oversight, not user admin. Must
   // come before the generic /operations/ → users:read fallback.
   if (p === "/operations/workload") return "reports:read"
+  // Specialist Directory & Routing Engine. Specific mappings must precede the
+  // generic /operations/ → users:read fallback.
+  if (p === "/operations/specialists" || p === "/operations/departments") return "specialists:read"
+  if (p === "/operations/specialist-workload") return "specialists:read"
+  if (p === "/operations/routing-rules" || p === "/operations/review-stages" || p === "/operations/escalation") return "routing:read"
   if (p.startsWith("/operations/")) return "users:read"
   if (p === "/audit") return "audit:read"
   if (p === "/admin/dashboard") return "org:manage"

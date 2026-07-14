@@ -46,7 +46,522 @@ tags:
     description: AI usage analytics & cost dashboard — per-request spend, volume, model/tier mix, escalation frequency, and success/error rates
   - name: training
     description: Training Center — per-user learning progress and in-platform support requests
+  - name: team-management
+    description: Specialist Directory & Routing Engine — specialists, departments, routing rules, review stages, escalation matrix, and workload
 paths:
+  /specialists:
+    get:
+      operationId: listSpecialists
+      tags: [team-management]
+      summary: List specialist directory profiles
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string }
+        - name: departmentId
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Specialist directory
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Specialist" }
+    post:
+      operationId: createSpecialist
+      tags: [team-management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SpecialistInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Specialist" }
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /specialists/directory/query:
+    get:
+      operationId: querySpecialistDirectory
+      tags: [team-management]
+      summary: Query the directory for routing decisions (AI routing knowledge base)
+      parameters:
+        - name: expertise
+          in: query
+          required: false
+          schema: { type: string }
+        - name: region
+          in: query
+          required: false
+          schema: { type: string }
+        - name: productCategory
+          in: query
+          required: false
+          schema: { type: string }
+        - name: availableOnly
+          in: query
+          required: false
+          schema: { type: boolean }
+        - name: approvalAuthority
+          in: query
+          required: false
+          schema: { type: boolean }
+        - name: minExpertiseRating
+          in: query
+          required: false
+          schema: { type: integer }
+        - name: escalationLevel
+          in: query
+          required: false
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Matching specialists ranked for routing
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Specialist" }
+  /specialists/{id}:
+    get:
+      operationId: getSpecialist
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Specialist" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+    patch:
+      operationId: updateSpecialist
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SpecialistInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Specialist" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /specialists/{id}/certifications:
+    post:
+      operationId: addSpecialistCertification
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CertificationInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Specialist" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /specialists/{id}/certifications/{certId}:
+    delete:
+      operationId: removeSpecialistCertification
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: certId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Specialist" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /departments:
+    get:
+      operationId: listDepartments
+      tags: [team-management]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Department" }
+    post:
+      operationId: createDepartment
+      tags: [team-management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DepartmentInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Department" }
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /departments/{id}:
+    patch:
+      operationId: updateDepartment
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DepartmentInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Department" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+    delete:
+      operationId: deleteDepartment
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Department" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /routing-rules:
+    get:
+      operationId: listRoutingRules
+      tags: [team-management]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RoutingRule" }
+    post:
+      operationId: createRoutingRule
+      tags: [team-management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoutingRuleInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RoutingRule" }
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /routing-rules/preview:
+    post:
+      operationId: previewRouting
+      tags: [team-management]
+      summary: Evaluate routing rules against a set of facts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoutingPreviewInput" }
+      responses:
+        "200":
+          description: Routing evaluation result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RoutingPreviewResult" }
+  /routing-rules/{id}:
+    patch:
+      operationId: updateRoutingRule
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RoutingRuleInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RoutingRule" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+    delete:
+      operationId: deleteRoutingRule
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RoutingRule" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /review-stages:
+    get:
+      operationId: listReviewStages
+      tags: [team-management]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ReviewStage" }
+    post:
+      operationId: createReviewStage
+      tags: [team-management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewStageInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewStage" }
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /review-stages/{id}:
+    patch:
+      operationId: updateReviewStage
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewStageInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewStage" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+    delete:
+      operationId: deleteReviewStage
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ReviewStage" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /escalation-rules:
+    get:
+      operationId: listEscalationRules
+      tags: [team-management]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/EscalationRule" }
+    post:
+      operationId: createEscalationRule
+      tags: [team-management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EscalationRuleInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EscalationRule" }
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /escalation-rules/{id}:
+    patch:
+      operationId: updateEscalationRule
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EscalationRuleInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EscalationRule" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+    delete:
+      operationId: deleteEscalationRule
+      tags: [team-management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/EscalationRule" }
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiError" }
+  /workload:
+    get:
+      operationId: listWorkload
+      tags: [team-management]
+      summary: Per-specialist workload and capacity
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/WorkloadEntry" }
   /healthz:
     get:
       operationId: healthCheck
@@ -3606,6 +4121,327 @@ paths:
 
 components:
   schemas:
+    Certification:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        issuer: { type: [string, "null"] }
+        effectiveDate: { type: [string, "null"] }
+        expirationDate: { type: [string, "null"] }
+        documentObjectPath: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+      required: [id, name, createdAt]
+    CertificationInput:
+      type: object
+      properties:
+        name: { type: string }
+        issuer: { type: [string, "null"] }
+        effectiveDate: { type: [string, "null"] }
+        expirationDate: { type: [string, "null"] }
+        documentObjectPath: { type: [string, "null"] }
+      required: [name]
+    Specialist:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: [integer, "null"] }
+        name: { type: string }
+        email: { type: [string, "null"] }
+        employeeId: { type: [string, "null"] }
+        photoUrl: { type: [string, "null"] }
+        jobTitle: { type: [string, "null"] }
+        departmentId: { type: [integer, "null"] }
+        departmentName: { type: [string, "null"] }
+        managerName: { type: [string, "null"] }
+        location: { type: [string, "null"] }
+        timeZone: { type: [string, "null"] }
+        role: { type: string }
+        status: { type: string }
+        activeReviewer: { type: boolean }
+        acceptingAssignments: { type: boolean }
+        routingPriority: { type: integer }
+        expertiseRating: { type: integer }
+        backupReviewer: { type: boolean }
+        escalationLevel: { type: integer }
+        approvalAuthority: { type: boolean }
+        maxActiveReviews: { type: integer }
+        expertise: { type: array, items: { type: string } }
+        regions: { type: array, items: { type: string } }
+        productCategories: { type: array, items: { type: string } }
+        notes: { type: [string, "null"] }
+        activeReviews: { type: integer }
+        availableCapacity: { type: integer }
+        certifications:
+          type: array
+          items: { $ref: "#/components/schemas/Certification" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [
+          id,
+          name,
+          role,
+          status,
+          activeReviewer,
+          acceptingAssignments,
+          routingPriority,
+          expertiseRating,
+          backupReviewer,
+          escalationLevel,
+          approvalAuthority,
+          maxActiveReviews,
+          expertise,
+          regions,
+          productCategories,
+          activeReviews,
+          availableCapacity,
+          certifications,
+          createdAt,
+          updatedAt,
+        ]
+    SpecialistInput:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: [string, "null"] }
+        employeeId: { type: [string, "null"] }
+        photoUrl: { type: [string, "null"] }
+        jobTitle: { type: [string, "null"] }
+        departmentId: { type: [integer, "null"] }
+        managerName: { type: [string, "null"] }
+        location: { type: [string, "null"] }
+        timeZone: { type: [string, "null"] }
+        role: { type: string }
+        status: { type: string }
+        activeReviewer: { type: boolean }
+        acceptingAssignments: { type: boolean }
+        routingPriority: { type: integer }
+        expertiseRating: { type: integer }
+        backupReviewer: { type: boolean }
+        escalationLevel: { type: integer }
+        approvalAuthority: { type: boolean }
+        maxActiveReviews: { type: integer }
+        expertise: { type: array, items: { type: string } }
+        regions: { type: array, items: { type: string } }
+        productCategories: { type: array, items: { type: string } }
+        notes: { type: [string, "null"] }
+        userId: { type: [integer, "null"] }
+      required: [name]
+    DepartmentMember:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        role: { type: string }
+      required: [id, name, role]
+    Department:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: [string, "null"] }
+        leaderUserId: { type: [integer, "null"] }
+        leaderName: { type: [string, "null"] }
+        escalationOwnerUserId: { type: [integer, "null"] }
+        escalationOwnerName: { type: [string, "null"] }
+        active: { type: boolean }
+        memberCount: { type: integer }
+        members:
+          type: array
+          items: { $ref: "#/components/schemas/DepartmentMember" }
+        createdAt: { type: string, format: date-time }
+      required: [id, name, active, memberCount, members, createdAt]
+    DepartmentInput:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: [string, "null"] }
+        leaderUserId: { type: [integer, "null"] }
+        escalationOwnerUserId: { type: [integer, "null"] }
+        active: { type: boolean }
+      required: [name]
+    RoutingCondition:
+      type: object
+      properties:
+        field: { type: string }
+        operator: { type: string }
+        value: { type: string }
+      required: [field, operator, value]
+    RoutingRule:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: [string, "null"] }
+        priority: { type: integer }
+        active: { type: boolean }
+        conditions:
+          type: array
+          items: { $ref: "#/components/schemas/RoutingCondition" }
+        actionType: { type: string }
+        actionDepartmentId: { type: [integer, "null"] }
+        actionSpecialistId: { type: [integer, "null"] }
+        actionStageId: { type: [integer, "null"] }
+        actionValue: { type: [string, "null"] }
+        actionLabel: { type: [string, "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [id, name, priority, active, conditions, actionType, createdAt, updatedAt]
+    RoutingRuleInput:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: [string, "null"] }
+        priority: { type: integer }
+        active: { type: boolean }
+        conditions:
+          type: array
+          items: { $ref: "#/components/schemas/RoutingCondition" }
+        actionType: { type: string }
+        actionDepartmentId: { type: [integer, "null"] }
+        actionSpecialistId: { type: [integer, "null"] }
+        actionStageId: { type: [integer, "null"] }
+        actionValue: { type: [string, "null"] }
+      required: [name, actionType]
+    RoutingFact:
+      type: object
+      properties:
+        field: { type: string }
+        value: { type: string }
+      required: [field, value]
+    RoutingPreviewInput:
+      type: object
+      properties:
+        facts:
+          type: array
+          items: { $ref: "#/components/schemas/RoutingFact" }
+      required: [facts]
+    RoutingTraceEntry:
+      type: object
+      properties:
+        ruleId: { type: integer }
+        ruleName: { type: string }
+        matched: { type: boolean }
+        reason: { type: string }
+      required: [ruleId, ruleName, matched, reason]
+    RoutingPreviewResult:
+      type: object
+      properties:
+        matched: { type: boolean }
+        ruleId: { type: [integer, "null"] }
+        ruleName: { type: [string, "null"] }
+        actionType: { type: [string, "null"] }
+        actionLabel: { type: [string, "null"] }
+        trace:
+          type: array
+          items: { $ref: "#/components/schemas/RoutingTraceEntry" }
+      required: [matched, trace]
+    ReviewStage:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        stageOrder: { type: integer }
+        assignedTeamId: { type: [integer, "null"] }
+        assignedTeamName: { type: [string, "null"] }
+        assignedDepartmentId: { type: [integer, "null"] }
+        assignedDepartmentName: { type: [string, "null"] }
+        assignedSpecialistId: { type: [integer, "null"] }
+        assignedSpecialistName: { type: [string, "null"] }
+        approvalAuthority: { type: [string, "null"] }
+        slaHours: { type: integer }
+        escalationPath: { type: [string, "null"] }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, name, stageOrder, slaHours, active, createdAt, updatedAt]
+    ReviewStageInput:
+      type: object
+      properties:
+        name: { type: string }
+        stageOrder: { type: integer }
+        assignedTeamId: { type: [integer, "null"] }
+        assignedDepartmentId: { type: [integer, "null"] }
+        assignedSpecialistId: { type: [integer, "null"] }
+        approvalAuthority: { type: [string, "null"] }
+        slaHours: { type: integer }
+        escalationPath: { type: [string, "null"] }
+        active: { type: boolean }
+      required: [name]
+    EscalationRule:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        matrixOrder: { type: integer }
+        triggerType: { type: string }
+        triggerOperator: { type: string }
+        triggerValue: { type: [string, "null"] }
+        escalateToLevel: { type: integer }
+        escalateToRole: { type: [string, "null"] }
+        escalateToSpecialistId: { type: [integer, "null"] }
+        escalateToSpecialistName: { type: [string, "null"] }
+        escalateToDepartmentId: { type: [integer, "null"] }
+        escalateToDepartmentName: { type: [string, "null"] }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        [
+          id,
+          name,
+          matrixOrder,
+          triggerType,
+          triggerOperator,
+          escalateToLevel,
+          active,
+          createdAt,
+          updatedAt,
+        ]
+    EscalationRuleInput:
+      type: object
+      properties:
+        name: { type: string }
+        matrixOrder: { type: integer }
+        triggerType: { type: string }
+        triggerOperator: { type: string }
+        triggerValue: { type: [string, "null"] }
+        escalateToLevel: { type: integer }
+        escalateToRole: { type: [string, "null"] }
+        escalateToSpecialistId: { type: [integer, "null"] }
+        escalateToDepartmentId: { type: [integer, "null"] }
+        active: { type: boolean }
+      required: [name, triggerType]
+    WorkloadEntry:
+      type: object
+      properties:
+        specialistId: { type: integer }
+        name: { type: string }
+        role: { type: string }
+        departmentName: { type: [string, "null"] }
+        status: { type: string }
+        acceptingAssignments: { type: boolean }
+        activeReviews: { type: integer }
+        maxActiveReviews: { type: integer }
+        availableCapacity: { type: integer }
+        pendingTasks: { type: integer }
+        escalatedReviews: { type: integer }
+        avgResolutionHours: { type: [number, "null"] }
+      required:
+        [
+          specialistId,
+          name,
+          role,
+          status,
+          acceptingAssignments,
+          activeReviews,
+          maxActiveReviews,
+          availableCapacity,
+          pendingTasks,
+          escalatedReviews,
+        ]
     Policy:
       type: object
       required:

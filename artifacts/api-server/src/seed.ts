@@ -28,6 +28,13 @@ import {
   glossaryEntriesTable,
   notificationStatesTable,
   notificationPreferencesTable,
+  departmentsTable,
+  specialistProfilesTable,
+  specialistCertificationsTable,
+  reviewStagesTable,
+  routingRulesTable,
+  escalationRulesTable,
+  aiUsageTable,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { analyzePackaging } from "./lib/ai";
@@ -152,6 +159,13 @@ async function clearDemo() {
   // Audit is append-only in normal operation; drop the guard so the reset can
   // clear it, then the caller reinstalls it once seeding completes.
   await dropAuditImmutability();
+  // Specialist Directory & Routing Engine (child → parent).
+  await db.delete(escalationRulesTable);
+  await db.delete(routingRulesTable);
+  await db.delete(reviewStagesTable);
+  await db.delete(specialistCertificationsTable);
+  await db.delete(specialistProfilesTable);
+  await db.delete(departmentsTable);
   await db.delete(notificationStatesTable);
   await db.delete(notificationPreferencesTable);
   await db.delete(teamMembersTable);
@@ -173,6 +187,8 @@ async function clearDemo() {
   await db.delete(packagesTable);
   await db.delete(suppliersTable);
   await db.delete(notificationsTable);
+  // ai_usage has a non-cascade org FK, so it must be cleared before the org row.
+  await db.delete(aiUsageTable);
   await db.delete(usersTable);
   await db.delete(organizationsTable);
 }
@@ -526,6 +542,208 @@ export async function seedDemo() {
   if (teamMemberRows.length) {
     await db.insert(teamMembersTable).values(teamMemberRows);
   }
+
+  // ---- Specialist Directory & Routing Engine (demo tenant) ----
+  const userByEmail = (email: string) =>
+    insertedUsers.find((u) => u.email === email) ?? null;
+
+  const insertedDepartments = await db
+    .insert(departmentsTable)
+    .values([
+      {
+        organizationId: orgId,
+        name: "Compliance",
+        description: "Owns packaging compliance review and final approvals.",
+        leaderUserId: userByEmail("marcus.lee@dollartree.com")?.id ?? null,
+        escalationOwnerUserId: userByEmail("dana.whitfield@dollartree.com")?.id ?? null,
+      },
+      {
+        organizationId: orgId,
+        name: "Packaging",
+        description: "Artwork, dieline, and barcode verification for packaging.",
+        leaderUserId: userByEmail("sofia.alvarez@dollartree.com")?.id ?? null,
+        escalationOwnerUserId: userByEmail("marcus.lee@dollartree.com")?.id ?? null,
+      },
+      {
+        organizationId: orgId,
+        name: "Regulatory Affairs",
+        description: "FDA, USDA, and federal labeling regulation specialists.",
+        leaderUserId: userByEmail("rachel.kim@dollartree.com")?.id ?? null,
+        escalationOwnerUserId: userByEmail("dana.whitfield@dollartree.com")?.id ?? null,
+      },
+      {
+        organizationId: orgId,
+        name: "Legal",
+        description: "Marketing claims and legal review of packaging language.",
+        leaderUserId: userByEmail("dana.whitfield@dollartree.com")?.id ?? null,
+        escalationOwnerUserId: userByEmail("dana.whitfield@dollartree.com")?.id ?? null,
+      },
+    ])
+    .returning();
+  const deptId = (name: string) =>
+    insertedDepartments.find((d) => d.name === name)?.id ?? null;
+
+  // Five real reviewers seeded as directory-only profiles (no login link).
+  const insertedSpecialists = await db
+    .insert(specialistProfilesTable)
+    .values([
+      {
+        organizationId: orgId,
+        name: "Shantel Woody",
+        jobTitle: "Manager, Packaging Compliance",
+        role: "Compliance Reviewer & Approver",
+        departmentId: deptId("Compliance"),
+        managerName: "Dana Whitfield",
+        location: "Chesapeake, VA",
+        status: "active",
+        activeReviewer: true,
+        acceptingAssignments: true,
+        approvalAuthority: true,
+        escalationLevel: 3,
+        routingPriority: 90,
+        expertiseRating: 5,
+        maxActiveReviews: 8,
+        expertise: ["Packaging Compliance", "Final Approvals", "Label Regulations"],
+        regions: ["US"],
+        productCategories: ["Food & Beverage", "Household Chemicals", "Cosmetics & Personal Care"],
+        notes: "Final approval authority for packaging compliance.",
+      },
+      {
+        organizationId: orgId,
+        name: "Laura Bolt",
+        jobTitle: "Senior Regulatory Specialist",
+        role: "Regulatory Reviewer & Approver",
+        departmentId: deptId("Regulatory Affairs"),
+        managerName: "Rachel Kim",
+        location: "Chesapeake, VA",
+        status: "active",
+        activeReviewer: true,
+        acceptingAssignments: true,
+        approvalAuthority: true,
+        escalationLevel: 2,
+        routingPriority: 80,
+        expertiseRating: 5,
+        maxActiveReviews: 6,
+        expertise: ["FDA Regulations", "Allergen Labeling", "Nutrition Facts"],
+        regions: ["US"],
+        productCategories: ["Food & Beverage"],
+        notes: "Lead reviewer for FDA-regulated food labeling.",
+      },
+      {
+        organizationId: orgId,
+        name: "Alice Rees",
+        jobTitle: "Packaging Compliance Analyst",
+        role: "Reviewer",
+        departmentId: deptId("Packaging"),
+        managerName: "Sofia Alvarez",
+        location: "Remote",
+        status: "active",
+        activeReviewer: true,
+        acceptingAssignments: true,
+        approvalAuthority: false,
+        escalationLevel: 1,
+        routingPriority: 60,
+        expertiseRating: 4,
+        maxActiveReviews: 5,
+        expertise: ["Artwork Review", "Barcode Verification", "Dieline Compliance"],
+        regions: ["US"],
+        productCategories: ["Food & Beverage", "Toys & Children"],
+        notes: "First-pass packaging artwork and barcode checks.",
+      },
+      {
+        organizationId: orgId,
+        name: "Eric Blanchette",
+        jobTitle: "Legal & Claims Reviewer",
+        role: "Legal Reviewer & Approver",
+        departmentId: deptId("Legal"),
+        managerName: "Dana Whitfield",
+        location: "Chesapeake, VA",
+        status: "active",
+        activeReviewer: true,
+        acceptingAssignments: true,
+        approvalAuthority: true,
+        escalationLevel: 2,
+        routingPriority: 75,
+        expertiseRating: 4,
+        maxActiveReviews: 5,
+        expertise: ["Marketing Claims", "FTC Compliance", "Legal Review"],
+        regions: ["US"],
+        productCategories: ["Food & Beverage", "Cosmetics & Personal Care"],
+        notes: "Reviews substantiation of marketing and health claims.",
+      },
+      {
+        organizationId: orgId,
+        name: "Megan Everding",
+        jobTitle: "Compliance Specialist",
+        role: "Reviewer",
+        departmentId: deptId("Compliance"),
+        managerName: "Marcus Lee",
+        location: "Remote",
+        status: "active",
+        activeReviewer: true,
+        acceptingAssignments: true,
+        approvalAuthority: false,
+        escalationLevel: 1,
+        routingPriority: 55,
+        expertiseRating: 4,
+        maxActiveReviews: 6,
+        expertise: ["Household Chemicals", "EPA Labeling", "Safety Warnings"],
+        regions: ["US"],
+        productCategories: ["Household Chemicals"],
+        notes: "Specialist for EPA-regulated household chemical labeling.",
+      },
+    ])
+    .returning();
+  const specId = (name: string) =>
+    insertedSpecialists.find((s) => s.name === name)?.id ?? null;
+
+  const shantelId = specId("Shantel Woody");
+  const lauraId = specId("Laura Bolt");
+  await db.insert(specialistCertificationsTable).values([
+    ...(shantelId
+      ? [{
+          organizationId: orgId,
+          specialistProfileId: shantelId,
+          name: "Certified Packaging Professional (CPP)",
+          issuer: "Institute of Packaging Professionals",
+          effectiveDate: "2022-03-01",
+          expirationDate: "2027-03-01",
+        }]
+      : []),
+    ...(lauraId
+      ? [{
+          organizationId: orgId,
+          specialistProfileId: lauraId,
+          name: "Regulatory Affairs Certification (RAC)",
+          issuer: "Regulatory Affairs Professionals Society",
+          effectiveDate: "2021-06-15",
+          expirationDate: "2026-06-15",
+        }]
+      : []),
+  ]);
+
+  // Default review pipeline.
+  await db.insert(reviewStagesTable).values([
+    { organizationId: orgId, name: "Packaging Review", stageOrder: 1, assignedDepartmentId: deptId("Packaging"), approvalAuthority: "Packaging Analyst", slaHours: 24, escalationPath: "Escalate to Packaging lead after SLA breach." },
+    { organizationId: orgId, name: "Compliance Review", stageOrder: 2, assignedDepartmentId: deptId("Compliance"), approvalAuthority: "Compliance Specialist", slaHours: 48, escalationPath: "Escalate to Compliance manager after SLA breach." },
+    { organizationId: orgId, name: "Regulatory Review", stageOrder: 3, assignedDepartmentId: deptId("Regulatory Affairs"), approvalAuthority: "Regulatory Specialist", slaHours: 48, escalationPath: "Escalate to Regulatory lead after SLA breach." },
+    { organizationId: orgId, name: "Final Approval", stageOrder: 4, assignedSpecialistId: shantelId, approvalAuthority: "Compliance Approver", slaHours: 24, escalationPath: "Escalate to Director." },
+  ]);
+
+  // Routing rules — first match (lowest priority number) wins.
+  await db.insert(routingRulesTable).values([
+    { organizationId: orgId, name: "Food & Beverage → Regulatory Affairs", description: "Food labeling requires FDA regulatory review.", priority: 10, conditions: [{ field: "category", operator: "equals", value: "Food & Beverage" }], actionType: "department", actionDepartmentId: deptId("Regulatory Affairs") },
+    { organizationId: orgId, name: "Household Chemicals → Megan Everding", description: "EPA-regulated household chemicals route to the chemicals specialist.", priority: 20, conditions: [{ field: "category", operator: "equals", value: "Household Chemicals" }], actionType: "specialist", actionSpecialistId: specId("Megan Everding") },
+    { organizationId: orgId, name: "Marketing claims → Legal", description: "Packages with marketing claims need legal review.", priority: 30, conditions: [{ field: "hasClaims", operator: "equals", value: "true" }], actionType: "specialist", actionSpecialistId: specId("Eric Blanchette") },
+    { organizationId: orgId, name: "Default → Compliance", description: "Catch-all: unmatched work goes to Compliance.", priority: 100, conditions: [], actionType: "department", actionDepartmentId: deptId("Compliance") },
+  ]);
+
+  // Escalation matrix — ordered; first matching trigger applies.
+  await db.insert(escalationRulesTable).values([
+    { organizationId: orgId, name: "Critical finding → Final approver", matrixOrder: 1, triggerType: "severity", triggerOperator: "equals", triggerValue: "Critical", escalateToLevel: 3, escalateToSpecialistId: shantelId },
+    { organizationId: orgId, name: "SLA breach → Compliance", matrixOrder: 2, triggerType: "sla_breach", triggerOperator: "greaterOrEqual", triggerValue: "24", escalateToLevel: 2, escalateToDepartmentId: deptId("Compliance") },
+    { organizationId: orgId, name: "High risk score → Director", matrixOrder: 3, triggerType: "risk_score", triggerOperator: "greaterOrEqual", triggerValue: "90", escalateToLevel: 3, escalateToRole: "Director" },
+  ]);
 
   const insertedSuppliers = await db
     .insert(suppliersTable)

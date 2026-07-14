@@ -28,6 +28,12 @@ import glossaryRouter from "./glossary";
 import resourcesRouter from "./resources";
 import usageRouter from "./usage";
 import trainingRouter from "./training";
+import specialistsRouter from "./specialists";
+import departmentsRouter from "./departments";
+import routingRulesRouter from "./routing-rules";
+import reviewStagesRouter from "./review-stages";
+import escalationRulesRouter from "./escalation-rules";
+import workloadRouter from "./workload";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -63,5 +69,11 @@ router.use(glossaryRouter);
 router.use(resourcesRouter);
 router.use(usageRouter);
 router.use(trainingRouter);
+router.use(specialistsRouter);
+router.use(departmentsRouter);
+router.use(routingRulesRouter);
+router.use(reviewStagesRouter);
+router.use(escalationRulesRouter);
+router.use(workloadRouter);
 
 export default router;

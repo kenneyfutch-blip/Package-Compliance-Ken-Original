@@ -29,3 +29,8 @@ export * from "./ai_usage";
 export * from "./ai_usage_health";
 export * from "./training_progress";
 export * from "./support_requests";
+export * from "./departments";
+export * from "./specialists";
+export * from "./review_stages";
+export * from "./escalation";
+export * from "./routing";

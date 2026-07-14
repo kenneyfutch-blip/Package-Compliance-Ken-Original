@@ -38,6 +38,12 @@ import UserManagement from "@/pages/operations/users"
 import TeamManagement from "@/pages/operations/teams"
 import RoleManagement from "@/pages/operations/roles"
 import WorkloadDashboard from "@/pages/operations/workload"
+import SpecialistsDirectory from "@/pages/operations/specialists"
+import DepartmentsPage from "@/pages/operations/departments"
+import RoutingRulesPage from "@/pages/operations/routing-rules"
+import ReviewStagesPage from "@/pages/operations/review-stages"
+import EscalationMatrixPage from "@/pages/operations/escalation"
+import SpecialistWorkloadPage from "@/pages/operations/specialist-workload"
 import AuditCenter from "@/pages/operations/audit-center"
 import SystemHealthPage from "@/pages/operations/system"
 import PackagesView from "@/pages/packages"
@@ -312,6 +318,12 @@ function AppRoutes() {
         <Route path="/operations/teams" component={TeamManagement} />
         <Route path="/operations/roles" component={RoleManagement} />
         <Route path="/operations/workload" component={WorkloadDashboard} />
+        <Route path="/operations/specialists" component={SpecialistsDirectory} />
+        <Route path="/operations/departments" component={DepartmentsPage} />
+        <Route path="/operations/routing-rules" component={RoutingRulesPage} />
+        <Route path="/operations/review-stages" component={ReviewStagesPage} />
+        <Route path="/operations/escalation" component={EscalationMatrixPage} />
+        <Route path="/operations/specialist-workload" component={SpecialistWorkloadPage} />
         <Route path="/operations/audit" component={AuditCenter} />
         <Route path="/operations/system" component={SystemHealthPage} />
 
