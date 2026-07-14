@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import {
   eq,
+  ne,
   desc,
   and,
   or,
@@ -613,6 +614,69 @@ router.post(
     if (id === null) return;
     const pkg = await loadOwnedPackage(req, res, id);
     if (!pkg) return;
+
+    const hasText = !!(pkg.extractedText && pkg.extractedText.trim());
+    const hasArtwork = !!(pkg.artworkUrl && pkg.artworkUrl.trim());
+
+    // When there's text to analyze or artwork to OCR, run the (potentially
+    // multi-minute, reasoning-tier) analysis in the BACKGROUND — the same path as
+    // upload — so the request returns immediately. The review page's progress
+    // stepper + 4s polling then take over, instead of the "Re-run AI" button
+    // hanging with a spinner for the whole analysis.
+    if (hasText || hasArtwork) {
+      const ctx = getAuthContext(req);
+      const supplierId =
+        ctx.roleKey === "supplier_user" ? (ctx.supplierId ?? -1) : null;
+      // Atomic single-flight guard: claim the package only if it isn't already
+      // analyzing. Concurrent re-run requests (double-click, multiple tabs/users,
+      // retries) serialize on this row update, so exactly one wins and enqueues a
+      // job; the losers see 0 rows and return the current detail idempotently —
+      // never a duplicate expensive analysis or an out-of-order overwrite.
+      const claimed = await db
+        .update(packagesTable)
+        .set({ status: "AI Review" })
+        .where(and(eq(packagesTable.id, id), ne(packagesTable.status, "AI Review")))
+        .returning({ id: packagesTable.id });
+      if (claimed.length === 0) {
+        const [inFlight] = await db
+          .select()
+          .from(packagesTable)
+          .where(eq(packagesTable.id, id));
+        res.json(await buildDetail(inFlight!));
+        return;
+      }
+      try {
+        await enqueuePackageAnalysis({
+          packageId: id,
+          organizationId: orgId(req),
+          supplierId,
+          actorUserId: ctx.userId,
+          actorName: ctx.name || ctx.email || "System",
+        });
+      } catch (err) {
+        // Never strand the package in "AI Review" with no job to complete it.
+        logger.error({ err, packageId: id }, "Failed to enqueue re-run analysis");
+        await db
+          .update(packagesTable)
+          .set({ status: "Needs Review" })
+          .where(eq(packagesTable.id, id))
+          .catch(() => {});
+        res
+          .status(502)
+          .json({ error: "Couldn't start AI analysis. Please retry." });
+        return;
+      }
+      const [queued] = await db
+        .select()
+        .from(packagesTable)
+        .where(eq(packagesTable.id, id));
+      res.json(await buildDetail(queued!));
+      return;
+    }
+
+    // Metadata-only package (no text, no artwork): there's nothing to OCR and the
+    // background job would just route it for manual review, so analyze inline —
+    // this path is fast without an OCR/reasoning step.
     try {
       const { regulations, priorKnowledge, internalStandards, cfrRegulations } =
         await loadAnalysisContext(pkg, req);

@@ -52,6 +52,19 @@ hang in a permanent "Analyzing…" limbo:
    to `"Needs Review"` and auto-assigns, then returns `analyzed:false` (not a throw, so
    no retry storm).
 
+**Manual re-run must also background + dedupe.** The manual `POST /packages/:id/analyze`
+("Re-run AI" button) originally ran analysis synchronously and blocked the HTTP request
+for the full 1-4 min (button "just spins"). It must mirror the upload path: set
+`"AI Review"` + enqueue the job + return immediately (metadata-only packages, no text/no
+artwork, keep the synchronous path since the job requires text). Critically, any endpoint
+that enqueues analysis needs an **atomic single-flight guard** — claim the package with a
+conditional `UPDATE ... SET status='AI Review' WHERE id=? AND status<>'AI Review'
+RETURNING id`; if 0 rows, it's already analyzing, so return current detail idempotently
+instead of enqueuing. Postgres serializes the row update, so concurrent re-runs (double
+click, multi-tab, multi-user) produce exactly one job — not duplicate expensive AI calls
+and out-of-order overwrites. The client-side disabled-button guard is not enough (races
+before status propagates).
+
 **How to apply:** if you add another status-holding + background-job pattern, wire all
 three exits. Assignment now happens *inside the job* (correct priority from the
 analysis's critical count) for the text path; only the no-text branch assigns
