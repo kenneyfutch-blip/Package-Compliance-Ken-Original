@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { PDFDocument } from "pdf-lib";
 import { db } from "@workspace/db";
 import {
@@ -27,15 +26,8 @@ import {
 import { mapPackageDetail } from "./mappers";
 import { ObjectStorageService } from "./objectStorage";
 import { logger } from "./logger";
+import { COMPLIANCE_PUBLIC } from "./assets";
 
-const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const WORKSPACE_ROOT = path.resolve(MODULE_DIR, "..", "..", "..", "..");
-const COMPLIANCE_PUBLIC = path.join(
-  WORKSPACE_ROOT,
-  "artifacts",
-  "compliance",
-  "public",
-);
 const objectStorage = new ObjectStorageService();
 
 /** Load raw bytes for an artwork URL from object storage or the seed public dir. */
@@ -46,8 +38,17 @@ async function loadFileBytes(fileUrl: string): Promise<Uint8Array | null> {
       const response = await objectStorage.downloadObject(file);
       return new Uint8Array(await response.arrayBuffer());
     }
-    const rel = fileUrl.replace(/^\//, "");
-    const bytes = await readFile(path.join(COMPLIANCE_PUBLIC, rel));
+    // Seed artwork under /artwork/. Canonicalize and fail closed if the
+    // resolved path escapes the public directory (defense in depth against a
+    // traversal-shaped fileUrl).
+    const filePath = path.resolve(COMPLIANCE_PUBLIC, fileUrl.replace(/^\//, ""));
+    if (
+      filePath !== COMPLIANCE_PUBLIC &&
+      !filePath.startsWith(COMPLIANCE_PUBLIC + path.sep)
+    ) {
+      return null;
+    }
+    const bytes = await readFile(filePath);
     return new Uint8Array(bytes);
   } catch (err) {
     logger.warn({ err, fileUrl }, "Could not load file for page-count detection");

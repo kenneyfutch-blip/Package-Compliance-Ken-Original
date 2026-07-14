@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
 import {
@@ -42,6 +41,7 @@ import {
 } from "../lib/packageService";
 import { generateProofPdf } from "../lib/proofPdf";
 import { renderPdfThumbnail } from "../lib/thumbnail";
+import { COMPLIANCE_PUBLIC } from "../lib/assets";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -62,15 +62,6 @@ import type { PackageRow } from "@workspace/db";
 const router: IRouter = Router();
 const objectStorage = new ObjectStorageService();
 
-// Workspace root, resolved from this module (src/lib is 3 levels below root).
-const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
-const WORKSPACE_ROOT = path.resolve(MODULE_DIR, "..", "..", "..", "..");
-const COMPLIANCE_PUBLIC = path.join(
-  WORKSPACE_ROOT,
-  "artifacts",
-  "compliance",
-  "public",
-);
 
 function reqId(raw: string | string[] | undefined): number {
   return Number(Array.isArray(raw) ? raw[0] : raw);
@@ -906,7 +897,13 @@ router.post(
       }
       const objectPath = objectStorage.normalizeObjectEntityPath(uploadURL);
       const serveUrl = `/api/storage/objects/${objectPath.replace(/^\/objects\//, "")}`;
-      const filename = `proof-${pkg.sku}-v${detail.currentVersionId ?? 1}.pdf`;
+      // Some packages have no SKU; fall back to a slug of the name (or the id)
+      // so the download never becomes "proof--v27.pdf" with an empty segment.
+      const slugBase = pkg.sku?.trim() || pkg.name?.trim() || `pkg-${id}`;
+      const slug =
+        slugBase.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) ||
+        `pkg-${id}`;
+      const filename = `proof-${slug}-v${detail.currentVersionId ?? 1}.pdf`;
 
       await db.insert(reportsTable).values({
         organizationId: pkg.organizationId,
