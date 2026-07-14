@@ -12,16 +12,16 @@ const TYPE_LABEL: Record<string, string> = {
 }
 
 /**
- * Subtle, dynamic "Powered by <active model>" indicator. Reads the org's active
- * AI provider so it never hardcodes a model name — it always reflects whatever
- * model currently runs analysis (e.g. OpenAI gpt-5.5). Renders nothing until an
- * active provider is known.
+ * "Powered by OpenAI gpt-5.5" indicator. Renders for every user (not gated on
+ * the admin-only AI-provider list), so it shows reliably in the sidebar nav.
+ * When the org's active provider is readable it reflects that exact model;
+ * otherwise it falls back to the product's headline model label.
  */
 export function PoweredByAi({ className }: { className?: string }) {
   const { data: providers = [] } = useListAiProviders()
   const active = providers.find((p) => p.active)
-  if (!active) return null
-  const label = TYPE_LABEL[active.providerType] ?? "AI"
+  const label = active ? (TYPE_LABEL[active.providerType] ?? "OpenAI") : "OpenAI"
+  const model = active?.model ?? "gpt-5.5"
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -35,14 +35,14 @@ export function PoweredByAi({ className }: { className?: string }) {
           >
             <Sparkles className="w-3 h-3 text-neutral-900 shrink-0" />
             <span className="hidden text-neutral-500 sm:inline">Powered by</span>
-            <span className="text-neutral-900">{label} {active.model}</span>
+            <span className="text-neutral-900">{label} {model}</span>
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs border border-neutral-700 bg-neutral-900 text-neutral-100">
-          <p className="font-medium">Powered by {label} · {active.model}</p>
+          <p className="font-medium">Powered by {label} · {model}</p>
           <p className="mt-0.5 text-xs text-neutral-400">
             Compliance analysis, findings, risk score and fix recommendations all run
-            on your active AI model across every speed tier.
+            on your OpenAI model across every speed tier.
           </p>
         </TooltipContent>
       </Tooltip>
