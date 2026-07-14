@@ -40,6 +40,18 @@ The enterprise foundation for Packaging Compliance AI: every user belongs to an 
 ## Object download ACL (resolved)
 - `GET /storage/objects/*` now enforces per-object ACL: `resolveObjectOwner` maps the path back to its owning package/supplier record and `canAccessObjectOwner` applies org + supplier-id scoping before streaming (deny-by-default → 404 on unknown/out-of-scope). Owner descriptors carry `supplierId`, not vendor.
 
+## ADMIN_EMAILS is self-healing on every login (durable admin)
+Any email in the `ADMIN_EMAILS` env (comma-list, lowercased) is force-restored to
+`platform_admin` (and reactivated) during `provisionUser` for EXISTING users too —
+not just first-time provisioning. Provisioning otherwise never changes an existing
+user's role.
+**Why:** a reset/reseed can demote or deactivate the operator's row; `ADMIN_EMAILS`
+alone used to only cover new-user `pickRoleForNewUser`, so admin could be silently
+lost and needed a manual DB fix. Self-heal makes admin access permanent.
+**How to apply:** to guarantee someone can always administer, add their email to
+`ADMIN_EMAILS` (shared env). Change takes effect on their next login; the 5-min
+auth cache / a stale client `/me` may delay it — hard-reload or wait out the TTL.
+
 ## Ops notes
 - `tsx` is not installed. To run the seed: bundle with esbuild via `artifacts/api-server/seed-build.mjs` (mirrors `build.mjs`, externalizes pino) then `node dist/seed.mjs`. Do NOT use `esbuild-plugin-pino` for the seed bundle — externalize `pino`/`pino-pretty` instead.
 - `drizzle-kit push` in this non-TTY env: its interactive truncate prompt fails even with `--force`; `TRUNCATE TABLE users CASCADE` first if it blocks.

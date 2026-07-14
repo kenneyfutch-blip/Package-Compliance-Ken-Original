@@ -209,6 +209,34 @@ export async function provisionUser(
         .returning();
       user = updated ?? user;
     }
+    // Self-heal admin access: an email listed in ADMIN_EMAILS must ALWAYS be a
+    // Platform Administrator. Role changes are otherwise never applied here, but
+    // a reset/reseed can demote or deactivate an existing row — so restore the
+    // admin role (and reactivate) on next login. This makes admin durable: it
+    // can't be silently lost, and the listed operator can always administer the
+    // system without a manual DB fix.
+    if (
+      user.email &&
+      ADMIN_EMAILS.includes(user.email.toLowerCase()) &&
+      (user.roleKey !== "platform_admin" || !user.active)
+    ) {
+      const adminDef = getRoleDef("platform_admin");
+      const [restored] = await db
+        .update(usersTable)
+        .set({
+          roleKey: "platform_admin",
+          role: adminDef?.name ?? "Platform Administrator",
+          active: true,
+          status: "active",
+        })
+        .where(eq(usersTable.id, user.id))
+        .returning();
+      user = restored ?? user;
+      logger.info(
+        { email: user.email },
+        "Restored Platform Administrator from ADMIN_EMAILS",
+      );
+    }
   } else {
     const organizationId = await resolveDefaultOrgId();
     // Adopt a matching seed/demo row (same email, not yet linked) if present.
