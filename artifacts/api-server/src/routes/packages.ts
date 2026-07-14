@@ -50,7 +50,10 @@ import {
   mapReport,
   mapExtraction,
 } from "../lib/mappers";
-import { runExtraction } from "../lib/document-ai/service";
+import {
+  runExtraction,
+  recordProvidedExtraction,
+} from "../lib/document-ai/service";
 import { getActiveProvider } from "../lib/document-ai/providers/registry";
 import { resolveSupplierId } from "../lib/suppliers/link";
 import {
@@ -404,6 +407,24 @@ router.post(
         .set({ extractionStatus: "Provided", extractedAt: now })
         .where(eq(packagesTable.id, inserted.id));
       current = { ...inserted, extractionStatus: "Provided", extractedAt: now };
+      // Persist the client text as a Document AI extraction record so the
+      // Document AI tab stays consistent with Findings (both derive from this
+      // same text). Non-fatal: a failure here just leaves the tab empty until a
+      // Reprocess, exactly as before — it must never fail the upload.
+      try {
+        await recordProvidedExtraction({
+          req,
+          organizationId,
+          pkg: current,
+          text: data.extractedText,
+          sourceName: data.name ?? undefined,
+        });
+      } catch (err) {
+        logger.error(
+          { err, packageId: inserted.id },
+          "Failed to record provided extraction (non-fatal)",
+        );
+      }
     }
 
     // Reasoning + assignment now run in the BACKGROUND so the upload returns

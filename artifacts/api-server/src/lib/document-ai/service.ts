@@ -15,11 +15,20 @@ import { writeAudit, writeSystemAudit } from "../audit";
 import { logger } from "../logger";
 import { getActiveProvider } from "./providers/registry";
 import type { OcrProvider, OcrExtractionResult } from "./providers/types";
+import { extractHeuristicComponents } from "./components";
 import {
   extractPdfTextLayer,
   PDF_TEXT_LAYER_ENGINE_ID,
   PDF_TEXT_LAYER_LABEL,
 } from "./pdf-text-layer";
+
+// Persisted to document_extractions.engine when the artwork text was supplied by
+// the client at upload (a PDF text layer read in-browser, an image OCR result,
+// or pasted copy) rather than transcribed by a server OCR provider. Treat as a
+// permanent contract value, like a provider id. Kept distinct so the Document AI
+// tab and audit trail can tell provided text apart from a real provider run.
+export const PROVIDED_ENGINE_ID = "provided-at-upload";
+export const PROVIDED_ENGINE_LABEL = "Provided at upload";
 
 const objectStorage = new ObjectStorageService();
 
@@ -147,6 +156,75 @@ async function getCompletedExtractionByHash(
     )
     .orderBy(desc(documentExtractionsTable.id))
     .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Persist client-supplied artwork text as a Complete extraction record.
+ *
+ * When the browser already extracted text at upload (a PDF text layer, an image
+ * OCR result, or pasted copy), the background analysis skips the OCR provider —
+ * so without this the Document AI tab would show "No extraction has run" even
+ * though Findings were generated from that same text. Recording it here keeps
+ * the tab consistent with Findings without paying for a redundant server OCR.
+ *
+ * Deliberately does NOT download/hash the artwork bytes (that stays out of the
+ * upload request to keep it fast); the cache key is a prefixed hash of the text
+ * so it can never collide with a real provider run of the same artwork — a later
+ * Reprocess still produces its own fresh, provider-generated record.
+ */
+export async function recordProvidedExtraction(params: {
+  req?: Request;
+  organizationId?: number;
+  pkg: PackageRow;
+  text: string;
+  sourceName?: string;
+  version?: number;
+}): Promise<DocumentExtractionRow | null> {
+  const { req, pkg, version = 1 } = params;
+  const text = params.text.trim();
+  if (!text) return null;
+
+  const organizationId =
+    params.organizationId ?? (req ? orgId(req) : pkg.organizationId);
+  const sourceHash = `provided:${sha256(Buffer.from(text, "utf-8"))}`;
+  const components = extractHeuristicComponents(text, []);
+  const now = new Date();
+
+  const [row] = await db
+    .insert(documentExtractionsTable)
+    .values({
+      organizationId,
+      packageId: pkg.id,
+      proofId: null,
+      version,
+      sourceHash,
+      sourceType: "artwork",
+      sourceName: params.sourceName?.trim() || pkg.name || "Provided at upload",
+      status: "Complete",
+      engine: PROVIDED_ENGINE_ID,
+      text,
+      pages: [],
+      components,
+      confidence: null,
+      pageCount: 1,
+      processedAt: now,
+    })
+    .returning();
+
+  const audit = {
+    action: "Document extracted",
+    entityType: "package",
+    entityId: pkg.id,
+    packageId: pkg.id,
+    detail: `${PROVIDED_ENGINE_LABEL}: recorded ${components.length} component(s) from text supplied at upload.`,
+  };
+  if (req) {
+    await writeAudit(req, audit);
+  } else if (organizationId != null) {
+    await writeSystemAudit(organizationId, audit);
+  }
+
   return row ?? null;
 }
 
