@@ -205,7 +205,10 @@ router.post(
         return;
       }
 
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      const ext = name.includes('.')
+        ? name.slice(name.lastIndexOf('.') + 1)
+        : undefined;
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL(ext);
       const objectPath =
         objectStorageService.normalizeObjectEntityPath(uploadURL);
 

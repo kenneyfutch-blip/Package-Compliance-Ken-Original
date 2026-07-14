@@ -28,7 +28,7 @@ import {
   ArrowLeft, BrainCircuit, CheckCircle, Loader2, Send, ShieldCheck, ShieldAlert,
   MessageSquarePlus, Trash2, CheckCheck, CornerDownRight, ClipboardList, Plus,
   FileDown, GitCompareArrows, Sparkles, ChevronDown, XCircle, AlertOctagon, ScrollText,
-  Gavel, Bot, User as UserIcon, FilePlus, Download, RotateCcw, HelpCircle,
+  Gavel, Bot, User as UserIcon, FilePlus, Download, RotateCcw, HelpCircle, Circle,
 } from "lucide-react"
 import { useUpload } from "@workspace/object-storage-web"
 import { ProofViewer, type ViewerAnnotation, type AnnotationDraft } from "@/components/proof-viewer"
@@ -627,6 +627,88 @@ function ApprovalBadge({ status }: { status: string }) {
 const STANDING_DISCLAIMER =
   "This review is an AI-assisted compliance assessment and should not be considered legal advice, regulatory approval, or a definitive compliance determination."
 
+function formatElapsed(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60)
+  const s = totalSeconds % 60
+  return `${m}:${s.toString().padStart(2, "0")}`
+}
+
+// Honest, stage-based progress for the ~1–4 min background analysis. We can't
+// report a real percentage (the AI call has no progress signal), so instead we
+// surface the genuine milestones we DO track: queue → text extraction
+// (extractionStatus) → compliance analysis. The indeterminate bar communicates
+// "working" without implying precise completion.
+function AnalysisProgress({ pkg }: { pkg: Pkg }) {
+  const [elapsed, setElapsed] = React.useState(0)
+  React.useEffect(() => {
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const ext = pkg.extractionStatus
+  const providedText = ext === "Provided"
+  const extractionDone = ext === "Complete" || ext === "Provided" || ext === "Skipped"
+
+  const steps: { label: string; state: "done" | "active" | "pending" }[] = [
+    { label: "Queued for analysis", state: "done" },
+    {
+      label: providedText
+        ? "Read text from file"
+        : extractionDone
+          ? "Read artwork (OCR)"
+          : "Reading artwork (OCR)",
+      state: extractionDone ? "done" : "active",
+    },
+    {
+      label: "Running compliance analysis",
+      state: extractionDone ? "active" : "pending",
+    },
+  ]
+
+  return (
+    <div className="py-10 px-4 max-w-sm mx-auto">
+      <div className="text-center mb-6">
+        <p className="font-medium text-foreground">Analyzing packaging…</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          A full compliance review usually takes 1–4 minutes. This page updates on its own — feel free to keep working elsewhere.
+        </p>
+      </div>
+      <ol className="space-y-3">
+        {steps.map((s, i) => (
+          <li key={i} className="flex items-center gap-3 text-sm">
+            {s.state === "done" ? (
+              <CheckCircle className="w-5 h-5 text-success shrink-0" />
+            ) : s.state === "active" ? (
+              <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+            ) : (
+              <Circle className="w-5 h-5 text-muted-foreground/40 shrink-0" />
+            )}
+            <span
+              className={
+                s.state === "pending"
+                  ? "text-muted-foreground/60"
+                  : s.state === "active"
+                    ? "text-foreground font-medium"
+                    : "text-muted-foreground"
+              }
+            >
+              {s.label}
+            </span>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-6">
+        <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+          <div className="h-full w-full rounded-full bg-gradient-to-r from-primary/25 via-primary to-primary/25 animate-pulse" />
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-2 text-center tabular-nums">
+          Elapsed {formatElapsed(elapsed)}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: number | null; onSelect: (id: number | null) => void }) {
   const groups: [string, Violation[]][] = [
     ["Issues", pkg.violations.filter((v) => v.findingClass === "issue")],
@@ -638,13 +720,7 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
 
   if (pkg.violations.length === 0) {
     if (pkg.status === "AI Review") {
-      return (
-        <div className="text-center py-12 text-muted-foreground">
-          <Loader2 className="w-12 h-12 mx-auto mb-3 text-primary opacity-70 animate-spin" />
-          <p className="font-medium text-foreground">Analyzing packaging…</p>
-          <p className="text-xs mt-1">The AI compliance review is running. Findings will appear here automatically when it finishes.</p>
-        </div>
-      )
+      return <AnalysisProgress pkg={pkg} />
     }
     return <div className="text-center py-12 text-muted-foreground"><CheckCircle className="w-12 h-12 mx-auto mb-3 text-success opacity-50" /><p>No findings yet. Run the AI analysis.</p></div>
   }

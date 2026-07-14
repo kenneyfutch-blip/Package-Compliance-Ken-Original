@@ -11,6 +11,11 @@ description: Object-storage uploads, proof/annotation/comment/decision model, an
   - **Why:** global auth alone let any signed-in user pull another tenant's/supplier's proof artifact by guessing an object path (code review REJECT). Object-serving routes must enforce the same tenancy predicates as the record routes, or they become an IDOR bypass.
   - **How to apply:** any new object kind served through this route must be persisted with its `/objects/...` path on an owning record and added to `resolveObjectOwner`, else it will 404. Exported proof PDFs needed a new `reports.object_path` column precisely for this.
 
+## Object keys MUST carry the file extension
+- The presign route appends the original file extension to the stored upload key (`/objects/uploads/<uuid>.pdf`). The proof viewer decides how to render (`<img>` vs pdf.js) purely from `fileType`, which is derived from the URL extension via `inferFileType`. An **extensionless** key → `fileType=null` → the viewer renders neither image nor PDF, the white artwork box collapses to **zero height**, and every AI pin's `top:y%` collapses to the top of the frame (user-reported "artwork not shown + broken reference points" — one root cause, not two).
+  - **Why:** the type must be recoverable from the URL alone; no other field (filename, content-type) is threaded through to the viewer. Legacy pre-fix uploads have null `package_versions.file_type` and render blank until backfilled.
+  - **How to apply:** keep the extension sanitized (`/^[a-z0-9]{1,5}$/i`, lowercased) so keys stay path-safe. To repair a legacy extensionless record without re-uploading, set `package_versions.file_type` directly (the object still serves from its extensionless key; pdf.js/`<img>` fetch by URL, not by extension).
+
 ## Version control (restore / download / integrity)
 - Version **restore** is **append-only**: it inserts a NEW `package_versions` row copying the target version's file/metadata and marks it current — it never mutates history — and writes its own audit event.
 - Per-version `package_versions.fileHash` (SHA-256) is **best-effort integrity evidence**, computed at create/restore time; null for legacy/seed rows. Hashing must never gate the upload succeeding.

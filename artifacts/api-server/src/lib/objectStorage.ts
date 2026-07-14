@@ -160,7 +160,7 @@ export class ObjectStorageService {
     };
   }
 
-  async getObjectEntityUploadURL(): Promise<string> {
+  async getObjectEntityUploadURL(ext?: string): Promise<string> {
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
       throw new Error(
@@ -170,7 +170,13 @@ export class ObjectStorageService {
     }
 
     const objectId = randomUUID();
-    const fullPath = `${privateObjectDir}/uploads/${objectId}`;
+    // Preserve the original file extension on the stored object key so the file
+    // type can be inferred everywhere downstream (viewer rendering, version
+    // metadata). Without it, `/objects/uploads/<uuid>` is extensionless and the
+    // proof viewer can't tell a PDF from an image, so nothing renders.
+    const safeExt =
+      ext && /^[a-z0-9]{1,5}$/i.test(ext) ? `.${ext.toLowerCase()}` : '';
+    const fullPath = `${privateObjectDir}/uploads/${objectId}${safeExt}`;
 
     const { bucketName, objectName } = parseObjectPath(fullPath);
 
