@@ -2,7 +2,7 @@ import * as React from "react"
 import * as pdfjsLib from "pdfjs-dist"
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"
 import {
-  ZoomIn, ZoomOut, RotateCw, Maximize, Minus, Plus,
+  ZoomIn, ZoomOut, RotateCw, Maximize2, Minimize2, Minus, Plus,
   ChevronLeft, ChevronRight, Hand, MapPin, Square, Highlighter,
   Circle as CircleIcon, MoveUpRight, Strikethrough, Type, Eye, EyeOff, FileWarning,
   Undo2, Loader2, Copy, Trash2,
@@ -136,6 +136,15 @@ export function ProofViewer(props: Props) {
   const fit = () => { setZoom(1); setRotation(0); setPan({ x: 0, y: 0 }) }
   const rotate = () => setRotation((r) => (r + 90) % 360)
 
+  // Full-screen the proof so reviewers can inspect fine artwork detail. Esc exits.
+  const [fullscreen, setFullscreen] = React.useState(false)
+  React.useEffect(() => {
+    if (!fullscreen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setFullscreen(false) }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [fullscreen])
+
   // Drag-to-pan when the hand tool is active (works at any zoom level).
   const onCanvasPointerDown = (e: React.PointerEvent) => {
     if (activeTool !== "hand") return
@@ -208,8 +217,17 @@ export function ProofViewer(props: Props) {
     ? pageAnnotations.find((a) => a.id === selectedId && a.source !== "ai")
     : undefined
 
+  // Marker counts so the AI / Reviewer visibility toggles show what they control.
+  // A package can have findings but no positioned markers, which would otherwise
+  // make the toggles look dead when clicked.
+  const aiCount = annotations.filter((a) => a.source === "ai").length
+  const humanCount = annotations.filter((a) => a.source !== "ai").length
+
   return (
-    <div className="flex flex-col h-full bg-accent/30 rounded-xl border border-border overflow-hidden">
+    <div className={cn(
+      "flex flex-col bg-accent/30 border border-border overflow-hidden",
+      fullscreen ? "fixed inset-0 z-50 h-screen w-screen rounded-none" : "h-full rounded-xl",
+    )}>
       {/* Toolbar */}
       <div className="flex items-center gap-1 p-2 border-b border-border bg-card shrink-0 flex-wrap">
         <TooltipProvider delayDuration={150}>
@@ -248,16 +266,20 @@ export function ProofViewer(props: Props) {
         </Button>
         <div className="h-6 w-px bg-border mx-1" />
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={zoomOut} title="Zoom out"><ZoomOut className="w-4 h-4" /></Button>
-        <span className="text-xs font-mono w-12 text-center tabular-nums">{Math.round(zoom * 100)}%</span>
+        <button type="button" onClick={fit} title="Reset view (fit to 100%)" className="text-xs font-mono w-12 text-center tabular-nums rounded py-1 hover:bg-accent hover:text-foreground">{Math.round(zoom * 100)}%</button>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={zoomIn} title="Zoom in"><ZoomIn className="w-4 h-4" /></Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={rotate} title="Rotate"><RotateCw className="w-4 h-4" /></Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fit} title="Fit / reset"><Maximize className="w-4 h-4" /></Button>
-        <div className="h-6 w-px bg-border mx-1" />
-        <Button variant={showAi ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5 text-xs" onClick={onToggleAi} title="Toggle AI markers">
-          {showAi ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />} AI
+        <Button variant={fullscreen ? "secondary" : "ghost"} size="icon" className="h-8 w-8" onClick={() => setFullscreen((f) => !f)} title={fullscreen ? "Exit full screen (Esc)" : "Full screen"} aria-label={fullscreen ? "Exit full screen" : "Full screen"}>
+          {fullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </Button>
-        <Button variant={showHuman ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5 text-xs" onClick={onToggleHuman} title="Toggle reviewer markups">
+        <div className="h-6 w-px bg-border mx-1" />
+        <Button variant={showAi ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5 text-xs" onClick={onToggleAi} title={aiCount ? "Show / hide AI markers" : "No AI markers on this artwork"}>
+          {showAi ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />} AI
+          <span className="rounded bg-black/10 px-1 text-[10px] tabular-nums dark:bg-white/15">{aiCount}</span>
+        </Button>
+        <Button variant={showHuman ? "secondary" : "ghost"} size="sm" className="h-8 gap-1.5 text-xs" onClick={onToggleHuman} title={humanCount ? "Show / hide reviewer markups" : "No reviewer markups on this artwork yet"}>
           {showHuman ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />} Reviewer
+          <span className="rounded bg-black/10 px-1 text-[10px] tabular-nums dark:bg-white/15">{humanCount}</span>
         </Button>
         {isPdf && pageCount > 1 && (
           <div className="flex items-center gap-1 ml-auto">
