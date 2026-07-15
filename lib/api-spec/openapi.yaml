@@ -988,6 +988,56 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /violations/{id}/dismiss:
+    post:
+      operationId: dismissViolation
+      tags: [violations]
+      summary: Mark a finding "Not Applicable" (excluded from the compliance score)
+      description: >
+        Dismiss a finding the AI raised — e.g. text OCR'd from the artwork's
+        prepress/production layer (color callouts, file names, dielines) that is
+        not consumer-facing. The finding is kept for the audit trail but excluded
+        from the compliance score and captured into compliance memory so future
+        AI reviews learn to treat similar content as a non-issue.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ViolationDismissInput"
+      responses:
+        "200":
+          description: The dismissed finding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Violation"
+
+  /violations/{id}/restore:
+    post:
+      operationId: restoreViolation
+      tags: [violations]
+      summary: Undo a dismissal, returning the finding to Open
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The restored finding
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Violation"
+
   /packages/{id}:
     get:
       operationId: getPackage
@@ -6498,6 +6548,20 @@ components:
         - failed
         - total
 
+    ViolationDismissInput:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: >
+            Reason key for the dismissal. One of: prepress, not_applicable,
+            false_positive, duplicate, other. Unknown values fall back to "other".
+        note:
+          type: ["string", "null"]
+          description: Optional free-text note (max 1000 chars).
+      required:
+        - reason
+
     Violation:
       type: object
       properties:
@@ -6547,6 +6611,18 @@ components:
           description: Optional per-finding caveat for high-risk / low-confidence findings.
         status:
           type: string
+        dismissReason:
+          type: ["string", "null"]
+          description: Human-readable reason a finding was marked "Not Applicable".
+        dismissNote:
+          type: ["string", "null"]
+          description: Optional free-text note added when the finding was dismissed.
+        dismissedBy:
+          type: ["string", "null"]
+          description: Display name of the reviewer who dismissed the finding.
+        dismissedAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time

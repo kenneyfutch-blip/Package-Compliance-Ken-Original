@@ -198,6 +198,8 @@ import type {
   UserUpdateInput,
   VendorPerformanceItem,
   VersionComparison,
+  Violation,
+  ViolationDismissInput,
   ViolationWithPackage,
   WorkloadEntry,
   WorkloadResponse,
@@ -3290,6 +3292,150 @@ export const useExtractArtworkFields = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getExtractArtworkFieldsMutationOptions(options));
+    }
+
+export const getDismissViolationUrl = (id: number,) => {
+
+
+
+
+  return `/api/violations/${id}/dismiss`
+}
+
+/**
+ * Dismiss a finding the AI raised — e.g. text OCR'd from the artwork's prepress/production layer (color callouts, file names, dielines) that is not consumer-facing. The finding is kept for the audit trail but excluded from the compliance score and captured into compliance memory so future AI reviews learn to treat similar content as a non-issue.
+ * @summary Mark a finding "Not Applicable" (excluded from the compliance score)
+ */
+export const dismissViolation = async (id: number,
+    violationDismissInput: ViolationDismissInput, options?: RequestInit): Promise<Violation> => {
+
+  return customFetch<Violation>(getDismissViolationUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(violationDismissInput)
+  }
+);}
+
+
+
+
+
+export const getDismissViolationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissViolation>>, TError,{id: number;data: BodyType<ViolationDismissInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof dismissViolation>>, TError,{id: number;data: BodyType<ViolationDismissInput>}, TContext> => {
+
+const mutationKey = ['dismissViolation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof dismissViolation>>, {id: number;data: BodyType<ViolationDismissInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  dismissViolation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DismissViolationMutationResult = NonNullable<Awaited<ReturnType<typeof dismissViolation>>>
+    export type DismissViolationMutationBody = BodyType<ViolationDismissInput>
+    export type DismissViolationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mark a finding "Not Applicable" (excluded from the compliance score)
+ */
+export const useDismissViolation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof dismissViolation>>, TError,{id: number;data: BodyType<ViolationDismissInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof dismissViolation>>,
+        TError,
+        {id: number;data: BodyType<ViolationDismissInput>},
+        TContext
+      > => {
+      return useMutation(getDismissViolationMutationOptions(options));
+    }
+
+export const getRestoreViolationUrl = (id: number,) => {
+
+
+
+
+  return `/api/violations/${id}/restore`
+}
+
+/**
+ * @summary Undo a dismissal, returning the finding to Open
+ */
+export const restoreViolation = async (id: number, options?: RequestInit): Promise<Violation> => {
+
+  return customFetch<Violation>(getRestoreViolationUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreViolationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreViolation>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreViolation>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['restoreViolation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreViolation>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreViolation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreViolationMutationResult = NonNullable<Awaited<ReturnType<typeof restoreViolation>>>
+
+    export type RestoreViolationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Undo a dismissal, returning the finding to Open
+ */
+export const useRestoreViolation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreViolation>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreViolation>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRestoreViolationMutationOptions(options));
     }
 
 export const getGetPackageUrl = (id: number,) => {

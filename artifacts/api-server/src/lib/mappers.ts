@@ -180,6 +180,10 @@ export function mapViolation(v: ViolationRow) {
     humanReviewRecommended: v.humanReviewRecommended,
     disclaimer: v.disclaimer,
     status: v.status,
+    dismissReason: v.dismissReason,
+    dismissNote: v.dismissNote,
+    dismissedBy: v.dismissedBy,
+    dismissedAt: iso(v.dismissedAt),
     createdAt: iso(v.createdAt)!,
   };
 }
@@ -280,26 +284,24 @@ export function mapApprovalDecision(a: ApprovalDecisionRow) {
   };
 }
 
+import { isFindingCounted } from "./violations/status";
+
 export function computeScorecard(
   p: PackageRow,
   violations: ViolationRow[],
   annotations: AnnotationRow[],
   tasks: ReviewTaskRow[],
 ) {
+  // Dismissed ("Not Applicable") findings are kept for the audit trail but do
+  // not count toward the compliance score.
   const criticalCount = violations.filter(
-    (v) =>
-      v.severity === "critical" &&
-      (v.findingClass === "issue" || v.findingClass === "warning"),
+    (v) => v.severity === "critical" && isFindingCounted(v),
   ).length;
   const majorCount = violations.filter(
-    (v) =>
-      v.severity === "major" &&
-      (v.findingClass === "issue" || v.findingClass === "warning"),
+    (v) => v.severity === "major" && isFindingCounted(v),
   ).length;
   const minorCount = violations.filter(
-    (v) =>
-      v.severity === "minor" &&
-      (v.findingClass === "issue" || v.findingClass === "warning"),
+    (v) => v.severity === "minor" && isFindingCounted(v),
   ).length;
   const passedCount = violations.filter(
     (v) => v.findingClass === "passed",

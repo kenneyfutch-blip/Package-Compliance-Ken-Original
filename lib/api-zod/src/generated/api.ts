@@ -1296,6 +1296,10 @@ export const CreatePackageResponse = zod.object({
   "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
   "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "regulations": zod.array(zod.object({
@@ -1496,6 +1500,92 @@ export const ExtractArtworkFieldsResponse = zod.object({
 
 
 /**
+ * Dismiss a finding the AI raised — e.g. text OCR'd from the artwork's prepress/production layer (color callouts, file names, dielines) that is not consumer-facing. The finding is kept for the audit trail but excluded from the compliance score and captured into compliance memory so future AI reviews learn to treat similar content as a non-issue.
+ * @summary Mark a finding "Not Applicable" (excluded from the compliance score)
+ */
+export const DismissViolationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DismissViolationBody = zod.object({
+  "reason": zod.string().describe('Reason key for the dismissal. One of: prepress, not_applicable, false_positive, duplicate, other. Unknown values fall back to \"other\".\n'),
+  "note": zod.string().nullish().describe('Optional free-text note (max 1000 chars).')
+})
+
+export const DismissViolationResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "severity": zod.string(),
+  "engine": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "regulationRef": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "detectedText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "evidence": zod.string().nullish().describe('Concrete observed basis for the finding, distinct from description (the reasoning).'),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "page": zod.number().optional(),
+  "confidence": zod.number().nullish(),
+  "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
+  "claimFlags": zod.array(zod.string()).optional(),
+  "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
+  "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
+  "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Undo a dismissal, returning the finding to Open
+ */
+export const RestoreViolationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RestoreViolationResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number(),
+  "severity": zod.string(),
+  "engine": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "regulationRef": zod.string().nullish(),
+  "recommendation": zod.string().nullish(),
+  "detectedText": zod.string().nullish(),
+  "suggestedText": zod.string().nullish(),
+  "evidence": zod.string().nullish().describe('Concrete observed basis for the finding, distinct from description (the reasoning).'),
+  "bbox": zod.union([zod.object({
+  "x": zod.number(),
+  "y": zod.number(),
+  "w": zod.number(),
+  "h": zod.number()
+}),zod.null()]).optional(),
+  "page": zod.number().optional(),
+  "confidence": zod.number().nullish(),
+  "findingClass": zod.string().optional().describe('issue (red) | warning (yellow) | passed (green) | recommendation (purple)'),
+  "claimFlags": zod.array(zod.string()).optional(),
+  "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
+  "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
+  "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Get a package with full compliance intelligence
  */
 export const GetPackageParams = zod.object({
@@ -1577,6 +1667,10 @@ export const GetPackageResponse = zod.object({
   "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
   "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "regulations": zod.array(zod.object({
@@ -1782,6 +1876,10 @@ export const UpdatePackageResponse = zod.object({
   "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
   "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "regulations": zod.array(zod.object({
@@ -1989,6 +2087,10 @@ export const AnalyzePackageResponse = zod.object({
   "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
   "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "regulations": zod.array(zod.object({
@@ -2362,6 +2464,10 @@ export const ReprocessPackageResponse = zod.object({
   "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
   "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "regulations": zod.array(zod.object({
@@ -4668,6 +4774,10 @@ export const CreatePackageVersionResponse = zod.object({
   "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
   "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "regulations": zod.array(zod.object({
@@ -4866,6 +4976,10 @@ export const RestorePackageVersionResponse = zod.object({
   "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
   "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "regulations": zod.array(zod.object({
@@ -5374,6 +5488,10 @@ export const CreateApprovalDecisionResponse = zod.object({
   "humanReviewRecommended": zod.boolean().describe('True when a human compliance reviewer should confirm before acting.'),
   "disclaimer": zod.string().nullish().describe('Optional per-finding caveat for high-risk \/ low-confidence findings.'),
   "status": zod.string(),
+  "dismissReason": zod.string().nullish().describe('Human-readable reason a finding was marked \"Not Applicable\".'),
+  "dismissNote": zod.string().nullish().describe('Optional free-text note added when the finding was dismissed.'),
+  "dismissedBy": zod.string().nullish().describe('Display name of the reviewer who dismissed the finding.'),
+  "dismissedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })),
   "regulations": zod.array(zod.object({

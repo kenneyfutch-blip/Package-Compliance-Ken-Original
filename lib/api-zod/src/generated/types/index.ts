@@ -272,6 +272,7 @@ export * from './vendorPerformanceItem';
 export * from './versionChange';
 export * from './versionComparison';
 export * from './violation';
+export * from './violationDismissInput';
 export * from './violationWithPackage';
 export * from './workloadEntry';
 export * from './workloadResponse';

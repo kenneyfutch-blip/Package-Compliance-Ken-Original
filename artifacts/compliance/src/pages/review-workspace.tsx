@@ -11,6 +11,7 @@ import {
   useCreatePackageVersion, useExtractArtworkText, useRestorePackageVersion,
   useGetPackageAssignment, getGetPackageAssignmentQueryKey,
   useGetDocumentAiStatus,
+  useDismissViolation, useRestoreViolation,
   type PackageDetail, type Annotation as ApiAnnotation, type Violation as ApiViolation,
   type ReviewTask as ApiReviewTask, type Citation,
 } from "@workspace/api-client-react"
@@ -36,6 +37,7 @@ import {
   MessageSquarePlus, Trash2, CheckCheck, CornerDownRight, ClipboardList, Plus,
   FileDown, GitCompareArrows, Sparkles, ChevronDown, XCircle, AlertOctagon, ScrollText,
   Gavel, Bot, User as UserIcon, FilePlus, Download, RotateCcw, HelpCircle, Circle,
+  Ban, MoreVertical,
 } from "lucide-react"
 import { useUpload } from "@workspace/object-storage-web"
 import { ProofViewer, type ViewerAnnotation, type AnnotationDraft } from "@/components/proof-viewer"
@@ -613,7 +615,7 @@ export default function ReviewWorkspace() {
 
             <div className="flex-1 overflow-y-auto min-h-0">
               <TabsContent value="document" className="m-0 p-4 h-full"><DocumentAiTab packageId={packageId} packageStatus={pkg.status} /></TabsContent>
-              <TabsContent value="findings" className="m-0 p-4"><FindingsPanel pkg={pkg} selectedId={selectedId} onSelect={setSelectedId} /></TabsContent>
+              <TabsContent value="findings" className="m-0 p-4"><FindingsPanel pkg={pkg} selectedId={selectedId} onSelect={setSelectedId} onChange={invalidate} /></TabsContent>
               <TabsContent value="comments" className="m-0 p-4"><CommentsPanel pkg={pkg} packageId={packageId} numbered={numbered} selectedId={selectedId} onSelect={setSelectedId} onChange={invalidate} onAddPin={() => setTool("pin")} /></TabsContent>
               <TabsContent value="tasks" className="m-0 p-4"><TasksPanel pkg={pkg} packageId={packageId} onChange={invalidate} /></TabsContent>
               <TabsContent value="data" className="m-0 p-4"><DataPanel pkg={pkg} /></TabsContent>
@@ -793,18 +795,46 @@ function AnalysisProgress({ pkg }: { pkg: Pkg }) {
   )
 }
 
-function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: number | null; onSelect: (id: number | null) => void }) {
+const DISMISS_OPTIONS: { key: string; label: string }[] = [
+  { key: "prepress", label: "Not applicable — prepress/production layer" },
+  { key: "not_applicable", label: "Not applicable to this product" },
+  { key: "false_positive", label: "False positive — no actual issue" },
+  { key: "duplicate", label: "Duplicate finding" },
+]
+
+function FindingsPanel({ pkg, selectedId, onSelect, onChange }: { pkg: Pkg; selectedId: number | null; onSelect: (id: number | null) => void; onChange: () => void }) {
+  const dismissViolation = useDismissViolation()
+  const restoreViolation = useRestoreViolation()
+
+  const isDismissed = (v: Violation) => v.status === "Not Applicable"
+  const active = pkg.violations.filter((v) => !isDismissed(v))
+  const dismissed = pkg.violations.filter(isDismissed)
+
   const groups: [string, Violation[]][] = [
-    ["Issues", pkg.violations.filter((v) => v.findingClass === "issue")],
-    ["Warnings", pkg.violations.filter((v) => v.findingClass === "warning")],
-    ["Recommendations", pkg.violations.filter((v) => v.findingClass === "recommendation")],
-    ["Passed checks", pkg.violations.filter((v) => v.findingClass === "passed")],
+    ["Issues", active.filter((v) => v.findingClass === "issue")],
+    ["Warnings", active.filter((v) => v.findingClass === "warning")],
+    ["Recommendations", active.filter((v) => v.findingClass === "recommendation")],
+    ["Passed checks", active.filter((v) => v.findingClass === "passed")],
   ]
   const annForViolation = (vid: number) => pkg.annotations.find((a) => a.violationId === vid)
 
+  const [pending, setPending] = React.useState<{ v: Violation; reason: string } | null>(null)
+  const [note, setNote] = React.useState("")
+
+  const openDismiss = (v: Violation, reason: string) => { setNote(""); setPending({ v, reason }) }
+  const handleDismiss = () => {
+    if (!pending) return
+    dismissViolation.mutate(
+      { id: pending.v.id, data: { reason: pending.reason, note: note.trim() || null } },
+      { onSuccess: () => { setPending(null); onChange() } },
+    )
+  }
+  const handleRestore = (v: Violation) =>
+    restoreViolation.mutate({ id: v.id }, { onSuccess: onChange })
+
   // Scroll the selected finding into view when a reference dot on the artwork is
   // clicked (the tab has just switched to Findings, so this may run on mount).
-  const selectedRef = React.useRef<HTMLButtonElement | null>(null)
+  const selectedRef = React.useRef<HTMLDivElement | null>(null)
   React.useEffect(() => {
     if (selectedId == null) return
     const el = selectedRef.current
@@ -844,14 +874,34 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
               ? null
               : v.recommendation || (!v.detectedText ? v.suggestedText : null) || null
             return (
-              <button key={v.id} type="button" ref={selected ? selectedRef : undefined} onClick={() => ann && onSelect(ann.id)}
-                className={cn("w-full text-left p-3 rounded-lg border bg-card space-y-1.5 transition-colors", selected ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground/40")}>
+              <div key={v.id} ref={selected ? selectedRef : undefined} role="button" tabIndex={0}
+                onClick={() => ann && onSelect(ann.id)}
+                onKeyDown={(e) => { if ((e.key === "Enter" || e.key === " ") && ann) { e.preventDefault(); onSelect(ann.id) } }}
+                className={cn("w-full text-left p-3 rounded-lg border bg-card space-y-1.5 transition-colors cursor-pointer", selected ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground/40")}>
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex items-start gap-2 min-w-0">
                     <span className={cn("w-2 h-2 rounded-full shrink-0 mt-1.5", meta.dot)} />
                     <span className="font-semibold text-sm break-words leading-snug">{v.title}</span>
                   </div>
-                  <Badge variant="outline" className="text-[10px] shrink-0">{v.engine}</Badge>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Badge variant="outline" className="text-[10px]">{v.engine}</Badge>
+                    {(v.findingClass === "issue" || v.findingClass === "warning") && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-foreground" title="Finding actions">
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-72" onClick={(e) => e.stopPropagation()}>
+                          {DISMISS_OPTIONS.map((opt, i) => (
+                            <DropdownMenuItem key={opt.key} onSelect={() => openDismiss(v, opt.key)}>
+                              {i === 0 && <Ban className="w-3.5 h-3.5 mr-2" />}{opt.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
                 </div>
                 <p className="text-xs text-muted-foreground">{v.description}</p>
                 {v.evidence && (
@@ -878,11 +928,55 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
                 )}
                 {v.regulationRef && <div className="text-[10px] font-mono text-muted-foreground">Ref: <RegulationRef refText={v.regulationRef} /></div>}
                 {v.disclaimer && <div className="text-[10px] italic text-muted-foreground/80 pt-0.5">{v.disclaimer}</div>}
-              </button>
+              </div>
             )
           })}
         </div>
       ))}
+      {dismissed.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Not applicable ({dismissed.length})</h4>
+          <p className="text-[11px] text-muted-foreground">Dismissed findings are excluded from the compliance score and recorded so future AI reviews learn from them.</p>
+          {dismissed.map((v) => (
+            <div key={v.id} className="w-full p-3 rounded-lg border border-dashed border-border bg-muted/30 space-y-1.5">
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex items-start gap-2 min-w-0">
+                  <Ban className="w-3.5 h-3.5 shrink-0 mt-0.5 text-muted-foreground" />
+                  <span className="font-semibold text-sm break-words leading-snug line-through decoration-muted-foreground/50">{v.title}</span>
+                </div>
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] shrink-0" onClick={() => handleRestore(v)}>
+                  <RotateCcw className="w-3 h-3 mr-1" /> Restore
+                </Button>
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                <span className="font-semibold text-foreground/70">Not applicable: </span>{v.dismissReason}
+                {v.dismissedBy ? ` — ${v.dismissedBy}` : ""}
+              </div>
+              {v.dismissNote && <div className="text-[11px] text-muted-foreground">{v.dismissNote}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+      <AlertDialog open={!!pending} onOpenChange={(o) => { if (!o) setPending(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark finding not applicable</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pending ? DISMISS_OPTIONS.find((o) => o.key === pending.reason)?.label : ""}. It will be excluded from the compliance score and recorded so future AI reviews learn from it. The finding stays on the record for the audit trail.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Note (optional)</label>
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Add context for the audit trail" rows={3} />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={dismissViolation.isPending} onClick={(e) => { e.preventDefault(); handleDismiss() }}>
+              {dismissViolation.isPending ? "Marking..." : "Mark not applicable"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

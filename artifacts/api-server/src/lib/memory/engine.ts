@@ -1,8 +1,12 @@
 import { db, violationsTable, complianceMemoryTable } from "@workspace/db";
-import type { PackageRow } from "@workspace/db";
+import type { PackageRow, ViolationRow } from "@workspace/db";
 import { and, eq, sql } from "drizzle-orm";
 import { embed, toVectorLiteral } from "./embedding";
 import { logger } from "../logger";
+import {
+  NOT_APPLICABLE_STATUS,
+  dismissalResolutionText,
+} from "../violations/status";
 
 // ---------------------------------------------------------------------------
 // Compliance Memory engine.
@@ -34,6 +38,54 @@ function findingContent(v: {
   ]
     .filter(Boolean)
     .join(". ");
+}
+
+// Build a single compliance-memory row for a finding. Dismissed ("Not
+// Applicable") findings are captured as accepted institutional knowledge so
+// future AI reviews recall them: approvalStatus "Approved" keeps them in recall,
+// while outcome "Not Applicable" and the resolution text tell the AI the team
+// treats such content as a non-issue rather than a violation.
+function buildMemoryRow(params: {
+  organizationId: number;
+  pkg: PackageRow;
+  v: ViolationRow;
+  decision: string;
+  approved: boolean;
+  actorName: string;
+  actorId: string | null;
+}) {
+  const { organizationId, pkg, v } = params;
+  const content = findingContent({ ...v, category: pkg.category });
+  const dismissed = v.status === NOT_APPLICABLE_STATUS;
+  return {
+    organizationId,
+    packageId: pkg.id,
+    violationId: v.id,
+    engine: v.engine,
+    severity: v.severity,
+    category: pkg.category,
+    vendor: pkg.vendor,
+    supplierId: pkg.supplierId,
+    regulationRef: v.regulationRef,
+    findingTitle: v.title,
+    findingText: v.description,
+    suggestedFix: v.suggestedText,
+    approvedFix: dismissed
+      ? dismissalResolutionText(v.dismissReason, v.dismissNote)
+      : params.approved
+        ? v.suggestedText
+        : null,
+    reviewer: dismissed ? (v.dismissedBy ?? params.actorName) : params.actorName,
+    reviewerId: params.actorId,
+    outcome: dismissed ? NOT_APPLICABLE_STATUS : params.decision,
+    approvalStatus: dismissed
+      ? "Approved"
+      : params.approved
+        ? "Approved"
+        : "Rejected",
+    content,
+    embedding: embed(content),
+  };
 }
 
 // Idempotently create the ANN index for vector search. HNSW gives fast, accurate
@@ -87,32 +139,67 @@ export async function captureFindingsForDecision(params: {
 
   if (violations.length === 0) return;
 
-  const rows = violations.map((v) => {
-    const content = findingContent({ ...v, category: pkg.category });
-    return {
+  const rows = violations.map((v) =>
+    buildMemoryRow({
       organizationId,
-      packageId: pkg.id,
-      violationId: v.id,
-      engine: v.engine,
-      severity: v.severity,
-      category: pkg.category,
-      vendor: pkg.vendor,
-      supplierId: pkg.supplierId,
-      regulationRef: v.regulationRef,
-      findingTitle: v.title,
-      findingText: v.description,
-      suggestedFix: v.suggestedText,
-      approvedFix: approved ? v.suggestedText : null,
-      reviewer: params.actorName,
-      reviewerId: params.actorId,
-      outcome: decision,
-      approvalStatus: approved ? "Approved" : "Rejected",
-      content,
-      embedding: embed(content),
-    };
-  });
+      pkg,
+      v,
+      decision,
+      approved,
+      actorName: params.actorName,
+      actorId: params.actorId,
+    }),
+  );
 
   await db.insert(complianceMemoryTable).values(rows);
+}
+
+// Capture a single dismissed finding into memory the moment a reviewer marks it
+// "Not Applicable" — so the AI starts learning from it immediately, without
+// waiting for a terminal package decision. Non-fatal by contract.
+export async function captureFindingDismissal(params: {
+  organizationId: number;
+  pkg: PackageRow;
+  violation: ViolationRow;
+  actorName: string;
+  actorId: string | null;
+}): Promise<void> {
+  const { organizationId, pkg, violation } = params;
+  // Replace any prior memory captured for this specific finding.
+  await db
+    .delete(complianceMemoryTable)
+    .where(
+      and(
+        eq(complianceMemoryTable.violationId, violation.id),
+        eq(complianceMemoryTable.organizationId, organizationId),
+      ),
+    );
+  const row = buildMemoryRow({
+    organizationId,
+    pkg,
+    v: violation,
+    decision: NOT_APPLICABLE_STATUS,
+    approved: true,
+    actorName: params.actorName,
+    actorId: params.actorId,
+  });
+  await db.insert(complianceMemoryTable).values(row);
+}
+
+// Drop the memory captured for a single finding (e.g. when a dismissal is
+// restored). Non-fatal by contract.
+export async function removeFindingMemory(
+  organizationId: number,
+  violationId: number,
+): Promise<void> {
+  await db
+    .delete(complianceMemoryTable)
+    .where(
+      and(
+        eq(complianceMemoryTable.violationId, violationId),
+        eq(complianceMemoryTable.organizationId, organizationId),
+      ),
+    );
 }
 
 export type SimilarFinding = {

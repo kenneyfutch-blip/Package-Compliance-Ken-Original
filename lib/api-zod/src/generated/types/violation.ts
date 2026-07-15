@@ -42,5 +42,22 @@ export interface Violation {
      */
   disclaimer?: string | null;
   status: string;
+  /**
+     * Human-readable reason a finding was marked "Not Applicable".
+     * @nullable
+     */
+  dismissReason?: string | null;
+  /**
+     * Optional free-text note added when the finding was dismissed.
+     * @nullable
+     */
+  dismissNote?: string | null;
+  /**
+     * Display name of the reviewer who dismissed the finding.
+     * @nullable
+     */
+  dismissedBy?: string | null;
+  /** @nullable */
+  dismissedAt?: Date | null;
   createdAt: Date;
 }

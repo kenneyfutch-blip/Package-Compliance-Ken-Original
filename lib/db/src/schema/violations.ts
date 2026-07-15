@@ -47,6 +47,17 @@ export const violationsTable = pgTable(
     // Optional per-finding caveat for high-risk / low-confidence findings.
     disclaimer: text("disclaimer"),
     status: text("status").notNull().default("Open"),
+    // Dismissal metadata — set when a reviewer marks a finding "Not Applicable"
+    // (e.g. prepress/production-layer content). Kept for the audit trail; a
+    // dismissed finding is excluded from the compliance score.
+    dismissReason: text("dismiss_reason"),
+    dismissNote: text("dismiss_note"),
+    dismissedBy: text("dismissed_by"),
+    dismissedByUserId: integer("dismissed_by_user_id"),
+    dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
+    // The status the finding held before dismissal, so Restore returns it to its
+    // exact prior state rather than blindly reopening it.
+    dismissPriorStatus: text("dismiss_prior_status"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

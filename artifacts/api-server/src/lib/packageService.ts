@@ -27,6 +27,7 @@ import { mapPackageDetail } from "./mappers";
 import { ObjectStorageService } from "./objectStorage";
 import { logger } from "./logger";
 import { COMPLIANCE_PUBLIC } from "./assets";
+import { isFindingCounted } from "./violations/status";
 
 const objectStorage = new ObjectStorageService();
 
@@ -177,6 +178,42 @@ export function layoutPinPositions(count: number): { x: number; y: number }[] {
     positions.push({ x: +x.toFixed(4), y: +y.toFixed(4) });
   }
   return positions;
+}
+
+// Recompute a package's stored severity counts from its current findings,
+// excluding any dismissed ("Not Applicable") findings. Called after a finding is
+// dismissed or restored so list views (which read the stored counts) and the
+// detail scorecard stay consistent.
+export async function recomputePackageCounts(
+  packageId: number,
+  executor: Pick<typeof db, "select" | "update"> = db,
+): Promise<void> {
+  const rows = await executor
+    .select({
+      severity: violationsTable.severity,
+      findingClass: violationsTable.findingClass,
+      status: violationsTable.status,
+    })
+    .from(violationsTable)
+    .where(eq(violationsTable.packageId, packageId));
+  const counts = rows.reduce(
+    (acc, v) => {
+      if (!isFindingCounted(v)) return acc;
+      if (v.severity === "critical") acc.critical += 1;
+      else if (v.severity === "major") acc.major += 1;
+      else if (v.severity === "minor") acc.minor += 1;
+      return acc;
+    },
+    { critical: 0, major: 0, minor: 0 },
+  );
+  await executor
+    .update(packagesTable)
+    .set({
+      criticalCount: counts.critical,
+      majorCount: counts.major,
+      minorCount: counts.minor,
+    })
+    .where(eq(packagesTable.id, packageId));
 }
 
 /**

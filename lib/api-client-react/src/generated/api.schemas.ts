@@ -1133,6 +1133,16 @@ export interface BulkLanguageReviewResult {
   total: number;
 }
 
+export interface ViolationDismissInput {
+  /** Reason key for the dismissal. One of: prepress, not_applicable, false_positive, duplicate, other. Unknown values fall back to "other". */
+  reason: string;
+  /**
+     * Optional free-text note (max 1000 chars).
+     * @nullable
+     */
+  note?: string | null;
+}
+
 export interface Violation {
   id: number;
   packageId: number;
@@ -1168,6 +1178,23 @@ export interface Violation {
      */
   disclaimer?: string | null;
   status: string;
+  /**
+     * Human-readable reason a finding was marked "Not Applicable".
+     * @nullable
+     */
+  dismissReason?: string | null;
+  /**
+     * Optional free-text note added when the finding was dismissed.
+     * @nullable
+     */
+  dismissNote?: string | null;
+  /**
+     * Display name of the reviewer who dismissed the finding.
+     * @nullable
+     */
+  dismissedBy?: string | null;
+  /** @nullable */
+  dismissedAt?: string | null;
   createdAt: string;
 }
 
