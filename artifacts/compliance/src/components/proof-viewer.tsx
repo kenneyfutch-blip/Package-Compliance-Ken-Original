@@ -62,6 +62,9 @@ type Props = {
    *  is not configured yet, so AI pin positions cannot be trusted. */
   aiToggleDisabled?: boolean
   aiToggleDisabledReason?: string
+  /** When set, the AI toggle is enabled but its pin positions are approximate
+   *  (e.g. Google Document AI not configured); shown as a tooltip note. */
+  aiApproximateReason?: string
   /** Revert the most recent markup the reviewer added this session. */
   onUndo: () => void
   canUndo: boolean
@@ -116,7 +119,7 @@ export function ProofViewer(props: Props) {
     fileUrl, fileType, pageCount, annotations, selectedId, activeTool, onToolChange,
     onSelect, onCreate, onDeleteSelected, onDuplicateSelected,
     showAi, showHuman, onToggleAi, onToggleHuman,
-    aiToggleDisabled, aiToggleDisabledReason,
+    aiToggleDisabled, aiToggleDisabledReason, aiApproximateReason,
     onUndo, canUndo, undoPending,
   } = props
 
@@ -289,7 +292,9 @@ export function ProofViewer(props: Props) {
           title={
             aiToggleDisabled
               ? (aiToggleDisabledReason ?? "AI annotations are unavailable")
-              : aiCount ? "Show / hide AI markers" : "No AI markers on this artwork"
+              : aiCount
+                ? (aiApproximateReason ?? "Show / hide AI markers")
+                : "No AI markers on this artwork"
           }
         >
           {showAi ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />} AI

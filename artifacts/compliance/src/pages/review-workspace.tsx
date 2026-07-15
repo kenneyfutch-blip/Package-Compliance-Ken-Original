@@ -201,14 +201,15 @@ export default function ReviewWorkspace() {
     if (!ann) return
     setActiveTab(ann.source === "ai" ? "findings" : "comments")
   }, [pkg])
-  const [showAi, setShowAi] = React.useState(true)
+  const [showAi, setShowAi] = React.useState(false)
   const [showHuman, setShowHuman] = React.useState(true)
-  // AI annotation pins are only trustworthy once Google Document AI OCR is
-  // configured (it supplies the real word-box geometry). Until then the AI-
-  // markers toggle stays off and disabled so reviewers never see guessed pins.
+  // AI annotation pins are OFF by default but can be toggled on at any time. Pin
+  // positions are only geometrically exact when Google Document AI OCR supplies
+  // real word-box geometry; with the default OpenAI Vision engine the positions
+  // are approximate. We surface that as a non-blocking tooltip note rather than
+  // disabling the toggle, so reviewers can still choose to view AI markers.
   // NOTE: must check the engine specifically — the default OpenAI Vision engine
-  // reports configured:true but does NOT provide the word boxes these pins need,
-  // so a bare `configured` check would wrongly open the gate.
+  // reports configured:true but does NOT provide the word boxes for exact pins.
   const { data: docAiStatus } = useGetDocumentAiStatus()
   const aiAnnotationsReady =
     docAiStatus?.engine === "google-document-ai" && docAiStatus.configured === true
@@ -559,12 +560,11 @@ export default function ReviewWorkspace() {
             onCreate={handleCreate}
             onDeleteSelected={handleDeleteSelected}
             onDuplicateSelected={handleDuplicateSelected}
-            showAi={aiAnnotationsReady && showAi}
+            showAi={showAi}
             showHuman={showHuman}
-            onToggleAi={() => { if (aiAnnotationsReady) setShowAi((v) => !v) }}
+            onToggleAi={() => setShowAi((v) => !v)}
             onToggleHuman={() => setShowHuman((v) => !v)}
-            aiToggleDisabled={!aiAnnotationsReady}
-            aiToggleDisabledReason="AI annotations are unavailable until Google Document AI is configured (needed for accurate pin positions)."
+            aiApproximateReason={aiAnnotationsReady ? undefined : "Show / hide AI markers — positions are approximate until Google Document AI is configured for exact word-box placement."}
             onUndo={handleUndo}
             canUndo={undoableId != null}
             undoPending={deleteAnnotation.isPending}

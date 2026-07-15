@@ -31,6 +31,17 @@ prompt already forces it to be literal artwork copy) back to the matching OCR
 tokens to compute a REAL bbox. Missing-element findings (`detectedText` null)
 have no location → label "location N/A", never a fake pin.
 
+**AI-overlay toggle is off-by-default but must stay TOGGLEABLE.** The review
+workspace AI-markers toggle (proof-viewer) was once hard-*disabled* unless the OCR
+engine was `google-document-ai`. Because the default engine is OpenAI Vision, that
+permanently disabled the toggle — users could never view AI pins at all. Correct
+behavior: `showAi` defaults to `false` (off by default), the toggle is always
+enabled, and when the engine is not Google Document AI we pass a non-blocking
+`aiApproximateReason` tooltip ("positions are approximate…") instead of disabling.
+**Why:** the user wanted it off by default, NOT permanently unavailable. Do not
+re-tie `aiToggleDisabled` to `aiAnnotationsReady`; use the tooltip to flag
+approximate geometry and let reviewers choose.
+
 **Cost tradeoff (ties to the token-cost work):** spatial OCR is the lever —
 Google Document AI (per-page $, good text + boxes) vs local Tesseract (free,
 lower fidelity on stylized art) vs OpenAI Vision (cheap, great text, ZERO boxes →
