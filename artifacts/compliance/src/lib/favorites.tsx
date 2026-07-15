@@ -1,5 +1,6 @@
 import * as React from "react"
 import { usePermissions } from "@/lib/access"
+import { FavoritesContext, type FavoritesState } from "@/lib/favorites-context"
 
 // -----------------------------------------------------------------------------
 // Favorite tools — lets each user star the tools they use most so they surface
@@ -35,15 +36,6 @@ function loadFavorites(key: string): string[] {
     return []
   }
 }
-
-type FavoritesState = {
-  /** Starred hrefs, in the order they were added. */
-  favorites: string[]
-  isFavorite: (href: string) => boolean
-  toggle: (href: string) => void
-}
-
-const FavoritesContext = React.createContext<FavoritesState | null>(null)
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
   const { me } = usePermissions()

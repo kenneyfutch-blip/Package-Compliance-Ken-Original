@@ -1,23 +1,16 @@
 import * as React from "react"
 import { useGetMe } from "@workspace/api-client-react"
-import type { Me } from "@workspace/api-client-react"
 import { Lock } from "lucide-react"
+import { PermissionContext, type PermissionState } from "@/lib/permission-context"
 
 // -----------------------------------------------------------------------------
 // Permission context — backed by GET /me. The API server independently enforces
 // the same permissions; this layer only shapes navigation and route access so
 // users never see actions they cannot perform.
+//
+// The context OBJECT itself lives in ./permission-context (a component-free
+// module) so its identity is stable across Fast Refresh; see that file for why.
 // -----------------------------------------------------------------------------
-
-interface PermissionState {
-  me: Me | null
-  permissions: Set<string>
-  isLoading: boolean
-  has: (perm: string) => boolean
-  hasAny: (...perms: string[]) => boolean
-}
-
-const PermissionContext = React.createContext<PermissionState | null>(null)
 
 export function PermissionProvider({ children }: { children: React.ReactNode }) {
   const { data, isLoading } = useGetMe()
