@@ -19,6 +19,7 @@ export * from "./notifications";
 export * from "./reports";
 export * from "./ai_providers";
 export * from "./ai_conversations";
+export * from "./workspace_actions";
 export * from "./reviews";
 export * from "./jobs";
 export * from "./compliance-memory";

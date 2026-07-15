@@ -15,6 +15,21 @@ import {
   toolStatusLabel,
   type WorkspaceCitation,
 } from "./tools";
+import {
+  availableActionsFor,
+  findAction,
+  actionStatusLabel,
+  type WorkspaceAction,
+} from "./actions";
+
+// A state-changing action the model has proposed and the user must confirm
+// before it runs. Carries only what the confirm flow needs; the authoritative
+// copy is persisted server-side so parameters cannot be tampered with.
+export type ProposedAction = {
+  actionName: string;
+  params: Record<string, unknown>;
+  summary: string;
+};
 
 // ---------------------------------------------------------------------------
 // AI Workspace agent — grounded, tool-calling, streaming chat.
@@ -41,6 +56,7 @@ function buildSystemPrompt(opts: {
   pageContext?: WorkspacePageContext | null;
   linkedRecordLabel?: string | null;
   hasTools: boolean;
+  hasActions: boolean;
 }): string {
   const specialist = getSpecialist(opts.specialistKey);
   const catalog = ASSISTANT_TOOL_CATALOG.map(
@@ -74,12 +90,18 @@ function buildSystemPrompt(opts: {
     ? `\n\nYou have READ-ONLY tools that fetch the user's real platform data (packages, findings, regulations, compliance memory, specialists, tasks, suppliers, reports, SOPs, audit trail, recalls). Every tool is already scoped to exactly what THIS user is permitted to see — never claim you cannot see data for permission reasons without trying the relevant tool first. Use tools whenever the user asks about their actual data ("my packages", "which suppliers", "what findings", "who can review…"); do NOT invent records, ids, statuses or citations. If a tool returns nothing, say so plainly. Ground factual claims about specific records in tool results, and prefer citing the specific records you used. For general regulatory/compliance knowledge you may answer directly. Do not call tools for pure greetings or general how-to questions.`
     : "";
 
+  const actionsBlock = opts.hasActions
+    ? `\n\nYou can also take ACTIONS on the user's behalf when they clearly ask you to (e.g. "assign this to Dana", "escalate it", "create a task", "generate a report", "summarize the findings", "compare the versions").
+- Read-only/derived actions (summarize_findings, draft_approval_notes, compare_versions, prepare_executive_summary) run immediately and their output is returned to you — weave it into your answer.
+- State-changing actions (create_review, assign_reviewer, escalate_review, create_task, generate_report) are NOT executed when you call them. Calling one PROPOSES it to the user, who must explicitly confirm before it runs. When you call such an action, tell the user plainly what you have proposed and that it is awaiting their confirmation. NEVER claim a state-changing action is done — it only happens after they confirm. Resolve real ids first (e.g. call list_specialists to get a specialistId before assign_reviewer). Do not propose the same action twice.`
+    : "";
+
   return `You are the AI compliance assistant for a packaging compliance review platform used by retail compliance specialists. Answer questions about packaging, labeling and regulatory compliance (FDA / FTC / CPSC / EPA / USDA / Prop 65 requirements, required warnings and disclosures, claim substantiation, net-quantity statements, ingredient/allergen labeling) accurately and practically, and help users find the right tool in the app.
 
 Be warm, concise and practical. Write a clear, well-structured plain-text answer (short paragraphs or bullet points where helpful). When a specific in-app tool would help, mention it by name and reference its path from this catalog — never invent paths:
 ${catalog}
 
-If you are not certain about a specific regulation or citation, say so plainly rather than guessing, and point the user to the Regulatory Library for authoritative text. Never state an uncertain requirement as if it were definitive. Do not use emojis.${toolsBlock}${personaBlock}${contextBlock}`;
+If you are not certain about a specific regulation or citation, say so plainly rather than guessing, and point the user to the Regulatory Library for authoritative text. Never state an uncertain requirement as if it were definitive. Do not use emojis.${toolsBlock}${actionsBlock}${personaBlock}${contextBlock}`;
 }
 
 type ChatMessage =
@@ -113,7 +135,11 @@ export async function runWorkspaceAgent(opts: {
   onDelta: (text: string) => void;
   onStatus?: (info: { tool: string; label: string }) => void;
   signal?: AbortSignal;
-}): Promise<{ answer: string; citations: WorkspaceCitation[] }> {
+}): Promise<{
+  answer: string;
+  citations: WorkspaceCitation[];
+  proposals: ProposedAction[];
+}> {
   const {
     req,
     organizationId,
@@ -128,7 +154,11 @@ export async function runWorkspaceAgent(opts: {
   } = opts;
 
   const tools = availableToolsFor(req);
-  const toolDefs = tools.map((t) => ({
+  const actions = availableActionsFor(req);
+  // The model is offered read tools AND actions under one function-calling
+  // surface. Sensitive actions are intercepted at call time (proposed, not run);
+  // non-sensitive actions execute inline like read tools.
+  const toolDefs = [...tools, ...actions].map((t) => ({
     type: "function" as const,
     function: {
       name: t.name,
@@ -141,7 +171,8 @@ export async function runWorkspaceAgent(opts: {
     specialistKey,
     pageContext,
     linkedRecordLabel,
-    hasTools: toolDefs.length > 0,
+    hasTools: tools.length > 0,
+    hasActions: actions.length > 0,
   });
 
   const convo: ChatMessage[] = [
@@ -155,6 +186,7 @@ export async function runWorkspaceAgent(opts: {
   const { client, model } = await resolveAiClientForTier("standard");
   const start = Date.now();
   const citations: WorkspaceCitation[] = [];
+  const proposals: ProposedAction[] = [];
   let full = "";
   let usage: unknown = null;
 
@@ -254,8 +286,12 @@ export async function runWorkspaceAgent(opts: {
 
       for (const call of toolCalls) {
         const tool = findTool(call.name);
-        onStatus?.({ tool: call.name, label: toolStatusLabel(call.name) });
-        if (!tool) {
+        const action = tool ? undefined : findAction(call.name);
+        onStatus?.({
+          tool: call.name,
+          label: action ? actionStatusLabel(call.name) : toolStatusLabel(call.name),
+        });
+        if (!tool && !action) {
           convo.push({
             role: "tool",
             tool_call_id: call.id,
@@ -263,13 +299,13 @@ export async function runWorkspaceAgent(opts: {
           });
           continue;
         }
-        // Re-check permission at execution time (defense in depth): only offered
-        // tools are callable, and each tool re-scopes its own query anyway.
-        if (!tools.includes(tool)) {
+        // Re-check offer at execution time (defense in depth): only offered
+        // tools/actions are runnable, and each re-scopes its own query anyway.
+        if ((tool && !tools.includes(tool)) || (action && !actions.includes(action))) {
           convo.push({
             role: "tool",
             tool_call_id: call.id,
-            content: "You do not have permission to use this tool.",
+            content: "You do not have permission to use this.",
           });
           continue;
         }
@@ -279,13 +315,63 @@ export async function runWorkspaceAgent(opts: {
         } catch {
           parsed = {};
         }
+
+        // --- Sensitive action → PROPOSE (do not execute) ------------------
+        if (action && action.sensitive) {
+          try {
+            const outcome = await action.summarize(req, parsed);
+            if ("error" in outcome) {
+              convo.push({
+                role: "tool",
+                tool_call_id: call.id,
+                content: `Could not propose ${action.name}: ${outcome.error}`,
+              });
+            } else {
+              const dup = proposals.some(
+                (p) =>
+                  p.actionName === action.name &&
+                  JSON.stringify(p.params) === JSON.stringify(parsed),
+              );
+              if (!dup) {
+                proposals.push({
+                  actionName: action.name,
+                  params: parsed,
+                  summary: outcome.summary,
+                });
+              }
+              convo.push({
+                role: "tool",
+                tool_call_id: call.id,
+                content: `Proposed to the user for confirmation (awaiting their decision — it has NOT run): ${outcome.summary}`,
+              });
+            }
+          } catch (err) {
+            logger.warn({ err, action: call.name }, "workspace action proposal failed");
+            convo.push({
+              role: "tool",
+              tool_call_id: call.id,
+              content: "That could not be proposed. Continue without it.",
+            });
+          }
+          continue;
+        }
+
+        // --- Read tool OR non-sensitive action → execute inline -----------
         try {
-          const result = await tool.execute(req, parsed);
-          citations.push(...result.citations);
+          let text: string;
+          if (tool) {
+            const result = await tool.execute(req, parsed);
+            text = result.text;
+            citations.push(...result.citations);
+          } else {
+            const result = await (action as WorkspaceAction).execute(req, parsed);
+            text = result.resultText;
+            citations.push(...result.citations);
+          }
           convo.push({
             role: "tool",
             tool_call_id: call.id,
-            content: result.text.slice(0, MAX_TOOL_RESULT_CHARS),
+            content: text.slice(0, MAX_TOOL_RESULT_CHARS),
           });
         } catch (err) {
           logger.warn({ err, tool: call.name }, "workspace tool execution failed");
@@ -313,5 +399,5 @@ export async function runWorkspaceAgent(opts: {
     return true;
   });
 
-  return { answer: full, citations: uniqueCitations };
+  return { answer: full, citations: uniqueCitations, proposals };
 }

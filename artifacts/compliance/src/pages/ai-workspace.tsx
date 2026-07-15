@@ -24,8 +24,11 @@ import { Input } from "@/components/ui/input"
 import { usePageContext } from "@/lib/workspace-context"
 import {
   streamWorkspaceMessage,
+  confirmWorkspaceAction,
+  cancelWorkspaceAction,
   type WorkspaceCitation,
   type WorkspaceAttachmentPayload,
+  type WorkspaceProposedAction,
 } from "@/lib/workspace-stream"
 import {
   extractAttachmentText,
@@ -63,6 +66,8 @@ type LocalMessage = {
   // Transient tool-activity label shown while the turn is still streaming.
   status?: string | null
   streaming?: boolean
+  // State-changing actions the assistant proposed on this turn (confirm cards).
+  proposedActions?: WorkspaceProposedAction[] | null
 }
 
 // A staged attachment (already extracted to text) awaiting the next send.
@@ -182,6 +187,9 @@ export default function AiWorkspacePage() {
                 .map((a) => a?.name)
                 .filter((n): n is string => typeof n === "string")
             : null,
+          proposedActions:
+            ((m as { proposedActions?: WorkspaceProposedAction[] | null })
+              .proposedActions as WorkspaceProposedAction[] | null) ?? null,
         })),
       )
       setSpecialist(detail.specialist || "general")
@@ -390,6 +398,19 @@ export default function AiWorkspacePage() {
             return next
           })
         },
+        onProposedAction: (proposal) => {
+          setLiveMessages((prev) => {
+            const next = [...prev]
+            const last = next[next.length - 1]
+            if (last && last.role === "assistant" && last.streaming) {
+              next[next.length - 1] = {
+                ...last,
+                proposedActions: [...(last.proposedActions ?? []), proposal],
+              }
+            }
+            return next
+          })
+        },
         onDone: () => {
           setStreaming(false)
           setLiveMessages((prev) => {
@@ -427,6 +448,77 @@ export default function AiWorkspacePage() {
   }
 
   React.useEffect(() => () => abortRef.current?.(), [])
+
+  // Track which proposals are mid-request so their buttons can disable/spinner.
+  const [pendingProposal, setPendingProposal] = React.useState<number | null>(null)
+
+  // Replace a proposal in-place across the transcript after confirm/cancel.
+  const updateProposal = React.useCallback((p: WorkspaceProposedAction) => {
+    setLiveMessages((prev) =>
+      prev.map((m) =>
+        m.proposedActions
+          ? {
+              ...m,
+              proposedActions: m.proposedActions.map((x) =>
+                x.id === p.id ? p : x,
+              ),
+            }
+          : m,
+      ),
+    )
+  }, [])
+
+  const confirmProposal = React.useCallback(
+    async (proposal: WorkspaceProposedAction) => {
+      if (activeId == null || pendingProposal != null) return
+      setPendingProposal(proposal.id)
+      setStreamError(null)
+      try {
+        const res = await confirmWorkspaceAction(activeId, proposal.id)
+        updateProposal(res.proposal)
+        if (res.message) {
+          setLiveMessages((prev) => [
+            ...prev,
+            {
+              id: res.message!.id,
+              role: "assistant",
+              content: res.message!.content,
+              citations:
+                (res.message!.citations as WorkspaceCitation[] | null) ?? null,
+            },
+          ])
+        }
+        void queryClient.invalidateQueries({
+          queryKey: getGetWorkspaceConversationQueryKey(activeId),
+        })
+      } catch (err) {
+        setStreamError(
+          err instanceof Error ? err.message : "The action could not be completed.",
+        )
+      } finally {
+        setPendingProposal(null)
+      }
+    },
+    [activeId, pendingProposal, queryClient, updateProposal],
+  )
+
+  const cancelProposal = React.useCallback(
+    async (proposal: WorkspaceProposedAction) => {
+      if (activeId == null || pendingProposal != null) return
+      setPendingProposal(proposal.id)
+      try {
+        const res = await cancelWorkspaceAction(activeId, proposal.id)
+        updateProposal(res.proposal)
+      } catch (err) {
+        setStreamError(
+          err instanceof Error ? err.message : "Could not cancel the action.",
+        )
+      } finally {
+        setPendingProposal(null)
+      }
+    },
+    [activeId, pendingProposal, updateProposal],
+  )
 
   const goTo = (href: string) => navigate(href)
 
@@ -745,6 +837,69 @@ export default function AiWorkspacePage() {
                             )
                           })}
                         </div>
+                      </div>
+                    )}
+                    {m.proposedActions && m.proposedActions.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {m.proposedActions.map((p) => (
+                          <div
+                            key={p.id}
+                            className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5 text-foreground"
+                          >
+                            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                              <Sparkles className="h-3.5 w-3.5" />
+                              Confirm action
+                            </p>
+                            <p className="mt-1 text-sm">{p.summary}</p>
+                            {p.status === "pending" ? (
+                              <div className="mt-2.5 flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="h-8"
+                                  disabled={pendingProposal != null}
+                                  onClick={() => confirmProposal(p)}
+                                >
+                                  {pendingProposal === p.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    "Confirm"
+                                  )}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8"
+                                  disabled={pendingProposal != null}
+                                  onClick={() => cancelProposal(p)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <p
+                                className={cn(
+                                  "mt-2 flex items-center gap-1.5 text-xs font-medium",
+                                  p.status === "executed"
+                                    ? "text-emerald-700"
+                                    : p.status === "failed"
+                                      ? "text-destructive"
+                                      : "text-muted-foreground",
+                                )}
+                              >
+                                {p.status === "executing" && (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                )}
+                                {p.status === "executed"
+                                  ? "Confirmed and completed."
+                                  : p.status === "cancelled"
+                                    ? "Cancelled."
+                                    : p.status === "executing"
+                                      ? "Running…"
+                                      : "This action could not be completed."}
+                              </p>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                     {m.suggestions && m.suggestions.length > 0 && (

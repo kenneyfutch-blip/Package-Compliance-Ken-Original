@@ -3,13 +3,15 @@ import {
   db,
   aiConversationsTable,
   aiConversationMessagesTable,
+  workspaceActionProposalsTable,
   packagesTable,
   reportsTable,
   reviewTasksTable,
   type AiConversationRow,
   type AiConversationMessageRow,
+  type WorkspaceActionProposalRow,
 } from "@workspace/db";
-import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { orgId, getAuthContext } from "../lib/rbac/context";
 import { parsePagination } from "../lib/pagination";
 import { writeAudit } from "../lib/audit";
@@ -18,6 +20,7 @@ import {
   type WorkspacePageContext,
 } from "../lib/ai";
 import { runWorkspaceAgent } from "../lib/workspace/agent";
+import { findAction, callerMayRunAction } from "../lib/workspace/actions";
 import { listSpecialists, isSpecialistKey } from "../lib/specialists";
 import { logger } from "../lib/logger";
 
@@ -180,6 +183,20 @@ function mapMessage(row: AiConversationMessageRow) {
         }))
       : null,
     citations: (row.citations as unknown) ?? null,
+    createdAt: iso(row.createdAt)!,
+  };
+}
+
+function mapProposal(row: WorkspaceActionProposalRow) {
+  return {
+    id: row.id,
+    conversationId: row.conversationId,
+    messageId: row.messageId ?? null,
+    actionName: row.actionName,
+    summary: row.summary,
+    status: row.status,
+    resultRef: (row.resultRef as unknown) ?? null,
+    resultText: row.resultText ?? null,
     createdAt: iso(row.createdAt)!,
   };
 }
@@ -367,9 +384,27 @@ router.get(
       .where(eq(aiConversationMessagesTable.conversationId, id))
       .orderBy(aiConversationMessagesTable.createdAt);
 
+    // Attach any action proposals to the assistant message that surfaced them,
+    // so a reload re-renders pending confirm cards (and executed/cancelled ones).
+    const proposalRows = await db
+      .select()
+      .from(workspaceActionProposalsTable)
+      .where(eq(workspaceActionProposalsTable.conversationId, id))
+      .orderBy(workspaceActionProposalsTable.id);
+    const byMessage = new Map<number, ReturnType<typeof mapProposal>[]>();
+    for (const p of proposalRows) {
+      if (p.messageId == null) continue;
+      const list = byMessage.get(p.messageId) ?? [];
+      list.push(mapProposal(p));
+      byMessage.set(p.messageId, list);
+    }
+
     res.json({
       ...mapConversation(conv),
-      messages: messages.map(mapMessage),
+      messages: messages.map((m) => ({
+        ...mapMessage(m),
+        proposedActions: byMessage.get(m.id) ?? null,
+      })),
     });
   },
 );
@@ -546,7 +581,7 @@ router.post(
 
     let full = "";
     try {
-      const { citations } = await runWorkspaceAgent({
+      const { citations, proposals } = await runWorkspaceAgent({
         req,
         organizationId,
         userId,
@@ -567,20 +602,49 @@ router.post(
       // Surface grounded source links to the client before completion.
       if (citations.length) send("citations", { citations });
 
-      // Persist the assistant turn (with its citations) and bump the timestamp.
-      if (full) {
-        await db.insert(aiConversationMessagesTable).values({
-          conversationId: id,
-          organizationId,
-          role: "assistant",
-          content: full,
-          citations: citations.length ? citations : null,
+      // Persist the assistant turn (with its citations) AND any proposed
+      // state-changing actions atomically, so history and its confirm cards can
+      // never end up out of sync (e.g. assistant text saved but a proposal lost).
+      // The proposal rows are authoritative: the confirm endpoint re-derives the
+      // action + params from them, never from the client. SSE events are emitted
+      // only AFTER the transaction commits.
+      const proposalRows: WorkspaceActionProposalRow[] = [];
+      if (full || proposals.length) {
+        await db.transaction(async (tx) => {
+          const [assistant] = await tx
+            .insert(aiConversationMessagesTable)
+            .values({
+              conversationId: id,
+              organizationId,
+              role: "assistant",
+              content: full,
+              citations: citations.length ? citations : null,
+            })
+            .returning({ id: aiConversationMessagesTable.id });
+          const assistantMessageId = assistant?.id ?? null;
+          for (const p of proposals) {
+            const [row] = await tx
+              .insert(workspaceActionProposalsTable)
+              .values({
+                conversationId: id,
+                organizationId,
+                userId,
+                messageId: assistantMessageId,
+                actionName: p.actionName,
+                params: p.params,
+                summary: p.summary,
+                status: "pending",
+              })
+              .returning();
+            if (row) proposalRows.push(row);
+          }
+          await tx
+            .update(aiConversationsTable)
+            .set({ updatedAt: new Date() })
+            .where(eq(aiConversationsTable.id, id));
         });
       }
-      await db
-        .update(aiConversationsTable)
-        .set({ updatedAt: new Date() })
-        .where(eq(aiConversationsTable.id, id));
+      for (const row of proposalRows) send("proposed_action", mapProposal(row));
 
       send("done", { ok: true });
       res.end();
@@ -605,6 +669,209 @@ router.post(
       send("error", { error: "The assistant is unavailable. Please retry." });
       res.end();
     }
+  },
+);
+
+// Owner + org + conversation scope for a proposal, so it can never be confirmed
+// or cancelled by anyone but its creator, in its own organization.
+function proposalOwnerConds(req: Request, conversationId: number, proposalId: number) {
+  const { userId } = getAuthContext(req);
+  return and(
+    eq(workspaceActionProposalsTable.id, proposalId),
+    eq(workspaceActionProposalsTable.conversationId, conversationId),
+    eq(workspaceActionProposalsTable.organizationId, orgId(req)),
+    eq(workspaceActionProposalsTable.userId, userId),
+  );
+}
+
+// Load a proposal the caller owns (any status), or null.
+async function loadOwnedProposal(
+  req: Request,
+  conversationId: number,
+  proposalId: number,
+): Promise<WorkspaceActionProposalRow | null> {
+  const [row] = await db
+    .select()
+    .from(workspaceActionProposalsTable)
+    .where(proposalOwnerConds(req, conversationId, proposalId))
+    .limit(1);
+  return row ?? null;
+}
+
+// Atomically transition a proposal from `pending` to `next` in a single guarded
+// UPDATE, returning the row only to the caller that won the race. This is the
+// idempotency + anti-double-execution guard: two concurrent confirms (or a
+// confirm racing a cancel) both filter on status='pending', so exactly one
+// UPDATE matches and the loser gets no row (→ 409). It replaces a
+// read-then-write check that a double-click could slip through.
+async function claimPendingProposal(
+  req: Request,
+  conversationId: number,
+  proposalId: number,
+  next: "executing" | "cancelled",
+  extra: Partial<typeof workspaceActionProposalsTable.$inferInsert> = {},
+): Promise<WorkspaceActionProposalRow | null> {
+  const [row] = await db
+    .update(workspaceActionProposalsTable)
+    .set({ status: next, decidedAt: new Date(), ...extra })
+    .where(
+      and(
+        proposalOwnerConds(req, conversationId, proposalId),
+        eq(workspaceActionProposalsTable.status, "pending"),
+      ),
+    )
+    .returning();
+  return row ?? null;
+}
+
+// POST /workspace/conversations/:id/actions/:proposalId/confirm — execute a
+// previously PROPOSED state-changing action. Security invariants:
+//   * The action name + parameters are read from the persisted proposal, never
+//     from the request body, so a client cannot forge or tamper with them.
+//   * Permissions are RE-VALIDATED here (defense in depth) — the caller must
+//     still hold every required permission and not be a supplier for an
+//     internal-only action, regardless of what was offered during the stream.
+//   * Only a pending proposal can be confirmed; the status guard makes confirm
+//     idempotent (a double-click can't run the action twice).
+//   * The underlying service writes the audit trail; execution is org/tenant
+//     scoped inside the action itself.
+router.post(
+  "/workspace/conversations/:id/actions/:proposalId/confirm",
+  async (req: Request, res: Response): Promise<void> => {
+    const id = parseId(req.params["id"]);
+    const proposalId = parseId(req.params["proposalId"]);
+    if (!Number.isFinite(id) || !Number.isFinite(proposalId)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const conv = await loadOwnedConversation(req, id);
+    if (!conv) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+    const proposal = await loadOwnedProposal(req, id, proposalId);
+    if (!proposal) {
+      res.status(404).json({ error: "Proposal not found" });
+      return;
+    }
+    if (proposal.status !== "pending") {
+      res.status(409).json({ error: `Proposal already ${proposal.status}` });
+      return;
+    }
+
+    const action = findAction(proposal.actionName);
+    if (!action || !action.sensitive) {
+      res.status(400).json({ error: "Unknown or non-confirmable action" });
+      return;
+    }
+    // Defense in depth: re-check permission + supplier gate NOW.
+    if (!callerMayRunAction(req, action)) {
+      res.status(403).json({ error: "You do not have permission to run this action" });
+      return;
+    }
+
+    // Atomically claim the proposal (pending → executing) BEFORE executing, so
+    // only one of N concurrent confirms can ever run the action. The loser sees
+    // no claimed row and returns 409 — the action never double-fires.
+    const claimed = await claimPendingProposal(req, id, proposalId, "executing");
+    if (!claimed) {
+      res.status(409).json({ error: "Proposal already being processed or decided" });
+      return;
+    }
+
+    const organizationId = orgId(req);
+    const params = (proposal.params ?? {}) as Record<string, unknown>;
+    let result: Awaited<ReturnType<typeof action.execute>>;
+    try {
+      result = await action.execute(req, params);
+    } catch (err) {
+      logger.error({ err, proposalId }, "Workspace action execution failed");
+      await db
+        .update(workspaceActionProposalsTable)
+        .set({
+          status: "failed",
+          error: err instanceof Error ? err.message : String(err),
+          decidedAt: new Date(),
+        })
+        .where(eq(workspaceActionProposalsTable.id, proposalId));
+      res.status(502).json({ error: "The action could not be completed." });
+      return;
+    }
+
+    // The action (and its audit trail) has now committed. Record the terminal
+    // status; a post-execution write failure here must NOT flip the proposal
+    // back to failed (the side effect already happened) — the service functions
+    // use the module-level db handle and cannot join a single transaction, so we
+    // finalize state-first and treat the result-message insert as best-effort.
+    const [updated] = await db
+      .update(workspaceActionProposalsTable)
+      .set({
+        status: "executed",
+        resultRef: result.recordRef ?? null,
+        resultText: result.resultText,
+        decidedAt: new Date(),
+      })
+      .where(eq(workspaceActionProposalsTable.id, proposalId))
+      .returning();
+
+    // Reflect the result back into the conversation as an assistant turn so
+    // history stays coherent and the created/updated record is linked.
+    let message: AiConversationMessageRow | null = null;
+    try {
+      const [row] = await db
+        .insert(aiConversationMessagesTable)
+        .values({
+          conversationId: id,
+          organizationId,
+          role: "assistant",
+          content: result.resultText,
+          citations: result.citations.length ? result.citations : null,
+        })
+        .returning();
+      message = row ?? null;
+      await db
+        .update(aiConversationsTable)
+        .set({ updatedAt: new Date() })
+        .where(eq(aiConversationsTable.id, id));
+    } catch (err) {
+      logger.warn({ err, proposalId }, "Workspace action result message insert failed");
+    }
+
+    res.json({
+      proposal: mapProposal(updated ?? claimed),
+      message: message ? mapMessage(message) : null,
+    });
+  },
+);
+
+// POST /workspace/conversations/:id/actions/:proposalId/cancel — decline a
+// proposed action. Owner-scoped; only a pending proposal can be cancelled.
+router.post(
+  "/workspace/conversations/:id/actions/:proposalId/cancel",
+  async (req: Request, res: Response): Promise<void> => {
+    const id = parseId(req.params["id"]);
+    const proposalId = parseId(req.params["proposalId"]);
+    if (!Number.isFinite(id) || !Number.isFinite(proposalId)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const conv = await loadOwnedConversation(req, id);
+    if (!conv) {
+      res.status(404).json({ error: "Conversation not found" });
+      return;
+    }
+    const proposal = await loadOwnedProposal(req, id, proposalId);
+    if (!proposal) {
+      res.status(404).json({ error: "Proposal not found" });
+      return;
+    }
+    // Atomic guarded transition; a confirm racing this cancel can't both win.
+    const updated = await claimPendingProposal(req, id, proposalId, "cancelled");
+    if (!updated) {
+      res.status(409).json({ error: `Proposal already ${proposal.status}` });
+      return;
+    }
+    res.json({ proposal: mapProposal(updated) });
   },
 );
 

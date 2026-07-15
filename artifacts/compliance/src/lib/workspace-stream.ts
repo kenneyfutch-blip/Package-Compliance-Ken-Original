@@ -24,12 +24,28 @@ export type WorkspaceCitation = {
   href?: string | null;
 };
 
+// A state-changing action the assistant has PROPOSED and the user must confirm
+// before it runs. Mirrors the server's mapProposal shape.
+export type WorkspaceProposedAction = {
+  id: number;
+  conversationId: number;
+  messageId: number | null;
+  actionName: string;
+  summary: string;
+  status: "pending" | "executing" | "executed" | "cancelled" | "failed";
+  resultRef?: WorkspaceCitation | null;
+  resultText?: string | null;
+  createdAt: string;
+};
+
 export type StreamHandlers = {
   onDelta: (text: string) => void;
   // A tool-activity status update (e.g. "Searching packages").
   onStatus?: (info: { tool: string; label: string }) => void;
   // Grounded citations for the turn (fires at most once, before onDone).
   onCitations?: (citations: WorkspaceCitation[]) => void;
+  // A proposed state-changing action awaiting the user's confirmation.
+  onProposedAction?: (proposal: WorkspaceProposedAction) => void;
   onDone?: () => void;
   onError?: (message: string) => void;
 };
@@ -117,6 +133,9 @@ export function streamWorkspaceMessage(
         } else if (event === "citations") {
           const list = (payload as { citations?: WorkspaceCitation[] })?.citations;
           if (Array.isArray(list) && list.length) handlers.onCitations?.(list);
+        } else if (event === "proposed_action") {
+          const p = payload as WorkspaceProposedAction;
+          if (p && typeof p.id === "number") handlers.onProposedAction?.(p);
         } else if (event === "done") {
           finishDone();
         } else if (event === "error") {
@@ -150,4 +169,50 @@ export function streamWorkspaceMessage(
   })();
 
   return () => controller.abort();
+}
+
+export type ConfirmActionResult = {
+  proposal: WorkspaceProposedAction;
+  message: {
+    id: number;
+    role: string;
+    content: string;
+    citations?: WorkspaceCitation[] | null;
+  } | null;
+};
+
+/**
+ * Confirm a proposed state-changing action. The server re-derives the action
+ * and parameters from the persisted proposal (never the client), re-checks
+ * permissions, executes via existing service logic, and appends a result turn.
+ */
+export async function confirmWorkspaceAction(
+  conversationId: number,
+  proposalId: number,
+): Promise<ConfirmActionResult> {
+  const res = await fetch(
+    `${API_BASE}/workspace/conversations/${conversationId}/actions/${proposalId}/confirm`,
+    { method: "POST", credentials: "include" },
+  );
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? "The action could not be completed.");
+  }
+  return (await res.json()) as ConfirmActionResult;
+}
+
+/** Decline a proposed action. */
+export async function cancelWorkspaceAction(
+  conversationId: number,
+  proposalId: number,
+): Promise<{ proposal: WorkspaceProposedAction }> {
+  const res = await fetch(
+    `${API_BASE}/workspace/conversations/${conversationId}/actions/${proposalId}/cancel`,
+    { method: "POST", credentials: "include" },
+  );
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? "Could not cancel the action.");
+  }
+  return (await res.json()) as { proposal: WorkspaceProposedAction };
 }

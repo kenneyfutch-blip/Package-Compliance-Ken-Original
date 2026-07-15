@@ -67,3 +67,44 @@ non-tenant reference material (internal regulations, live eCFR, FDA recalls).
 ## Rate limiting
 The workspace stream path must be listed in the AI POST-paths regex in
 `middlewares/rateLimit.ts` or streamed AI turns bypass the AI rate limiter.
+
+## Phase 3 — actions with confirmation
+The Workspace can now PROPOSE and, on explicit user approval, INITIATE platform
+actions. Action registry lives in `.../workspace/actions.ts`, alongside the
+read-tool registry it mirrors. Actions reuse EXISTING service functions
+(assignReview/autoAssignReview, escalateReviewNow, compareVersions, DAO inserts +
+writeAudit) — no new business logic, no privilege/tenant bypass.
+
+**Confirmation via tool-call-as-proposal.** Sensitive actions are registered as
+model-callable tools, but calling one during the stream does NOT execute it: the
+agent runs `action.summarize()` (validates args + resolves human names, org/tenant
+scoped), records a proposal, and feeds the model a "surfaced for confirmation,
+awaiting decision" tool result so it never claims the action is done. A
+`proposed_action` SSE event surfaces a confirm card. Non-sensitive (read-only/
+derived) actions execute inline like read tools.
+**Why:** state-changing ops must never fire from a model turn alone; the human is
+the gate. Modeling the proposal as a tool result keeps the streaming loop's
+tool_call/tool_response lockstep intact.
+
+**Authoritative proposal row.** `workspace_action_proposals` (own dedicated table,
+NOT inline message jsonb) is the source of truth. The confirm endpoint re-derives
+action name + params FROM THE ROW, never the client body — so params cannot be
+forged/tampered after proposal. Status pending→executed|cancelled|failed makes
+confirm idempotent (double-click can't run twice).
+
+**Three security invariants (all enforced in code, not prompt):**
+1. Every state-changing action is `sensitive:true` AND `supplierSafe:false`
+   (internal-only) — a supplier is never offered nor allowed one.
+2. Confirm re-validates perms + supplier gate via `callerMayRunAction(req, action)`
+   independently of what was offered mid-stream (defense in depth).
+3. Proposal load is scoped by conversation + org + owner; only the owner can
+   confirm/cancel their own pending proposal.
+Coverage is unit tests (`actions.authz.test.ts`) — seed has no supplier_user rows,
+so supplier isolation can't be curl-tested.
+
+**Confirm/cancel endpoints** are plain JSON POSTs kept OUT of the OpenAPI/orval
+codegen (like the stream endpoint) — the client calls them via fetch in
+`workspace-stream.ts`. Reflect a successful action back as an assistant result
+message with a record link + citation. Derived AI outputs
+(draft_approval_notes/prepare_executive_summary) reuse the `copilot` telemetry
+workload (no new AiWorkload member needed).
