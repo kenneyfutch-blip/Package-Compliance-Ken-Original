@@ -518,9 +518,9 @@ router.patch(
         ...(d.title !== undefined ? { title: d.title } : {}),
         ...(d.description !== undefined ? { description: d.description } : {}),
         ...(d.assignedRole !== undefined
-          ? { assignedRole: d.assignedRole }
+          ? { assignedRole: d.assignedRole || null }
           : {}),
-        ...(d.assignee !== undefined ? { assignee: d.assignee } : {}),
+        ...(d.assignee !== undefined ? { assignee: d.assignee || null } : {}),
         ...(d.dueDate !== undefined ? { dueDate: d.dueDate } : {}),
         ...(d.priority !== undefined ? { priority: d.priority } : {}),
         ...(d.status !== undefined ? { status: d.status } : {}),

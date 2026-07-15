@@ -9,7 +9,7 @@ import {
   useGetLanguageReview, useRunLanguageReview, getGetLanguageReviewQueryKey,
   useGetClaimsAnalysis, useRunClaimsAnalysis, getGetClaimsAnalysisQueryKey,
   useCreatePackageVersion, useExtractArtworkText, useRestorePackageVersion,
-  useGetPackageAssignment, getGetPackageAssignmentQueryKey,
+  useGetPackageAssignment, getGetPackageAssignmentQueryKey, useListSpecialists,
   useGetDocumentAiStatus,
   useDismissViolation, useRestoreViolation,
   type PackageDetail, type Annotation as ApiAnnotation, type Violation as ApiViolation,
@@ -45,7 +45,7 @@ import { RegulationRef } from "@/components/regulation-ref"
 import { FdaIntelligenceTab } from "@/components/fda-intelligence-tab"
 import { EcfrRegulationsTab } from "@/components/ecfr-regulations-tab"
 import {
-  type MarkupTool, findingClassMeta, priorityMeta, REVIEWERS,
+  type MarkupTool, findingClassMeta, priorityMeta,
   extractMentions, relativeTime, HUMAN_MARKUP_COLOR, fileTypeFromName, servingUrl,
   downloadProof,
 } from "@/lib/proof-utils"
@@ -1099,11 +1099,20 @@ function highlightMentions(text: string): React.ReactNode {
 // ---------------------------------------------------------------------------
 // Tasks
 // ---------------------------------------------------------------------------
+// Sentinel for the "no specialist" option — radix Select forbids an empty-string
+// value, so we map it to `assignee: ""` (unassigned) at the API boundary.
+const UNASSIGNED = "__unassigned__"
+
 function TasksPanel({ pkg, packageId, onChange }: { pkg: Pkg; packageId: number; onChange: () => void }) {
   const create = useCreateReviewTask()
   const update = useUpdateReviewTask()
+  // Route tasks to real specialists from the Specialist Directory. A task's
+  // `assignee` is free text, so a specialist does NOT need to be linked to a
+  // login account (unlike package ownership via /reviews/assignable).
+  const { data: specialists } = useListSpecialists()
+  const specialistRoster = (specialists ?? []).filter((s) => s.status === "active")
   const [title, setTitle] = React.useState("")
-  const [assignee, setAssignee] = React.useState(REVIEWERS[0])
+  const [assignee, setAssignee] = React.useState<string>(UNASSIGNED)
   const [priority, setPriority] = React.useState("medium")
 
   const statusMeta: Record<string, { label: string; badge: string }> = {
@@ -1113,35 +1122,72 @@ function TasksPanel({ pkg, packageId, onChange }: { pkg: Pkg; packageId: number;
   }
   const nextStatus = (s: string) => (s === "open" ? "in_progress" : s === "in_progress" ? "done" : "open")
 
+  const specialistItems = specialistRoster.map((s) => (
+    <SelectItem key={s.id} value={s.name}>{s.name}{s.role ? ` — ${s.role}` : ""}</SelectItem>
+  ))
+  const noSpecialists = specialistRoster.length === 0
+
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-border p-3 space-y-2 bg-accent/20">
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New review task…" className="h-9" />
         <div className="flex gap-2">
-          <Select value={assignee} onValueChange={setAssignee}><SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
-            <SelectContent>{REVIEWERS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+          <Select value={assignee} onValueChange={setAssignee}>
+            <SelectTrigger className="h-8 text-xs flex-1"><SelectValue placeholder="Send to specialist…" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+              {specialistItems}
+            </SelectContent>
+          </Select>
           <Select value={priority} onValueChange={setPriority}><SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
             <SelectContent>{["critical", "high", "medium", "low"].map((p) => <SelectItem key={p} value={p}>{priorityMeta(p).label}</SelectItem>)}</SelectContent></Select>
           <Button size="sm" className="h-8 gap-1" disabled={!title.trim() || create.isPending}
-            onClick={() => create.mutate({ id: packageId, data: { title, assignee, priority } }, { onSuccess: () => { setTitle(""); onChange() } })}>
+            onClick={() => create.mutate(
+              { id: packageId, data: { title, assignee: assignee === UNASSIGNED ? undefined : assignee, priority } },
+              { onSuccess: () => { setTitle(""); setAssignee(UNASSIGNED); onChange() } })}>
             <Plus className="w-4 h-4" />
           </Button>
         </div>
+        {noSpecialists && (
+          <p className="text-[11px] text-muted-foreground">
+            No active specialists found. Add them in Operations → Specialists to route tasks.
+          </p>
+        )}
       </div>
       {pkg.tasks.length === 0 ? (
         <div className="text-center py-10 text-muted-foreground text-sm"><ClipboardList className="w-10 h-10 mx-auto mb-2 opacity-30" />No tasks yet.</div>
       ) : pkg.tasks.map((t: Task) => {
         const sm = statusMeta[t.status] ?? statusMeta.open
+        // Treat empty string as unassigned. Keep an off-roster assignee selectable
+        // so the picker always reflects reality (e.g. a former reviewer).
+        const currentAssignee = t.assignee || undefined
+        const offRoster = !!currentAssignee && !specialistRoster.some((s) => s.name === currentAssignee)
         return (
-          <div key={t.id} className={cn("rounded-lg border border-border p-3 space-y-1", t.status === "done" && "opacity-60")}>
+          <div key={t.id} className={cn("rounded-lg border border-border p-3 space-y-2", t.status === "done" && "opacity-60")}>
             <div className="flex items-start justify-between gap-2">
               <span className="text-sm font-medium">{t.title}</span>
               <Badge variant="outline" className={cn("text-[10px] shrink-0", priorityMeta(t.priority).badge)}>{priorityMeta(t.priority).label}</Badge>
             </div>
             {t.description && <p className="text-xs text-muted-foreground">{t.description}</p>}
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-[10px] text-muted-foreground">{t.assignedRole ?? t.assignee ?? "Unassigned"}{t.source === "ai" ? " • AI" : ""}</span>
-              <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => update.mutate({ id: t.id, data: { status: nextStatus(t.status) } }, { onSuccess: onChange })}>
+            {!currentAssignee && t.assignedRole && (
+              <p className="text-[10px] text-muted-foreground">Suggested: {t.assignedRole}{t.source === "ai" ? " • AI" : ""}</p>
+            )}
+            <div className="flex items-center justify-between gap-2 pt-1">
+              <Select
+                value={currentAssignee ?? UNASSIGNED}
+                disabled={update.isPending}
+                onValueChange={(v) => update.mutate(
+                  { id: t.id, data: { assignee: v === UNASSIGNED ? "" : v } },
+                  { onSuccess: onChange })}
+              >
+                <SelectTrigger className="h-7 text-xs flex-1"><SelectValue placeholder="Send to specialist…" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                  {offRoster && <SelectItem value={currentAssignee}>{currentAssignee} (not in directory)</SelectItem>}
+                  {specialistItems}
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant="ghost" className="h-7 text-xs shrink-0" onClick={() => update.mutate({ id: t.id, data: { status: nextStatus(t.status) } }, { onSuccess: onChange })}>
                 <Badge variant="outline" className={cn("text-[10px]", sm.badge)}>{sm.label}</Badge>
               </Button>
             </div>

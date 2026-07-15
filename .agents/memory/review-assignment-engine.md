@@ -103,3 +103,18 @@ gate, or the UI silently breaks for exactly the roles meant to use it.
 non-supplier) identical on BOTH the read endpoint and the write-side validation in
 `POST /packages/:id/assign` + `/reviews/bulk-assign` — else forged IDs can assign
 inactive/supplier users the picker hides.
+
+## Review TASK routing ≠ package assignment (free-text assignee)
+- A review task's `review_tasks.assignee` is a nullable TEXT column (not a user FK),
+  so the Tasks tab picker routes to specialists BY NAME from the full Specialist
+  Directory (`useListSpecialists` / GET /api/specialists, gated `specialists:read`).
+- Do NOT use `/reviews/assignable` (useListAssignableReviewers) for task routing:
+  that roster only returns specialists LINKED to an active login user, and in the
+  demo org that set is empty (specialists have userId=null) → picker looks broken.
+  `/reviews/assignable` is for package OWNERSHIP (assignments reference user ids).
+- **Why:** two different models — package assignment needs a real user id; a task
+  assignee is just a display/routing label, so login linkage isn't required.
+- PATCH /tasks/:id normalizes empty-string assignee/assignedRole → null (UI sends
+  "" to unassign). AI tasks carry `assignedRole` + null assignee; UI shows
+  "Suggested: <role>" until a human routes it. Residual risk: duplicate specialist
+  names collide (name is the picker value).
