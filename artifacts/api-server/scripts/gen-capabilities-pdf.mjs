@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 
 // ---- Content ----------------------------------------------------------------
 const TITLE = "Packaging Compliance AI";
@@ -197,6 +197,19 @@ page.drawText(SUBTITLE, { x: MARGIN, y: PAGE_H - 92, size: 13, font, color: GREE
 page.drawText("Project portfolio summary", {
   x: MARGIN, y: PAGE_H - 114, size: 10, font, color: GREEN,
 });
+
+// Dollar Tree logo, right-aligned in the header band (its own black bg blends
+// seamlessly with the black header).
+const logoImg = await doc.embedPng(readFileSync("attached_assets/dt-logo-2.png"));
+const LOGO_H = 72;
+const LOGO_W = (logoImg.width / logoImg.height) * LOGO_H;
+page.drawImage(logoImg, {
+  x: PAGE_W - MARGIN - LOGO_W,
+  y: PAGE_H - 66 - LOGO_H / 2,
+  width: LOGO_W,
+  height: LOGO_H,
+});
+
 y = PAGE_H - 132 - 28;
 
 // Intro
