@@ -18,3 +18,9 @@ id = "fcQB4Y6C3mlTe8dS-li9i"
 uri = "file://attached_assets/Packaging-Compliance-AI-Architecture.pdf"
 type = "pdf"
 title = "Packaging Compliance AI — Architecture & Wiring Diagram"
+
+[[outputs]]
+id = "FPVJO5LECpXoxp3rA_jGx"
+uri = "file://docs/sentinel-ai-workspace-build-spec.md"
+type = "text"
+title = "AI Workspace — Full Build & Capabilities Spec (for Sentinel)"
