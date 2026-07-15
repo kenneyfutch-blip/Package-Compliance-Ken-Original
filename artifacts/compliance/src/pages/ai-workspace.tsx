@@ -530,18 +530,20 @@ export default function AiWorkspacePage() {
   const body = (
     <div
       className={cn(
-        "flex overflow-hidden rounded-xl border bg-card",
+        "flex overflow-hidden rounded-xl border bg-card shadow-sm",
         isOverlay ? "fixed inset-0 z-50 rounded-none border-0" : "h-[calc(100vh-9rem)]",
       )}
     >
       {/* Conversation history sidebar */}
       <aside className="hidden w-72 shrink-0 flex-col border-r bg-muted/30 md:flex">
-        <div className="flex items-center justify-between gap-2 border-b p-3">
+        <div className="flex items-center justify-between gap-2 border-b px-3 py-3.5">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold">AI Workspace</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+              <Sparkles className="h-4 w-4" />
+            </span>
+            <span className="text-sm font-semibold tracking-tight">AI Workspace</span>
           </div>
-          <Button size="sm" variant="outline" className="gap-1" onClick={startNew}>
+          <Button size="sm" variant="outline" className="h-8 gap-1" onClick={startNew}>
             <Plus className="h-3.5 w-3.5" /> New
           </Button>
         </div>
@@ -583,9 +585,9 @@ export default function AiWorkspacePage() {
               <div
                 key={c.id}
                 className={cn(
-                  "group flex items-center gap-1 rounded-md px-2 py-2 text-sm transition-colors",
+                  "group flex items-center gap-1 rounded-lg px-2 py-2 text-sm transition-colors",
                   c.id === activeId
-                    ? "bg-primary/10 text-foreground"
+                    ? "bg-primary/10 text-foreground ring-1 ring-primary/15"
                     : "hover:bg-muted",
                 )}
               >
@@ -675,8 +677,8 @@ export default function AiWorkspacePage() {
       {/* Main chat column */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Toolbar: specialist switcher + mode controls */}
-        <div className="flex items-center justify-between gap-2 border-b p-3">
-          <div className="flex min-w-0 items-center gap-2 overflow-x-auto">
+        <div className="flex items-center justify-between gap-3 border-b px-3 py-2.5">
+          <div className="flex min-w-0 items-center gap-1 overflow-x-auto pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {specialists.map((s) => (
               <button
                 key={s.key}
@@ -684,10 +686,10 @@ export default function AiWorkspacePage() {
                 onClick={() => persistSpecialist(s.key)}
                 title={s.description}
                 className={cn(
-                  "shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
                   s.key === specialist
-                    ? "border-primary bg-primary/10 text-primary"
-                    : "border-transparent bg-muted text-muted-foreground hover:text-foreground",
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
                 {s.label}
@@ -734,46 +736,56 @@ export default function AiWorkspacePage() {
         </div>
 
         {/* Transcript */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6">
           {liveMessages.length === 0 ? (
             <div className="mx-auto flex h-full max-w-2xl flex-col justify-center">
-              <h2 className="text-2xl font-semibold">
+              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              <h2 className="text-2xl font-semibold tracking-tight">
                 {activeSpecialist?.label ?? "AI Workspace"}
               </h2>
-              <p className="mt-1 text-muted-foreground">
+              <p className="mt-1.5 text-muted-foreground">
                 {activeSpecialist?.description ??
                   "Ask a compliance question or describe what you're trying to do."}
               </p>
-              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+              <div className="mt-6 grid gap-2 sm:grid-cols-2">
                 {(activeSpecialist?.suggestedPrompts ?? []).map((p) => (
                   <button
                     key={p}
                     type="button"
                     onClick={() => send(p)}
-                    className="flex items-center justify-between gap-2 rounded-lg border bg-card px-3.5 py-2.5 text-left text-sm hover:bg-muted transition-colors"
+                    className="group flex items-center justify-between gap-2 rounded-xl border bg-card px-3.5 py-3 text-left text-sm shadow-sm transition-all hover:border-primary/30 hover:bg-primary/5"
                   >
                     <span>{p}</span>
-                    <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
                   </button>
                 ))}
               </div>
             </div>
           ) : (
-            <div className="mx-auto max-w-3xl space-y-4">
-              {liveMessages.map((m, i) => (
+            <div className="mx-auto max-w-3xl space-y-6">
+              {liveMessages.map((m, i) => {
+                const isUser = m.role === "user"
+                return (
                 <div
                   key={m.id ?? `live-${i}`}
                   className={cn(
-                    "flex",
-                    m.role === "user" ? "justify-end" : "justify-start",
+                    "flex gap-3",
+                    isUser ? "justify-end" : "justify-start",
                   )}
                 >
+                  {!isUser && (
+                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
+                      <Sparkles className="h-3.5 w-3.5" />
+                    </div>
+                  )}
                   <div
                     className={cn(
-                      "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
-                      m.role === "user"
-                        ? "rounded-br-sm bg-primary text-primary-foreground"
-                        : "rounded-bl-sm bg-muted text-foreground",
+                      "min-w-0 text-sm leading-relaxed",
+                      isUser
+                        ? "max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-primary-foreground shadow-sm"
+                        : "max-w-[calc(100%-2.5rem)] flex-1 pt-0.5 text-foreground",
                     )}
                   >
                     {m.attachmentNames && m.attachmentNames.length > 0 && (
@@ -926,7 +938,8 @@ export default function AiWorkspacePage() {
                     )}
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -979,7 +992,7 @@ export default function AiWorkspacePage() {
               e.preventDefault()
               void send(input)
             }}
-            className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border bg-background p-2"
+            className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border bg-background p-2 shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10"
           >
             <Button
               type="button"
