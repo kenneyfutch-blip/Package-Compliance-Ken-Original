@@ -7,6 +7,7 @@ import {
   useGetWorkspaceConversation,
   useUpdateWorkspaceConversation,
   useDeleteWorkspaceConversation,
+  useAssistantExtract,
   getListWorkspaceConversationsQueryKey,
   getGetWorkspaceConversationQueryKey,
 } from "@workspace/api-client-react"
@@ -21,7 +22,16 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { usePageContext } from "@/lib/workspace-context"
-import { streamWorkspaceMessage } from "@/lib/workspace-stream"
+import {
+  streamWorkspaceMessage,
+  type WorkspaceCitation,
+  type WorkspaceAttachmentPayload,
+} from "@/lib/workspace-stream"
+import {
+  extractAttachmentText,
+  ATTACHMENT_ACCEPT,
+  type RunOcr,
+} from "@/lib/attachment-extract"
 import {
   Sparkles,
   Plus,
@@ -37,6 +47,8 @@ import {
   MessageSquare,
   Loader2,
   FileText,
+  Paperclip,
+  Link2,
 } from "lucide-react"
 
 // A locally-tracked message (persisted messages plus the in-flight streaming
@@ -46,8 +58,15 @@ type LocalMessage = {
   role: "user" | "assistant"
   content: string
   suggestions?: AssistantToolSuggestion[] | null
+  citations?: WorkspaceCitation[] | null
+  attachmentNames?: string[] | null
+  // Transient tool-activity label shown while the turn is still streaming.
+  status?: string | null
   streaming?: boolean
 }
+
+// A staged attachment (already extracted to text) awaiting the next send.
+type StagedAttachment = { name: string; text: string }
 
 type ViewMode = "chat" | "fullscreen" | "split"
 
@@ -70,8 +89,47 @@ export default function AiWorkspacePage() {
   const [liveMessages, setLiveMessages] = React.useState<LocalMessage[]>([])
   const [streaming, setStreaming] = React.useState(false)
   const [streamError, setStreamError] = React.useState<string | null>(null)
+  const [attachments, setAttachments] = React.useState<StagedAttachment[]>([])
+  const [attaching, setAttaching] = React.useState(false)
+  const [attachError, setAttachError] = React.useState<string | null>(null)
   const abortRef = React.useRef<null | (() => void)>(null)
   const scrollRef = React.useRef<HTMLDivElement>(null)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const extract = useAssistantExtract()
+
+  // Reuse the shared attachment pipeline: text/PDF are read client-side, images
+  // are OCR'd server-side via the assistant extract endpoint.
+  const runOcr: RunOcr = React.useCallback(
+    async (imageDataUrl: string) => {
+      const r = await extract.mutateAsync({ data: { imageDataUrl } })
+      return r.text ?? ""
+    },
+    [extract],
+  )
+
+  const onSelectFiles = React.useCallback(
+    async (files: FileList | null) => {
+      if (!files || files.length === 0) return
+      setAttachError(null)
+      setAttaching(true)
+      try {
+        for (const file of Array.from(files)) {
+          try {
+            const text = await extractAttachmentText(file, runOcr)
+            setAttachments((prev) => [...prev, { name: file.name, text }])
+          } catch (err) {
+            setAttachError(
+              err instanceof Error ? err.message : `Couldn't read ${file.name}.`,
+            )
+          }
+        }
+      } finally {
+        setAttaching(false)
+        if (fileInputRef.current) fileInputRef.current.value = ""
+      }
+    },
+    [runOcr],
+  )
 
   const specialistsQuery = useListWorkspaceSpecialists()
   const specialists: WorkspaceSpecialist[] =
@@ -113,6 +171,17 @@ export default function AiWorkspacePage() {
           role: m.role === "assistant" ? "assistant" : "user",
           content: m.content,
           suggestions: (m.suggestions as AssistantToolSuggestion[] | null) ?? null,
+          citations:
+            ((m as { citations?: WorkspaceCitation[] | null }).citations as
+              | WorkspaceCitation[]
+              | null) ?? null,
+          attachmentNames: Array.isArray(
+            (m as { attachments?: unknown }).attachments,
+          )
+            ? ((m as { attachments?: { name?: string }[] }).attachments ?? [])
+                .map((a) => a?.name)
+                .filter((n): n is string => typeof n === "string")
+            : null,
         })),
       )
       setSpecialist(detail.specialist || "general")
@@ -236,7 +305,7 @@ export default function AiWorkspacePage() {
 
   const send = async (raw: string) => {
     const text = raw.trim()
-    if (!text || streaming) return
+    if ((!text && attachments.length === 0) || streaming || attaching) return
 
     // Ensure we have a conversation to stream into.
     let convId = activeId
@@ -248,11 +317,24 @@ export default function AiWorkspacePage() {
       invalidateList()
     }
 
+    const staged = attachments
+    const attachmentPayload: WorkspaceAttachmentPayload[] = staged.map((a) => ({
+      name: a.name,
+      kind: "text",
+      content: a.text,
+    }))
+
     setInput("")
+    setAttachments([])
+    setAttachError(null)
     setStreamError(null)
     setLiveMessages((prev) => [
       ...prev,
-      { role: "user", content: text },
+      {
+        role: "user",
+        content: text,
+        attachmentNames: staged.length ? staged.map((a) => a.name) : null,
+      },
       { role: "assistant", content: "", streaming: true },
     ])
     setStreaming(true)
@@ -267,7 +349,11 @@ export default function AiWorkspacePage() {
 
     abortRef.current = streamWorkspaceMessage(
       convId,
-      { message: text, pageContext: ctxPayload },
+      {
+        message: text,
+        pageContext: ctxPayload,
+        ...(attachmentPayload.length ? { attachments: attachmentPayload } : {}),
+      },
       {
         onDelta: (delta) => {
           setLiveMessages((prev) => {
@@ -277,7 +363,29 @@ export default function AiWorkspacePage() {
               next[next.length - 1] = {
                 ...last,
                 content: last.content + delta,
+                // First token arrived — clear the "searching…" status.
+                status: null,
               }
+            }
+            return next
+          })
+        },
+        onStatus: (info) => {
+          setLiveMessages((prev) => {
+            const next = [...prev]
+            const last = next[next.length - 1]
+            if (last && last.role === "assistant" && last.streaming) {
+              next[next.length - 1] = { ...last, status: info.label }
+            }
+            return next
+          })
+        },
+        onCitations: (citations) => {
+          setLiveMessages((prev) => {
+            const next = [...prev]
+            const last = next[next.length - 1]
+            if (last && last.role === "assistant" && last.streaming) {
+              next[next.length - 1] = { ...last, citations }
             }
             return next
           })
@@ -576,15 +684,69 @@ export default function AiWorkspacePage() {
                         : "rounded-bl-sm bg-muted text-foreground",
                     )}
                   >
+                    {m.attachmentNames && m.attachmentNames.length > 0 && (
+                      <div className="mb-1.5 flex flex-wrap gap-1.5">
+                        {m.attachmentNames.map((n, j) => (
+                          <span
+                            key={`${n}-${j}`}
+                            className="flex items-center gap-1 rounded-md bg-black/10 px-1.5 py-0.5 text-xs"
+                          >
+                            <FileText className="h-3 w-3" />
+                            {n}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {m.streaming && m.status && !m.content && (
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        {m.status}…
+                      </p>
+                    )}
                     <p className="whitespace-pre-wrap">
                       {m.content}
-                      {m.streaming && !m.content && (
+                      {m.streaming && !m.content && !m.status && (
                         <Loader2 className="inline h-4 w-4 animate-spin" />
                       )}
                       {m.streaming && m.content && (
                         <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-current align-middle" />
                       )}
                     </p>
+                    {m.citations && m.citations.length > 0 && (
+                      <div className="mt-3 border-t border-border/60 pt-2">
+                        <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                          Sources
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.citations.map((c, j) => {
+                            const key = `${c.type}-${c.id}-${j}`
+                            const content = (
+                              <>
+                                <Link2 className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{c.label}</span>
+                              </>
+                            )
+                            return c.href ? (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => goTo(c.href as string)}
+                                className="flex max-w-full items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
+                              >
+                                {content}
+                              </button>
+                            ) : (
+                              <span
+                                key={key}
+                                className="flex max-w-full items-center gap-1 rounded-md border bg-muted px-2 py-1 text-xs text-muted-foreground"
+                              >
+                                {content}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
                     {m.suggestions && m.suggestions.length > 0 && (
                       <div className="mt-3 space-y-2">
                         {m.suggestions.map((s) => (
@@ -621,6 +783,42 @@ export default function AiWorkspacePage() {
               {streamError}
             </p>
           )}
+          {attachError && (
+            <p className="mx-auto mb-2 max-w-3xl px-1 text-xs text-destructive">
+              {attachError}
+            </p>
+          )}
+          {attachments.length > 0 && (
+            <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-1.5 px-1">
+              {attachments.map((a, i) => (
+                <span
+                  key={`${a.name}-${i}`}
+                  className="flex items-center gap-1 rounded-md border bg-muted px-2 py-1 text-xs"
+                >
+                  <FileText className="h-3 w-3" />
+                  <span className="max-w-[12rem] truncate">{a.name}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${a.name}`}
+                    onClick={() =>
+                      setAttachments((prev) => prev.filter((_, j) => j !== i))
+                    }
+                    className="ml-0.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ATTACHMENT_ACCEPT}
+            className="hidden"
+            onChange={(e) => void onSelectFiles(e.target.files)}
+          />
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -628,6 +826,21 @@ export default function AiWorkspacePage() {
             }}
             className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border bg-background p-2"
           >
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              disabled={streaming || attaching}
+              onClick={() => fileInputRef.current?.click()}
+              className="h-9 w-9 shrink-0 rounded-full"
+              aria-label="Attach files"
+            >
+              {attaching ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Paperclip className="h-4 w-4" />
+              )}
+            </Button>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}

@@ -72,6 +72,10 @@ export const aiConversationMessagesTable = pgTable(
     suggestions: jsonb("suggestions"),
     // Arbitrary attachment metadata echoed back for rendering (nullable).
     attachments: jsonb("attachments"),
+    // Grounded source references the assistant turn drew on (from the read-tool
+    // layer): { type, id, label, href }[]. Lets the UI render source links back
+    // into the app. Nullable; only set on assistant turns that used data tools.
+    citations: jsonb("citations"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

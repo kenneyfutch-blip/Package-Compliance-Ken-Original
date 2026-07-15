@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { AssistantToolSuggestion } from './assistantToolSuggestion';
+import type { WorkspaceCitation } from './workspaceCitation';
 
 export interface WorkspaceMessage {
   id: number;
@@ -14,5 +15,7 @@ export interface WorkspaceMessage {
   /** @nullable */
   suggestions?: AssistantToolSuggestion[] | null;
   attachments?: unknown | null;
+  /** @nullable */
+  citations?: WorkspaceCitation[] | null;
   createdAt: string;
 }

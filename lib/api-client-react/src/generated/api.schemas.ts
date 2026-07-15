@@ -1866,6 +1866,14 @@ export interface WorkspaceConversationList {
   conversations: WorkspaceConversation[];
 }
 
+export interface WorkspaceCitation {
+  type: string;
+  id: string | number;
+  label: string;
+  /** @nullable */
+  href?: string | null;
+}
+
 export interface WorkspaceMessage {
   id: number;
   role: string;
@@ -1873,6 +1881,8 @@ export interface WorkspaceMessage {
   /** @nullable */
   suggestions?: AssistantToolSuggestion[] | null;
   attachments?: unknown | null;
+  /** @nullable */
+  citations?: WorkspaceCitation[] | null;
   createdAt: string;
 }
 

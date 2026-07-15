@@ -275,6 +275,7 @@ export * from './violation';
 export * from './violationWithPackage';
 export * from './workloadEntry';
 export * from './workloadResponse';
+export * from './workspaceCitation';
 export * from './workspaceConversation';
 export * from './workspaceConversationDetail';
 export * from './workspaceConversationList';

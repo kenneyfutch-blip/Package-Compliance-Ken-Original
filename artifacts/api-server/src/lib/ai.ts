@@ -761,7 +761,7 @@ export type AssistantChatMessage = {
 // Curated catalog of tools the assistant can point users to. Kept in sync with
 // the left-nav sections in the web app. The model may ONLY recommend hrefs that
 // appear here (enforced below), so every suggestion resolves to a real page.
-const ASSISTANT_TOOL_CATALOG: { label: string; href: string; desc: string }[] = [
+export const ASSISTANT_TOOL_CATALOG: { label: string; href: string; desc: string }[] = [
   { label: "New Package", href: "/upload", desc: "Upload packaging artwork/PDF to start a new AI compliance review." },
   { label: "All Packages", href: "/packages", desc: "Browse, search and filter every package in the system." },
   { label: "Active Reviews", href: "/packages/active", desc: "Packages currently under AI review or assigned to a specialist." },

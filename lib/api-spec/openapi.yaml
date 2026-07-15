@@ -7552,6 +7552,10 @@ components:
             $ref: "#/components/schemas/AssistantToolSuggestion"
         attachments:
           nullable: true
+        citations:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/WorkspaceCitation"
         createdAt:
           type: string
       required:
@@ -7559,6 +7563,24 @@ components:
         - role
         - content
         - createdAt
+
+    WorkspaceCitation:
+      type: object
+      properties:
+        type:
+          type: string
+        id:
+          oneOf:
+            - type: string
+            - type: integer
+        label:
+          type: string
+        href:
+          type: ["string", "null"]
+      required:
+        - type
+        - id
+        - label
 
     WorkspaceConversationDetail:
       type: object

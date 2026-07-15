@@ -2609,6 +2609,12 @@ export const GetWorkspaceConversationResponse = zod.object({
   "reason": zod.string().optional()
 })).nullish(),
   "attachments": zod.unknown().nullish(),
+  "citations": zod.array(zod.object({
+  "type": zod.string(),
+  "id": zod.union([zod.string(),zod.number()]),
+  "label": zod.string(),
+  "href": zod.string().nullish()
+})).nullish(),
   "createdAt": zod.string()
 }))
 })

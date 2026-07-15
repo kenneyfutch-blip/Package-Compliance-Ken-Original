@@ -10,8 +10,26 @@ export type WorkspacePageContextPayload = {
   summary?: string | null;
 };
 
+// A single uploaded attachment. Text attachments carry client-extracted text;
+// image attachments carry a data URL that the server OCRs.
+export type WorkspaceAttachmentPayload =
+  | { name: string; kind: "text"; content: string }
+  | { name: string; kind: "image"; imageDataUrl: string };
+
+// A grounded source reference the assistant drew on, emitted before `done`.
+export type WorkspaceCitation = {
+  type: string;
+  id: string | number;
+  label: string;
+  href?: string | null;
+};
+
 export type StreamHandlers = {
   onDelta: (text: string) => void;
+  // A tool-activity status update (e.g. "Searching packages").
+  onStatus?: (info: { tool: string; label: string }) => void;
+  // Grounded citations for the turn (fires at most once, before onDone).
+  onCitations?: (citations: WorkspaceCitation[]) => void;
   onDone?: () => void;
   onError?: (message: string) => void;
 };
@@ -29,6 +47,7 @@ export function streamWorkspaceMessage(
   body: {
     message: string;
     pageContext?: WorkspacePageContextPayload | null;
+    attachments?: WorkspaceAttachmentPayload[];
   },
   handlers: StreamHandlers,
 ): () => void {
@@ -91,6 +110,13 @@ export function streamWorkspaceMessage(
         if (event === "delta") {
           const text = (payload as { text?: string })?.text ?? "";
           if (text) handlers.onDelta(text);
+        } else if (event === "status") {
+          const info = payload as { tool?: string; label?: string };
+          if (info?.label)
+            handlers.onStatus?.({ tool: info.tool ?? "", label: info.label });
+        } else if (event === "citations") {
+          const list = (payload as { citations?: WorkspaceCitation[] })?.citations;
+          if (Array.isArray(list) && list.length) handlers.onCitations?.(list);
         } else if (event === "done") {
           finishDone();
         } else if (event === "error") {

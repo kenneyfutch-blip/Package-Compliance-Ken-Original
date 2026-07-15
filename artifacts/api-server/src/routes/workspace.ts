@@ -13,9 +13,77 @@ import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { orgId, getAuthContext } from "../lib/rbac/context";
 import { parsePagination } from "../lib/pagination";
 import { writeAudit } from "../lib/audit";
-import { askWorkspaceStream, type WorkspacePageContext } from "../lib/ai";
+import {
+  extractTextFromImage,
+  type WorkspacePageContext,
+} from "../lib/ai";
+import { runWorkspaceAgent } from "../lib/workspace/agent";
 import { listSpecialists, isSpecialistKey } from "../lib/specialists";
 import { logger } from "../lib/logger";
+
+// A single uploaded attachment for a Workspace turn. Text attachments carry
+// client-extracted text (txt/pdf-text-layer/docx/xlsx); image attachments carry
+// a data URL that is OCR'd server-side. Both are bounded before use.
+type ParsedAttachment = { name: string; kind: "text" | "image"; text: string };
+
+const IMAGE_DATA_URL_RE = /^data:image\/[a-zA-Z0-9.+-]+;base64,/;
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_TEXT = 6000;
+
+// Extract usable text from the request's attachments, reusing the server-side
+// OCR pipeline for images. Never throws — a failed attachment is skipped so the
+// chat still proceeds.
+async function parseAttachments(raw: unknown): Promise<ParsedAttachment[]> {
+  if (!Array.isArray(raw)) return [];
+  const out: ParsedAttachment[] = [];
+  for (const item of raw.slice(0, MAX_ATTACHMENTS)) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const name =
+      typeof o["name"] === "string" && o["name"].trim()
+        ? o["name"].trim().slice(0, 200)
+        : "attachment";
+    const kind = o["kind"] === "image" ? "image" : "text";
+    if (kind === "image") {
+      const dataUrl = typeof o["imageDataUrl"] === "string" ? o["imageDataUrl"] : "";
+      if (!IMAGE_DATA_URL_RE.test(dataUrl)) continue;
+      try {
+        const text = await extractTextFromImage(dataUrl);
+        if (text && text.trim())
+          out.push({ name, kind, text: text.trim().slice(0, MAX_ATTACHMENT_TEXT) });
+      } catch (err) {
+        logger.warn({ err, name }, "workspace attachment OCR failed");
+      }
+    } else {
+      const text = typeof o["content"] === "string" ? o["content"] : "";
+      if (text.trim())
+        out.push({ name, kind, text: text.trim().slice(0, MAX_ATTACHMENT_TEXT) });
+    }
+  }
+  return out;
+}
+
+// Fold a message row's persisted attachment text into the content sent to the
+// model, so uploaded-document context survives across turns without dumping raw
+// text into the chat bubble (which renders only `content`).
+function contentWithAttachments(
+  content: string,
+  attachments: unknown,
+): string {
+  if (!Array.isArray(attachments) || attachments.length === 0) return content;
+  const blocks = attachments
+    .map((a) => {
+      if (!a || typeof a !== "object") return null;
+      const o = a as Record<string, unknown>;
+      const name = typeof o["name"] === "string" ? o["name"] : "attachment";
+      const text = typeof o["text"] === "string" ? o["text"] : "";
+      if (!text.trim()) return null;
+      return `--- Attached document: ${name} ---\n${text}`;
+    })
+    .filter(Boolean)
+    .join("\n\n");
+  return blocks ? `${content}\n\n${blocks}` : content;
+}
 
 const router: IRouter = Router();
 
@@ -102,7 +170,16 @@ function mapMessage(row: AiConversationMessageRow) {
     role: row.role,
     content: row.content,
     suggestions: (row.suggestions as unknown) ?? null,
-    attachments: (row.attachments as unknown) ?? null,
+    // Ship only attachment metadata (name/kind) to the client; the extracted
+    // text stays server-side (it's folded into model history directly from the
+    // DB) so conversation loads don't carry large document blobs.
+    attachments: Array.isArray(row.attachments)
+      ? (row.attachments as { name?: unknown; kind?: unknown }[]).map((a) => ({
+          name: typeof a?.name === "string" ? a.name : "attachment",
+          kind: a?.kind === "image" ? "image" : "text",
+        }))
+      : null,
+    citations: (row.citations as unknown) ?? null,
     createdAt: iso(row.createdAt)!,
   };
 }
@@ -392,10 +469,6 @@ router.post(
     const body = (req.body ?? {}) as Record<string, unknown>;
     const message =
       typeof body["message"] === "string" ? body["message"].trim() : "";
-    if (!message) {
-      res.status(400).json({ error: "message is required" });
-      return;
-    }
     let pageContext: WorkspacePageContext | null = null;
     const pc = body["pageContext"];
     if (pc && typeof pc === "object") {
@@ -407,32 +480,48 @@ router.post(
       };
     }
 
+    // Extract text from any uploaded attachments (images OCR'd server-side).
+    const attachments = await parseAttachments(body["attachments"]);
+
+    // A turn needs either typed text OR at least one usable attachment (the UI
+    // allows sending files with no message for "analyze this" requests).
+    if (!message && attachments.length === 0) {
+      res.status(400).json({ error: "message or an attachment is required" });
+      return;
+    }
+
     // Persist the user turn before streaming so history is durable even if the
-    // stream is interrupted.
+    // stream is interrupted. Attachment text is stored in the attachments jsonb
+    // (not in content) so the bubble stays clean but context survives reloads.
     await db.insert(aiConversationMessagesTable).values({
       conversationId: id,
       organizationId,
       role: "user",
       content: message.slice(0, 8000),
+      attachments: attachments.length ? attachments : null,
     });
 
-    // Build the message history (existing turns + this one) for the model.
+    // Build the message history (existing turns + this one) for the model,
+    // folding each turn's persisted attachment text into its content.
     const prior = await db
       .select({
         role: aiConversationMessagesTable.role,
         content: aiConversationMessagesTable.content,
+        attachments: aiConversationMessagesTable.attachments,
       })
       .from(aiConversationMessagesTable)
       .where(eq(aiConversationMessagesTable.conversationId, id))
       .orderBy(aiConversationMessagesTable.createdAt);
     const history = prior.map((m) => ({
       role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
-      content: m.content,
+      content: contentWithAttachments(m.content, m.attachments),
     }));
 
-    // Auto-title a fresh conversation from the first user message.
+    // Auto-title a fresh conversation from the first user message (or the first
+    // attachment's name for an attachment-only turn).
     if (conv.title === "New conversation") {
-      const derived = message.slice(0, 60);
+      const derived =
+        (message || attachments[0]?.name || "New conversation").slice(0, 60);
       await db
         .update(aiConversationsTable)
         .set({ title: derived, updatedAt: new Date() })
@@ -457,7 +546,8 @@ router.post(
 
     let full = "";
     try {
-      await askWorkspaceStream({
+      const { citations } = await runWorkspaceAgent({
+        req,
         organizationId,
         userId,
         specialistKey: conv.specialist,
@@ -469,15 +559,22 @@ router.post(
           full += delta;
           send("delta", { text: delta });
         },
+        onStatus: (info) => {
+          send("status", info);
+        },
       });
 
-      // Persist the assistant turn and bump the conversation timestamp.
+      // Surface grounded source links to the client before completion.
+      if (citations.length) send("citations", { citations });
+
+      // Persist the assistant turn (with its citations) and bump the timestamp.
       if (full) {
         await db.insert(aiConversationMessagesTable).values({
           conversationId: id,
           organizationId,
           role: "assistant",
           content: full,
+          citations: citations.length ? citations : null,
         });
       }
       await db

@@ -64,6 +64,9 @@ const AI_POST_PATHS: RegExp[] = [
   // AI assistant: chat is an LLM call and extract is multimodal OCR — both are
   // open to every authenticated user, so they must ride the strict AI limiter.
   /^\/api\/assistant\/(chat|extract)$/,
+  // AI Workspace streaming chat: a tool-calling LLM turn (may also OCR uploaded
+  // attachments), open to every authenticated user — must ride the AI limiter.
+  /^\/api\/workspace\/conversations\/[^/]+\/stream$/,
 ];
 
 const UPLOAD_POST_PATHS: RegExp[] = [/^\/api\/storage\/uploads\/request-url$/];
