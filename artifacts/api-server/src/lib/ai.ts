@@ -316,7 +316,24 @@ Respond with JSON of shape:
         { signal, maxRetries: 0 },
       );
 
-      const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
+      const content = response.choices[0]?.message?.content ?? "";
+      // A blank body, or JSON that fails to parse (safeParse yields {}), means the
+      // model returned nothing usable. Do NOT fall through: every field below
+      // would silently default (grade "C", riskScore 50, empty summary, zero
+      // violations), which then persists as a bogus "completed" review with no
+      // findings. Throw instead so the durable job queue retries, and — on final
+      // failure — the package is routed to manual review rather than mislabeled.
+      const parsed = safeParse(content);
+      if (
+        !content.trim() ||
+        !parsed ||
+        typeof parsed !== "object" ||
+        Object.keys(parsed).length === 0
+      ) {
+        throw new Error(
+          "Packaging analysis returned an empty or unparseable response from the AI model",
+        );
+      }
 
       const violations: AnalyzedViolation[] = Array.isArray(parsed.violations)
         ? parsed.violations.map((v: any) => {

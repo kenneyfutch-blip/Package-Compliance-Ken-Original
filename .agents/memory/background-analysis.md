@@ -84,6 +84,28 @@ synchronously at create. Supplier-scoped memory recall is preserved by passing
 findings). The worker polls every 10s; `pokeJobWorker()` is called after enqueue so
 analysis starts without the poll delay.
 
+**An empty/unparseable AI analysis response must THROW, not silently default.**
+`analyzePackaging` parses the model's JSON and, field-by-field, coerces missing values
+to defaults: `grade ?? "C"`, `clampScore(undefined) → 50`, `summary ?? ""`,
+`violations: []` when not an array. So when the model returns blank content or JSON that
+fails to parse (`safeParse` yields `{}`), the whole result collapses to the exact tuple
+**grade "C" / riskScore 50 / empty summary / zero violations** — and because nothing
+throws, the job is marked `completed` and this bogus "review" is persisted. Symptom the
+user sees: a package with a grade but the Findings/Key Findings panel empty, even though
+Document AI (OCR) is populated (OCR is a separate, earlier step). Fix: in the
+`analyzePackaging` `run()` callback, after `safeParse`, throw if the content is blank OR
+the parsed value is a non-object / empty object (`Object.keys(parsed).length === 0`).
+`runTiered` rethrows, `runPackageAnalysis` throws before `applyAnalysis`, and the job
+retries (bounded by `maxAttempts`); on final failure the package drops to `Needs Review`.
+**Why:** a valid clean-package analysis is still a *full* JSON object (grade/summary/
+`violations:[]`), so the empty-object guard rejects only genuine failures, never a
+legitimate zero-finding result. Observed live: an upload's fast-triage returned empty
+content, defaulted to C/50/no-findings, and completed — a deep re-run then hit the throw
+on attempt 1 and succeeded on attempt 2 with real findings.
+**Same latent pattern (not yet fixed):** `language-ai.ts` and `claims-ai.ts` also parse
+`content ?? "{}"` and fall back to default score/summary/findings without throwing — they
+can likewise persist "completed but empty" outputs.
+
 **Document AI tab must reflect the in-flight state.** The extraction tab renders off the
 `document_extractions` record, which only exists once OCR *finishes*. During the normal
 background window (package `status === "AI Review"`) there is no record yet, so a static
