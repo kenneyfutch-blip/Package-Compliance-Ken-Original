@@ -63,6 +63,17 @@ non-tenant reference material (internal regulations, live eCFR, FDA recalls).
   server-constructed, allowlisted app routes only (no injection surface).
 - Also added a `status` SSE event for tool activity. The client ignores unknown
   SSE events, so new event types are backward-compatible.
+- **Package citation/nav hrefs must be `/reviews/:id`, NOT `/packages/:id`.** The
+  package DETAIL page is the wouter route `/reviews/:id` (ReviewWorkspace).
+  `/packages/*` in the web app is only a set of STATIC list routes
+  (`/packages/active|needs-review|approved|rejected|archived`) with no `:id`
+  param — so a `/packages/123` nav link falls through to NotFound (404).
+  `/packages/:id` exists ONLY as an API endpoint on the server; it is not a
+  frontend route. When building any citation/suggestion/dashboard href that
+  deep-links a package, use `/reviews/${id}` (this is what the dashboard already
+  does). **Why:** a code-authored href pointing at the API-style path silently
+  404s in the UI. **How to apply:** grep new nav hrefs against `App.tsx` routes,
+  never assume `/packages/:id` is navigable.
 
 ## Rate limiting
 The workspace stream path must be listed in the AI POST-paths regex in

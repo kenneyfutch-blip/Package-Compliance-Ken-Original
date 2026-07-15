@@ -127,7 +127,7 @@ function packageCitation(pkg: {
     type: "package",
     id: pkg.id,
     label: `${pkg.name} (${pkg.sku})`,
-    href: `/packages/${pkg.id}`,
+    href: `/reviews/${pkg.id}`,
   };
 }
 

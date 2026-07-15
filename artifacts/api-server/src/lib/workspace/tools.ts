@@ -168,7 +168,7 @@ const searchPackages: WorkspaceTool = {
         type: "package",
         id: r.id,
         label: `${r.name} (${r.sku})`,
-        href: `/packages/${r.id}`,
+        href: `/reviews/${r.id}`,
       })),
     };
   },
@@ -238,7 +238,7 @@ const getPackageDetails: WorkspaceTool = {
           type: "package",
           id: pkg.id,
           label: `${pkg.name} (${pkg.sku})`,
-          href: `/packages/${pkg.id}`,
+          href: `/reviews/${pkg.id}`,
         },
       ],
     };
@@ -308,7 +308,7 @@ const searchFindings: WorkspaceTool = {
           type: "package",
           id: r.packageId,
           label: r.packageName ?? `Package #${r.packageId}`,
-          href: `/packages/${r.packageId}`,
+          href: `/reviews/${r.packageId}`,
         });
       }
     }
@@ -600,7 +600,7 @@ const searchTasks: WorkspaceTool = {
           type: "package",
           id: r.packageId,
           label: r.packageName ?? `Package #${r.packageId}`,
-          href: `/packages/${r.packageId}`,
+          href: `/reviews/${r.packageId}`,
         });
       }
     }
