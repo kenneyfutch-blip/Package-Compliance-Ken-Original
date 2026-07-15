@@ -847,9 +847,9 @@ function FindingsPanel({ pkg, selectedId, onSelect }: { pkg: Pkg; selectedId: nu
               <button key={v.id} type="button" ref={selected ? selectedRef : undefined} onClick={() => ann && onSelect(ann.id)}
                 className={cn("w-full text-left p-3 rounded-lg border bg-card space-y-1.5 transition-colors", selected ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground/40")}>
                 <div className="flex justify-between items-start gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={cn("w-2 h-2 rounded-full shrink-0", meta.dot)} />
-                    <span className="font-semibold text-sm truncate">{v.title}</span>
+                  <div className="flex items-start gap-2 min-w-0">
+                    <span className={cn("w-2 h-2 rounded-full shrink-0 mt-1.5", meta.dot)} />
+                    <span className="font-semibold text-sm break-words leading-snug">{v.title}</span>
                   </div>
                   <Badge variant="outline" className="text-[10px] shrink-0">{v.engine}</Badge>
                 </div>
