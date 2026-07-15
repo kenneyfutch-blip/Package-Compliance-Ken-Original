@@ -7,8 +7,7 @@ import {
   workspaceAgentRunsTable,
 } from "@workspace/db";
 import { and, desc, eq, sql } from "drizzle-orm";
-import { orgId, getAuthContext, hasPermission } from "../lib/rbac/context";
-import { packageConds, opsTeamScope } from "../lib/rbac/scope";
+import { resolveDashboardAccess } from "./workspace-dashboard-access";
 import { listAssignments } from "../lib/reviews/reporting";
 import { getSpecialist } from "../lib/specialists";
 import { getActiveAgentProvider } from "../lib/agents/registry";
@@ -73,12 +72,12 @@ async function safeItems(
 router.get(
   "/workspace/home",
   async (req: Request, res: Response): Promise<void> => {
-    const organizationId = orgId(req);
-    const { userId } = getAuthContext(req);
-
-    // Permission gates mirror the pages each section links to.
-    const canReviews = hasPermission(req, "packages:read");
-    const canReports = hasPermission(req, "reports:read");
+    // Single pure access plan: which sections are visible and exactly how the
+    // cross-record sections are scoped. Every query below builds from this, so
+    // the dashboard can never widen access beyond what the caller already sees.
+    const access = resolveDashboardAccess(req);
+    const { organizationId, userId, canReviews, canReports, reviewScope } =
+      access;
 
     // --- own conversations (newest first) ---------------------------------
     const recentConversations = await safeItems("recentConversations", async () => {
@@ -133,10 +132,10 @@ router.get(
     const assignedReviews = canReviews
       ? await safeItems("assignedReviews", async () => {
           const rows = await listAssignments(
-            organizationId,
-            { assigneeUserId: userId },
-            packageConds(req),
-            opsTeamScope(req),
+            reviewScope.organizationId,
+            { assigneeUserId: reviewScope.userId },
+            reviewScope.packageScope,
+            reviewScope.teamScope,
             { limit: RECENT_LIMIT, offset: 0 },
           );
           return rows.map((r) => ({
@@ -157,10 +156,10 @@ router.get(
     const recentReviews = canReviews
       ? await safeItems("recentReviews", async () => {
           const rows = await listAssignments(
-            organizationId,
+            reviewScope.organizationId,
             {},
-            packageConds(req),
-            opsTeamScope(req),
+            reviewScope.packageScope,
+            reviewScope.teamScope,
             { limit: RECENT_LIMIT, offset: 0 },
           );
           return rows.map((r) => ({
