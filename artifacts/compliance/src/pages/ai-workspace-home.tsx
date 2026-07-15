@@ -49,6 +49,29 @@ function shortWhen(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" })
 }
 
+// Map a status/label badge to a color variant so reviewers can scan outcomes at
+// a glance. Positive outcomes are green, terminal failures red, "needs a human"
+// amber, and in-flight work blue; anything else (formats, versions, "Saved")
+// stays neutral gray.
+type BadgeVariant =
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "success"
+  | "warning"
+function badgeVariantFor(badge: string): BadgeVariant {
+  const b = badge.toLowerCase()
+  // Check terminal failures before positive outcomes so "non-compliant" isn't
+  // captured by the "compliant" success match.
+  if (/failed|rejected|non-?compliant|critical|error|blocked/.test(b))
+    return "destructive"
+  if (/approved|passed|compliant|resolved|complete|done/.test(b)) return "success"
+  if (/needs review|escalat|overdue|attention|action|warning/.test(b))
+    return "warning"
+  if (/ai review|analy|in review|under review|processing/.test(b)) return "default"
+  return "secondary"
+}
+
 function ItemRow({ item }: { item: WorkspaceHomeItem }) {
   const inner = (
     <div className="flex items-center gap-3 rounded-md px-2 py-2 -mx-2 transition-colors hover:bg-muted/60">
@@ -56,7 +79,10 @@ function ItemRow({ item }: { item: WorkspaceHomeItem }) {
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
           {item.badge && (
-            <Badge variant="secondary" className="shrink-0 text-[10px]">
+            <Badge
+              variant={badgeVariantFor(item.badge)}
+              className="shrink-0 text-[10px]"
+            >
               {item.badge}
             </Badge>
           )}
