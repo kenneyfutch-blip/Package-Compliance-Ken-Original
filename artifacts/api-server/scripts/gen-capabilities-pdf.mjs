@@ -142,6 +142,7 @@ const MARGIN = 56;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
 const NAVY = rgb(0.05, 0.13, 0.25);
+const BLACK = rgb(0, 0, 0);
 const BLUE = rgb(0.02, 0.42, 0.78);
 const GRAY = rgb(0.28, 0.32, 0.38);
 const LIGHT = rgb(0.6, 0.64, 0.7);
@@ -186,7 +187,7 @@ function drawText(text, f, size, color, x, maxW, lineGap = 3) {
 }
 
 // ---- Header band ------------------------------------------------------------
-page.drawRectangle({ x: 0, y: PAGE_H - 132, width: PAGE_W, height: 132, color: NAVY });
+page.drawRectangle({ x: 0, y: PAGE_H - 132, width: PAGE_W, height: 132, color: BLACK });
 page.drawRectangle({ x: 0, y: PAGE_H - 136, width: PAGE_W, height: 4, color: BLUE });
 page.drawText(TITLE, { x: MARGIN, y: PAGE_H - 66, size: 26, font: bold, color: rgb(1, 1, 1) });
 page.drawText(SUBTITLE, { x: MARGIN, y: PAGE_H - 92, size: 13, font, color: rgb(0.75, 0.85, 0.95) });
