@@ -12,3 +12,9 @@ id = "TAa14i5BE535Ns362gz2K"
 uri = "file://attached_assets/Packaging-Compliance-AI-Capabilities.pdf"
 type = "pdf"
 title = "Packaging Compliance AI — Capabilities Overview"
+
+[[outputs]]
+id = "fcQB4Y6C3mlTe8dS-li9i"
+uri = "file://attached_assets/Packaging-Compliance-AI-Architecture.pdf"
+type = "pdf"
+title = "Packaging Compliance AI — Architecture & Wiring Diagram"
