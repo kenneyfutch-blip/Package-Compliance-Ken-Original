@@ -52,6 +52,7 @@ import type {
   CommentReplyInput,
   CopilotAnswer,
   CopilotInput,
+  CreateWorkspaceConversationInput,
   DashboardStats,
   Department,
   DepartmentInput,
@@ -100,6 +101,7 @@ import type {
   ListSpecialistsParams,
   ListSupplierSubmissionsParams,
   ListViolationsParams,
+  ListWorkspaceConversationsParams,
   Me,
   MutationResult,
   MyWorkResponse,
@@ -186,6 +188,7 @@ import type {
   TrainingProgressList,
   TrendPoint,
   UpdateLanguageFindingInput,
+  UpdateWorkspaceConversationInput,
   UploadUrlRequest,
   UploadUrlResponse,
   UserAccount,
@@ -197,7 +200,11 @@ import type {
   VersionComparison,
   ViolationWithPackage,
   WorkloadEntry,
-  WorkloadResponse
+  WorkloadResponse,
+  WorkspaceConversation,
+  WorkspaceConversationDetail,
+  WorkspaceConversationList,
+  WorkspaceSpecialistList
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -4017,6 +4024,458 @@ export const useAssistantExtract = <TError = ErrorType<ApiError>,
         TContext
       > => {
       return useMutation(getAssistantExtractMutationOptions(options));
+    }
+
+export const getListWorkspaceSpecialistsUrl = () => {
+
+
+
+
+  return `/api/workspace/specialists`
+}
+
+/**
+ * @summary List AI Workspace specialist personas
+ */
+export const listWorkspaceSpecialists = async ( options?: RequestInit): Promise<WorkspaceSpecialistList> => {
+
+  return customFetch<WorkspaceSpecialistList>(getListWorkspaceSpecialistsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkspaceSpecialistsQueryKey = () => {
+    return [
+    `/api/workspace/specialists`
+    ] as const;
+    }
+
+
+export const getListWorkspaceSpecialistsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkspaceSpecialists>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceSpecialists>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspaceSpecialistsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaceSpecialists>>> = ({ signal }) => listWorkspaceSpecialists({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceSpecialists>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkspaceSpecialistsQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaceSpecialists>>>
+export type ListWorkspaceSpecialistsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List AI Workspace specialist personas
+ */
+
+export function useListWorkspaceSpecialists<TData = Awaited<ReturnType<typeof listWorkspaceSpecialists>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceSpecialists>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkspaceSpecialistsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListWorkspaceConversationsUrl = (params?: ListWorkspaceConversationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/workspace/conversations?${stringifiedParams}` : `/api/workspace/conversations`
+}
+
+/**
+ * @summary List the caller's AI Workspace conversations
+ */
+export const listWorkspaceConversations = async (params?: ListWorkspaceConversationsParams, options?: RequestInit): Promise<WorkspaceConversationList> => {
+
+  return customFetch<WorkspaceConversationList>(getListWorkspaceConversationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkspaceConversationsQueryKey = (params?: ListWorkspaceConversationsParams,) => {
+    return [
+    `/api/workspace/conversations`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListWorkspaceConversationsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkspaceConversations>>, TError = ErrorType<unknown>>(params?: ListWorkspaceConversationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkspaceConversationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkspaceConversations>>> = ({ signal }) => listWorkspaceConversations(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceConversations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkspaceConversationsQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkspaceConversations>>>
+export type ListWorkspaceConversationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the caller's AI Workspace conversations
+ */
+
+export function useListWorkspaceConversations<TData = Awaited<ReturnType<typeof listWorkspaceConversations>>, TError = ErrorType<unknown>>(
+ params?: ListWorkspaceConversationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkspaceConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkspaceConversationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWorkspaceConversationUrl = () => {
+
+
+
+
+  return `/api/workspace/conversations`
+}
+
+/**
+ * @summary Create a new AI Workspace conversation
+ */
+export const createWorkspaceConversation = async (createWorkspaceConversationInput?: CreateWorkspaceConversationInput, options?: RequestInit): Promise<WorkspaceConversation> => {
+
+  return customFetch<WorkspaceConversation>(getCreateWorkspaceConversationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createWorkspaceConversationInput)
+  }
+);}
+
+
+
+
+
+export const getCreateWorkspaceConversationMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkspaceConversation>>, TError,{data?: BodyType<CreateWorkspaceConversationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWorkspaceConversation>>, TError,{data?: BodyType<CreateWorkspaceConversationInput>}, TContext> => {
+
+const mutationKey = ['createWorkspaceConversation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWorkspaceConversation>>, {data?: BodyType<CreateWorkspaceConversationInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWorkspaceConversation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWorkspaceConversationMutationResult = NonNullable<Awaited<ReturnType<typeof createWorkspaceConversation>>>
+    export type CreateWorkspaceConversationMutationBody = BodyType<CreateWorkspaceConversationInput> | undefined
+    export type CreateWorkspaceConversationMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Create a new AI Workspace conversation
+ */
+export const useCreateWorkspaceConversation = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkspaceConversation>>, TError,{data?: BodyType<CreateWorkspaceConversationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWorkspaceConversation>>,
+        TError,
+        {data?: BodyType<CreateWorkspaceConversationInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWorkspaceConversationMutationOptions(options));
+    }
+
+export const getGetWorkspaceConversationUrl = (id: number,) => {
+
+
+
+
+  return `/api/workspace/conversations/${id}`
+}
+
+/**
+ * @summary Get a conversation with its messages
+ */
+export const getWorkspaceConversation = async (id: number, options?: RequestInit): Promise<WorkspaceConversationDetail> => {
+
+  return customFetch<WorkspaceConversationDetail>(getGetWorkspaceConversationUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkspaceConversationQueryKey = (id: number,) => {
+    return [
+    `/api/workspace/conversations/${id}`
+    ] as const;
+    }
+
+
+export const getGetWorkspaceConversationQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspaceConversation>>, TError = ErrorType<ApiError>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceConversation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkspaceConversationQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkspaceConversation>>> = ({ signal }) => getWorkspaceConversation(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceConversation>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorkspaceConversationQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceConversation>>>
+export type GetWorkspaceConversationQueryError = ErrorType<ApiError>
+
+
+/**
+ * @summary Get a conversation with its messages
+ */
+
+export function useGetWorkspaceConversation<TData = Awaited<ReturnType<typeof getWorkspaceConversation>>, TError = ErrorType<ApiError>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceConversation>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorkspaceConversationQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateWorkspaceConversationUrl = (id: number,) => {
+
+
+
+
+  return `/api/workspace/conversations/${id}`
+}
+
+/**
+ * @summary Rename / change specialist / favorite / archive a conversation
+ */
+export const updateWorkspaceConversation = async (id: number,
+    updateWorkspaceConversationInput: UpdateWorkspaceConversationInput, options?: RequestInit): Promise<WorkspaceConversation> => {
+
+  return customFetch<WorkspaceConversation>(getUpdateWorkspaceConversationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateWorkspaceConversationInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateWorkspaceConversationMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspaceConversation>>, TError,{id: number;data: BodyType<UpdateWorkspaceConversationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWorkspaceConversation>>, TError,{id: number;data: BodyType<UpdateWorkspaceConversationInput>}, TContext> => {
+
+const mutationKey = ['updateWorkspaceConversation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWorkspaceConversation>>, {id: number;data: BodyType<UpdateWorkspaceConversationInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWorkspaceConversation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWorkspaceConversationMutationResult = NonNullable<Awaited<ReturnType<typeof updateWorkspaceConversation>>>
+    export type UpdateWorkspaceConversationMutationBody = BodyType<UpdateWorkspaceConversationInput>
+    export type UpdateWorkspaceConversationMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Rename / change specialist / favorite / archive a conversation
+ */
+export const useUpdateWorkspaceConversation = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspaceConversation>>, TError,{id: number;data: BodyType<UpdateWorkspaceConversationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWorkspaceConversation>>,
+        TError,
+        {id: number;data: BodyType<UpdateWorkspaceConversationInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateWorkspaceConversationMutationOptions(options));
+    }
+
+export const getDeleteWorkspaceConversationUrl = (id: number,) => {
+
+
+
+
+  return `/api/workspace/conversations/${id}`
+}
+
+/**
+ * @summary Soft-delete (archive) a conversation
+ */
+export const deleteWorkspaceConversation = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteWorkspaceConversationUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteWorkspaceConversationMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspaceConversation>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspaceConversation>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteWorkspaceConversation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWorkspaceConversation>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteWorkspaceConversation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWorkspaceConversationMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWorkspaceConversation>>>
+
+    export type DeleteWorkspaceConversationMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Soft-delete (archive) a conversation
+ */
+export const useDeleteWorkspaceConversation = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspaceConversation>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWorkspaceConversation>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteWorkspaceConversationMutationOptions(options));
     }
 
 export const getAskCopilotUrl = (id: number,) => {

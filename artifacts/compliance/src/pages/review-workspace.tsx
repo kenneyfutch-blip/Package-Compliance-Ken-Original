@@ -14,6 +14,7 @@ import {
   type PackageDetail, type Annotation as ApiAnnotation, type Violation as ApiViolation,
   type ReviewTask as ApiReviewTask, type Citation,
 } from "@workspace/api-client-react"
+import { useRegisterPageContext } from "@/lib/workspace-context"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -107,6 +108,27 @@ export default function ReviewWorkspace() {
         query.state.data?.status === "AI Review" ? 4000 : false,
     },
   })
+
+  // Publish this package to the AI Workspace so context-aware answers can
+  // reference what the reviewer is currently looking at.
+  useRegisterPageContext(
+    pkg
+      ? {
+          path: `/reviews/${packageId}`,
+          title: `${pkg.name} (${pkg.sku})`,
+          summary: [
+            `Package "${pkg.name}", SKU ${pkg.sku}, brand ${pkg.brand}.`,
+            pkg.vendor ? `Vendor: ${pkg.vendor}.` : "",
+            `Status: ${pkg.status}.`,
+            typeof pkg.riskScore === "number"
+              ? `Risk score: ${pkg.riskScore}.`
+              : "",
+          ]
+            .filter(Boolean)
+            .join(" "),
+        }
+      : null,
+  )
 
   const analyze = useAnalyzePackage()
   const createAnnotation = useCreateAnnotation()

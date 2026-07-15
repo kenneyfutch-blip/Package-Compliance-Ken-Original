@@ -2514,6 +2514,145 @@ export const AssistantExtractResponse = zod.object({
 
 
 /**
+ * @summary List AI Workspace specialist personas
+ */
+export const ListWorkspaceSpecialistsResponse = zod.object({
+  "specialists": zod.array(zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "description": zod.string(),
+  "suggestedPrompts": zod.array(zod.string())
+}))
+})
+
+
+/**
+ * @summary List the caller's AI Workspace conversations
+ */
+export const ListWorkspaceConversationsQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "favorite": zod.coerce.boolean().optional(),
+  "includeArchived": zod.coerce.boolean().optional(),
+  "limit": zod.coerce.number().optional(),
+  "offset": zod.coerce.number().optional()
+})
+
+export const ListWorkspaceConversationsResponse = zod.object({
+  "conversations": zod.array(zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "specialist": zod.string(),
+  "favorite": zod.boolean(),
+  "archived": zod.boolean(),
+  "linkedRecordType": zod.string().nullish(),
+  "linkedRecordId": zod.number().nullish(),
+  "linkedRecordLabel": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Create a new AI Workspace conversation
+ */
+export const CreateWorkspaceConversationBody = zod.object({
+  "title": zod.string().optional(),
+  "specialist": zod.string().optional(),
+  "linkedRecordType": zod.string().optional().describe('package | report | task'),
+  "linkedRecordId": zod.number().optional(),
+  "seedMessages": zod.array(zod.object({
+  "role": zod.string().describe('user | assistant'),
+  "content": zod.string()
+})).optional().describe('Optional prior transcript to persist as the conversation\'s first messages (e.g. handed off from the assistant panel).')
+})
+
+export const CreateWorkspaceConversationResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "specialist": zod.string(),
+  "favorite": zod.boolean(),
+  "archived": zod.boolean(),
+  "linkedRecordType": zod.string().nullish(),
+  "linkedRecordId": zod.number().nullish(),
+  "linkedRecordLabel": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Get a conversation with its messages
+ */
+export const GetWorkspaceConversationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWorkspaceConversationResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "specialist": zod.string(),
+  "favorite": zod.boolean(),
+  "archived": zod.boolean(),
+  "linkedRecordType": zod.string().nullish(),
+  "linkedRecordId": zod.number().nullish(),
+  "linkedRecordLabel": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string(),
+  "messages": zod.array(zod.object({
+  "id": zod.number(),
+  "role": zod.string(),
+  "content": zod.string(),
+  "suggestions": zod.array(zod.object({
+  "label": zod.string(),
+  "href": zod.string(),
+  "reason": zod.string().optional()
+})).nullish(),
+  "attachments": zod.unknown().nullish(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Rename / change specialist / favorite / archive a conversation
+ */
+export const UpdateWorkspaceConversationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateWorkspaceConversationBody = zod.object({
+  "title": zod.string().optional(),
+  "specialist": zod.string().optional(),
+  "favorite": zod.boolean().optional(),
+  "archived": zod.boolean().optional()
+})
+
+export const UpdateWorkspaceConversationResponse = zod.object({
+  "id": zod.number(),
+  "title": zod.string(),
+  "specialist": zod.string(),
+  "favorite": zod.boolean(),
+  "archived": zod.boolean(),
+  "linkedRecordType": zod.string().nullish(),
+  "linkedRecordId": zod.number().nullish(),
+  "linkedRecordLabel": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Soft-delete (archive) a conversation
+ */
+export const DeleteWorkspaceConversationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteWorkspaceConversationResponse = zod.void()
+
+
+/**
  * @summary Ask the AI compliance copilot a question about this package
  */
 export const AskCopilotParams = zod.object({

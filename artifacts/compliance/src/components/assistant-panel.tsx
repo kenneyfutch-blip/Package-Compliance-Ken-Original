@@ -3,7 +3,7 @@ import { useLocation } from "wouter"
 import { cn } from "@/lib/utils"
 import { useAssistantChat, useAssistantExtract } from "@workspace/api-client-react"
 import type { AssistantToolSuggestion } from "@workspace/api-client-react"
-import { X, ArrowUp, Plus, ArrowRight, FileText, Loader2 } from "lucide-react"
+import { X, ArrowUp, Plus, ArrowRight, FileText, Loader2, Maximize2 } from "lucide-react"
 import {
   extractAttachmentText,
   ATTACHMENT_ACCEPT,
@@ -195,14 +195,40 @@ export function AssistantPanel({
               <p className="text-[11px] text-white/50">Find the right tool</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close assistant"
-            className="rounded-md p-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                // Hand the current transcript to the full AI Workspace, which
+                // seeds a fresh saved conversation from it.
+                sessionStorage.setItem(
+                  "ai-workspace-handoff",
+                  JSON.stringify({
+                    messages: messages.map((m) => ({
+                      role: m.role,
+                      content: m.apiContent ?? m.content,
+                    })),
+                  }),
+                )
+                navigate("/ai-workspace")
+                onClose()
+              }}
+              aria-label="Open AI Workspace"
+              title="Open full AI Workspace"
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              <Maximize2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Workspace</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close assistant"
+              className="rounded-md p-1.5 text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         {/* Transcript */}

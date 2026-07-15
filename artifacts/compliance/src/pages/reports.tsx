@@ -1,4 +1,5 @@
 import { useListReports } from "@workspace/api-client-react"
+import { useRegisterPageContext } from "@/lib/workspace-context"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -8,6 +9,12 @@ import { servingUrl } from "@/lib/proof-utils"
 
 export default function ReportsPage() {
   const { data: reports = [], isLoading } = useListReports()
+
+  useRegisterPageContext({
+    path: "/reports",
+    title: "Compliance Reports",
+    summary: `The reports library currently holds ${reports.length} generated compliance report(s).`,
+  })
 
   const getFormatIcon = (format: string) => {
     switch(format.toLowerCase()) {

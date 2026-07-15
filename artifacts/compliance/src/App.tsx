@@ -16,6 +16,7 @@ import { Shell } from "@/components/layout"
 import { PermissionProvider, usePermissions, NoAccess } from "@/lib/access"
 import { FavoritesProvider } from "@/lib/favorites"
 import { PresenceProvider } from "@/lib/presence"
+import { PageContextProvider } from "@/lib/workspace-context"
 import { requiredPermFor } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
 import { ShieldCheck, Loader2, Lock } from "lucide-react"
@@ -27,6 +28,7 @@ import MyWorkPage from "@/pages/my-work"
 import MyDashboardPage from "@/pages/my-dashboard"
 import BulkQueuePage from "@/pages/bulk"
 import ReviewWorkspace from "@/pages/review-workspace"
+import AiWorkspacePage from "@/pages/ai-workspace"
 import ActiveReviews from "@/pages/active-reviews"
 import AdminPage from "@/pages/admin"
 import AccountPage from "@/pages/account"
@@ -249,6 +251,10 @@ function AppRoutes() {
           <PackagesView title="My Reviews" subtitle="Packages assigned to you for compliance review." emptyText="No reviews assigned right now." />
         </Route>
         <Route path="/reviews/:id" component={ReviewWorkspace} />
+
+        {/* AI Workspace */}
+        <Route path="/ai-workspace/:id" component={AiWorkspacePage} />
+        <Route path="/ai-workspace" component={AiWorkspacePage} />
         <Route path="/queue/high-risk">
           <PackagesView title="High Risk Queue" subtitle="Packages with the highest compliance risk scores." riskFilter="high" emptyText="No high-risk packages. Nicely done." />
         </Route>
@@ -371,7 +377,9 @@ function ProtectedArea() {
           <PermissionProvider>
             <FavoritesProvider>
               <PresenceProvider>
-                <AppRoutes />
+                <PageContextProvider>
+                  <AppRoutes />
+                </PageContextProvider>
               </PresenceProvider>
             </FavoritesProvider>
           </PermissionProvider>

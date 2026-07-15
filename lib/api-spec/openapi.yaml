@@ -46,6 +46,8 @@ tags:
     description: AI usage analytics & cost dashboard — per-request spend, volume, model/tier mix, escalation frequency, and success/error rates
   - name: training
     description: Training Center — per-user learning progress and in-platform support requests
+  - name: workspace
+    description: AI Workspace conversations, specialists and streaming chat.
   - name: team-management
     description: Specialist Directory & Routing Engine — specialists, departments, routing rules, review stages, escalation matrix, and workload
 paths:
@@ -1236,6 +1238,160 @@ paths:
                 $ref: "#/components/schemas/ApiError"
         "502":
           description: Extraction unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /workspace/specialists:
+    get:
+      operationId: listWorkspaceSpecialists
+      tags: [workspace]
+      summary: List AI Workspace specialist personas
+      responses:
+        "200":
+          description: Specialist catalog
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceSpecialistList"
+
+  /workspace/conversations:
+    get:
+      operationId: listWorkspaceConversations
+      tags: [workspace]
+      summary: List the caller's AI Workspace conversations
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: favorite
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceConversationList"
+    post:
+      operationId: createWorkspaceConversation
+      tags: [workspace]
+      summary: Create a new AI Workspace conversation
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWorkspaceConversationInput"
+      responses:
+        "201":
+          description: Created conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceConversation"
+        "400":
+          description: Invalid linked record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: Linked record not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /workspace/conversations/{id}:
+    get:
+      operationId: getWorkspaceConversation
+      tags: [workspace]
+      summary: Get a conversation with its messages
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conversation with messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceConversationDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    patch:
+      operationId: updateWorkspaceConversation
+      tags: [workspace]
+      summary: Rename / change specialist / favorite / archive a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateWorkspaceConversationInput"
+      responses:
+        "200":
+          description: Updated conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceConversation"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+    delete:
+      operationId: deleteWorkspaceConversation
+      tags: [workspace]
+      summary: Soft-delete (archive) a conversation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Archived
+        "404":
+          description: Not found
           content:
             application/json:
               schema:
@@ -7309,6 +7465,176 @@ components:
       required:
         - answer
         - suggestions
+
+    WorkspaceSpecialist:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        suggestedPrompts:
+          type: array
+          items:
+            type: string
+      required:
+        - key
+        - label
+        - description
+        - suggestedPrompts
+
+    WorkspaceSpecialistList:
+      type: object
+      properties:
+        specialists:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceSpecialist"
+      required:
+        - specialists
+
+    WorkspaceConversation:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        specialist:
+          type: string
+        favorite:
+          type: boolean
+        archived:
+          type: boolean
+        linkedRecordType:
+          type: ["string", "null"]
+        linkedRecordId:
+          type: ["integer", "null"]
+        linkedRecordLabel:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - title
+        - specialist
+        - favorite
+        - archived
+        - createdAt
+        - updatedAt
+
+    WorkspaceConversationList:
+      type: object
+      properties:
+        conversations:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceConversation"
+      required:
+        - conversations
+
+    WorkspaceMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        role:
+          type: string
+        content:
+          type: string
+        suggestions:
+          type: ["array", "null"]
+          items:
+            $ref: "#/components/schemas/AssistantToolSuggestion"
+        attachments:
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - role
+        - content
+        - createdAt
+
+    WorkspaceConversationDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        specialist:
+          type: string
+        favorite:
+          type: boolean
+        archived:
+          type: boolean
+        linkedRecordType:
+          type: ["string", "null"]
+        linkedRecordId:
+          type: ["integer", "null"]
+        linkedRecordLabel:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceMessage"
+      required:
+        - id
+        - title
+        - specialist
+        - favorite
+        - archived
+        - createdAt
+        - updatedAt
+        - messages
+
+    CreateWorkspaceConversationInput:
+      type: object
+      properties:
+        title:
+          type: string
+        specialist:
+          type: string
+        linkedRecordType:
+          type: string
+          description: package | report | task
+        linkedRecordId:
+          type: integer
+        seedMessages:
+          type: array
+          description: >-
+            Optional prior transcript to persist as the conversation's first
+            messages (e.g. handed off from the assistant panel).
+          items:
+            type: object
+            required: [role, content]
+            properties:
+              role:
+                type: string
+                description: user | assistant
+              content:
+                type: string
+
+    UpdateWorkspaceConversationInput:
+      type: object
+      properties:
+        title:
+          type: string
+        specialist:
+          type: string
+        favorite:
+          type: boolean
+        archived:
+          type: boolean
 
     BulkAnalyzeInput:
       type: object

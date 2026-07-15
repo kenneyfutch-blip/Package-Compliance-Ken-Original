@@ -1835,6 +1835,87 @@ export interface AssistantChatAnswer {
   suggestions: AssistantToolSuggestion[];
 }
 
+export interface WorkspaceSpecialist {
+  key: string;
+  label: string;
+  description: string;
+  suggestedPrompts: string[];
+}
+
+export interface WorkspaceSpecialistList {
+  specialists: WorkspaceSpecialist[];
+}
+
+export interface WorkspaceConversation {
+  id: number;
+  title: string;
+  specialist: string;
+  favorite: boolean;
+  archived: boolean;
+  /** @nullable */
+  linkedRecordType?: string | null;
+  /** @nullable */
+  linkedRecordId?: number | null;
+  /** @nullable */
+  linkedRecordLabel?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface WorkspaceConversationList {
+  conversations: WorkspaceConversation[];
+}
+
+export interface WorkspaceMessage {
+  id: number;
+  role: string;
+  content: string;
+  /** @nullable */
+  suggestions?: AssistantToolSuggestion[] | null;
+  attachments?: unknown | null;
+  createdAt: string;
+}
+
+export interface WorkspaceConversationDetail {
+  id: number;
+  title: string;
+  specialist: string;
+  favorite: boolean;
+  archived: boolean;
+  /** @nullable */
+  linkedRecordType?: string | null;
+  /** @nullable */
+  linkedRecordId?: number | null;
+  /** @nullable */
+  linkedRecordLabel?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  messages: WorkspaceMessage[];
+}
+
+export type CreateWorkspaceConversationInputSeedMessagesItem = {
+  /** user | assistant */
+  role: string;
+  content: string;
+};
+
+export interface CreateWorkspaceConversationInput {
+  title?: string;
+  specialist?: string;
+  /** package | report | task */
+  linkedRecordType?: string;
+  linkedRecordId?: number;
+  /** Optional prior transcript to persist as the conversation's first messages (e.g. handed off from the assistant panel). */
+  seedMessages?: CreateWorkspaceConversationInputSeedMessagesItem[];
+}
+
+export interface UpdateWorkspaceConversationInput {
+  title?: string;
+  specialist?: string;
+  favorite?: boolean;
+  archived?: boolean;
+}
+
 export interface BulkAnalyzeInput {
   ids: number[];
 }
@@ -2898,6 +2979,14 @@ offset?: number;
 export type CheckPackageDuplicatesParams = {
 sku?: string;
 upc?: string;
+};
+
+export type ListWorkspaceConversationsParams = {
+q?: string;
+favorite?: boolean;
+includeArchived?: boolean;
+limit?: number;
+offset?: number;
 };
 
 export type ListLanguageFindingsParams = {

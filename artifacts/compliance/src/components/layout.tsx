@@ -131,6 +131,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { name: "Dashboard", href: "/", icon: LayoutDashboard },
       { name: "New Package", href: "/upload", icon: Upload },
+      { name: "AI Workspace", href: "/ai-workspace", icon: Sparkles },
     ],
   },
   {
@@ -348,6 +349,7 @@ const NAV_DESC: Record<string, string> = {
   "/notifications": "Alerts, mentions, and updates for you.",
   "/": "Team-wide compliance dashboard and key metrics.",
   "/upload": "Upload artwork to start a new package review.",
+  "/ai-workspace": "AI-native workspace: specialists, memory, and context-aware chat.",
   "/queue/high-risk": "Packages flagged high risk, prioritized for review.",
   "/queue/assigned": "All reviews assigned across the team.",
   "/bulk": "Review many packages at once.",

@@ -6,8 +6,9 @@ import {
   WORKLOAD_LABELS,
   type AiOrchestration,
 } from "./ai-orchestration";
-import { trackDirectUsage } from "./ai-usage";
+import { trackDirectUsage, recordAiUsage } from "./ai-usage";
 import { cachedAiCall } from "./cache/ai-cache";
+import { getSpecialist } from "./specialists";
 
 // Prompt-version constants: bump when a workload's prompt changes so cached
 // results produced by the previous prompt are no longer served (see ai-cache).
@@ -852,6 +853,149 @@ Respond ONLY with valid minified JSON: {"answer":string,"suggestions":[{"label":
     ),
     suggestions,
   };
+}
+
+// ---------------------------------------------------------------------------
+// AI Workspace — streaming chat (enhancement layered on askAssistant)
+// ---------------------------------------------------------------------------
+
+// Bounded page/record context the Workspace can send so answers are aware of
+// what the user is currently looking at. Everything is optional and treated as
+// hints only — the model still answers generally when context is absent.
+export type WorkspacePageContext = {
+  path?: string | null;
+  title?: string | null;
+  summary?: string | null;
+};
+
+/**
+ * Streaming variant of the assistant used by the AI Workspace. Streams a
+ * plain-text answer (no JSON envelope) so it is robust and renders token by
+ * token. Tool suggestions are intentionally NOT part of the streaming path —
+ * they remain in the classic assistant panel. Persona framing comes from the
+ * shared specialists module ("general" reproduces the classic voice).
+ *
+ * onDelta is invoked for every content chunk. Usage is logged fire-and-forget
+ * after the stream completes; telemetry never affects the response.
+ */
+export async function askWorkspaceStream(opts: {
+  organizationId: number;
+  userId?: number | null;
+  specialistKey: string;
+  messages: AssistantChatMessage[];
+  pageContext?: WorkspacePageContext | null;
+  linkedRecordLabel?: string | null;
+  onDelta: (text: string) => void;
+  signal?: AbortSignal;
+}): Promise<{ answer: string }> {
+  const {
+    organizationId,
+    userId,
+    specialistKey,
+    messages,
+    pageContext,
+    linkedRecordLabel,
+    onDelta,
+    signal,
+  } = opts;
+
+  const specialist = getSpecialist(specialistKey);
+  const catalog = ASSISTANT_TOOL_CATALOG.map(
+    (t) => `- ${t.label} (${t.href}): ${t.desc}`,
+  ).join("\n");
+
+  const contextParts: string[] = [];
+  if (linkedRecordLabel) {
+    contextParts.push(`The user has linked this record to the conversation: ${linkedRecordLabel}.`);
+  }
+  if (pageContext?.title || pageContext?.path) {
+    contextParts.push(
+      `The user is currently viewing: ${pageContext.title ?? pageContext.path}${pageContext.path && pageContext.title ? ` (${pageContext.path})` : ""}.`,
+    );
+  }
+  if (pageContext?.summary) {
+    contextParts.push(`Context summary: ${pageContext.summary.slice(0, 1200)}`);
+  }
+  const contextBlock =
+    contextParts.length > 0
+      ? `\n\nCurrent context (use only if relevant):\n${contextParts.join("\n")}`
+      : "";
+
+  const personaBlock = specialist.instructions
+    ? `\n\nPersona: ${specialist.label}. ${specialist.instructions}`
+    : "";
+
+  const system = `You are the AI compliance assistant for a packaging compliance review platform used by retail compliance specialists. Answer questions about packaging, labeling and regulatory compliance (FDA / FTC / CPSC / EPA / Prop 65 requirements, required warnings and disclosures, claim substantiation, net-quantity statements, ingredient/allergen labeling) accurately and practically, and help users find the right tool in the app.
+
+Be warm, concise and practical. Write a clear, well-structured plain-text answer (short paragraphs or bullet points where helpful). When a specific in-app tool would help, mention it by name and reference its path from this catalog — never invent paths:
+${catalog}
+
+If you are not certain about a specific regulation or citation, say so plainly rather than guessing, and point the user to the Regulatory Library for authoritative text. Never state an uncertain requirement as if it were definitive. Do not use emojis.${personaBlock}${contextBlock}`;
+
+  const trimmed = messages.slice(-12).map((m) => ({
+    role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+    content: String(m.content ?? "").slice(0, 4000),
+  }));
+
+  const { client, model } = await resolveAiClientForTier("standard");
+  const start = Date.now();
+  let full = "";
+  let usage: unknown = null;
+
+  try {
+    const stream = await client.chat.completions.create(
+      {
+        model,
+        messages: [{ role: "system", content: system }, ...trimmed],
+        max_completion_tokens: 1024,
+        stream: true,
+        stream_options: { include_usage: true },
+      },
+      signal ? { signal } : undefined,
+    );
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices?.[0]?.delta?.content ?? "";
+      if (delta) {
+        full += delta;
+        onDelta(delta);
+      }
+      if (chunk.usage) usage = chunk.usage;
+    }
+
+    const u = readUsage(usage);
+    recordAiUsage({
+      workload: "copilot",
+      model,
+      tier: "standard",
+      reviewType: WORKLOAD_LABELS.copilot,
+      organizationId,
+      userId: userId ?? null,
+      promptTokens: u.promptTokens,
+      completionTokens: u.completionTokens,
+      totalTokens: u.totalTokens,
+      durationMs: Date.now() - start,
+      success: true,
+    });
+  } catch (err) {
+    recordAiUsage({
+      workload: "copilot",
+      model,
+      tier: "standard",
+      reviewType: WORKLOAD_LABELS.copilot,
+      organizationId,
+      userId: userId ?? null,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      durationMs: Date.now() - start,
+      success: false,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
+
+  return { answer: full };
 }
 
 // ---------------------------------------------------------------------------
