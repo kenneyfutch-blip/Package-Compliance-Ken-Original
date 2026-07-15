@@ -9,6 +9,7 @@
 - [Document extraction (OCR) providers](document-ai.md) — provider-based OCR (OcrProvider + registry); DEFAULT is now OpenAI Vision (rides on active AI model, images+PDF), Google still selectable via OCR_PROVIDER; use provider.id, UI branches on status.engine; strict 3-trigger contract, content-hash cache, extraction/reasoning/validation separation, SSRF boundary.
 - [orval codegen + tsc build cache](codegen-build-cache.md) — after openapi codegen, consumers can typecheck against stale api-zod dist .d.ts; nuke dist + tsbuildinfo and rebuild libs.
 - [api-server test harness](api-server-test-harness.md) — test.mjs must bundle pino (esbuild-plugin-pino + __dirname banner) like build.mjs, else any logger-importing test crashes on __dirname.
+- [Route-level authz tests](route-authz-handler-tests.md) — test bundled express handlers via router.stack extraction + mock.method(db,"select") thenable builder + PgDialect render of the WHERE to assert scoping (no live DB).
 - [Root tsconfig composite refs](root-tsconfig-composite-refs.md) — every composite lib an artifact references must be in root tsconfig refs or `tsc -p` fails TS6305; clean single run to see the real error.
 - [Review Assignment & Workload Engine](review-assignment-engine.md) — durable Postgres job queue; category→team routing; atomic monotonic escalation; SLA/metrics; recurring reschedule dedupe.
 - [Operations Console](operations-console.md) — admin UI; jobs table is org-scoped (filter every read); self-lockout guards; invalidateAuthCache on role change; invite = unlinked user row.
