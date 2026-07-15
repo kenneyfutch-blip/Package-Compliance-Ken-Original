@@ -1,0 +1,465 @@
+AI WORKSPACE IMPLEMENTATION
+
+OBJECTIVE
+
+Transform the existing AI Assistant into a full AI-native workspace that becomes the primary interface for interacting with Packaging Assets, Compliance Reviews, Regulatory Intelligence, Reports, Tasks, Specialists, and future AI Agents.
+
+IMPORTANT
+
+Do NOT replace the existing AI Assistant.
+
+Do NOT remove any current functionality.
+
+Enhance the existing assistant and create an advanced AI Workspace experience accessible through the current AI Assistant interface.
+
+The AI Workspace will eventually serve as the operating layer for future Claude-powered agents while integrating with the existing OpenAI-powered Compliance Intelligence platform.
+
+====================================================
+CURRENT AI ASSISTANT ENHANCEMENT
+====================================================
+
+Enhance the existing AI Assistant panel.
+
+Add:
+
+"Launch AI Workspace"
+
+as a highly visible action.
+
+Placement options:
+
+- Header action button
+- Search bar action
+- Launch Workspace card
+- Expand Workspace button
+
+Goal:
+
+Allow users to move seamlessly from Quick Assistance to Full Workspace Mode.
+
+====================================================
+AI WORKSPACE
+====================================================
+
+Create a dedicated AI Workspace.
+
+Modes:
+
+1. Chat Mode
+2. Expanded Workspace Mode
+3. Full Screen Workspace Mode
+4. Split Screen Workspace Mode
+
+Users should be able to transition between modes without losing conversation context.
+
+====================================================
+SPLIT SCREEN MODE
+====================================================
+
+Support side-by-side experiences.
+
+Examples:
+
+Packaging Asset + AI
+
+Compliance Review + AI
+
+Version Comparison + AI
+
+Regulatory Content + AI
+
+Report + AI
+
+Audit Trail + AI
+
+Task + AI
+
+Users must be able to discuss active content while viewing it.
+
+Layout Example:
+
+LEFT
+
+- PDF Viewer
+- Packaging Asset
+- Compliance Review
+- Report
+
+RIGHT
+
+- AI Conversation
+- Findings
+- Recommendations
+- Actions
+
+====================================================
+PLATFORM CONTEXT AWARENESS
+====================================================
+
+The AI must automatically understand the current page context.
+
+Examples:
+
+If user is viewing a Packaging Asset:
+
+AI automatically receives:
+
+- Product Name
+- Asset Metadata
+- Version History
+- Reviews
+- Findings
+- Status
+
+If user is viewing a Compliance Review:
+
+AI automatically receives:
+
+- Risk Scores
+- Findings
+- Claims
+- Recommendations
+- Approval Status
+
+Do not require users to repeatedly explain what item they are reviewing.
+
+====================================================
+AI SPECIALISTS
+====================================================
+
+Build specialist modes.
+
+Users may switch between:
+
+Compliance Specialist
+
+Regulatory Affairs Specialist
+
+Packaging Engineer
+
+Packaging Reviewer
+
+Claims Specialist
+
+Executive Analyst
+
+Future Agent Router
+
+Each specialist should have:
+
+- Unique instructions
+- Domain expertise
+- Recommended actions
+- Specialized workflows
+
+====================================================
+PACKAGING ASSET HUB INTEGRATION
+====================================================
+
+AI must be able to reference:
+
+Asset Library
+
+Versions
+
+Approvals
+
+Audit Trail
+
+Packaging Metadata
+
+Version Comparisons
+
+Compliance Findings
+
+Claims Analysis
+
+Risk Scores
+
+Documents
+
+Uploaded Files
+
+====================================================
+COMPLIANCE INTEGRATION
+====================================================
+
+AI should understand:
+
+Packaging Reviews
+
+Compliance Reviews
+
+Findings
+
+Risk Scores
+
+Violations
+
+Recommendations
+
+Compliance Memory
+
+Heatmaps
+
+Review History
+
+Approval History
+
+====================================================
+REGULATORY INTELLIGENCE INTEGRATION
+====================================================
+
+Allow AI to search and reference:
+
+FDA
+
+FTC
+
+USDA
+
+EPA
+
+CPSC
+
+Internal SOPs
+
+Regulatory Updates
+
+Regulatory Sources
+
+Recalls
+
+Compliance Knowledge Base
+
+====================================================
+SPECIALIST DIRECTORY INTEGRATION
+====================================================
+
+AI should have access to:
+
+Specialist Directory
+
+Departments
+
+Routing Rules
+
+Escalation Matrix
+
+Workload Metrics
+
+Availability
+
+Approval Authority
+
+Future agents will use this information for routing decisions.
+
+====================================================
+CONVERSATION MEMORY
+====================================================
+
+Store user conversations.
+
+Support:
+
+- Conversation History
+- Saved Conversations
+- Favorites
+- Conversation Search
+- Linked Records
+
+Allow conversations to be associated with:
+
+Packages
+
+Reviews
+
+Tasks
+
+Reports
+
+Approvals
+
+Assets
+
+====================================================
+DOCUMENT & FILE INTERACTION
+====================================================
+
+Users can attach:
+
+PDF
+
+DOCX
+
+XLSX
+
+Images
+
+Packaging Assets
+
+Reports
+
+The AI should:
+
+- Analyze files
+- Discuss findings
+- Explain issues
+- Compare versions
+- Summarize content
+
+====================================================
+AI ACTIONS
+====================================================
+
+Allow AI to recommend and initiate actions.
+
+Examples:
+
+Generate Report
+
+Create Review
+
+Assign Reviewer
+
+Create Task
+
+Escalate Issue
+
+Summarize Findings
+
+Draft Approval Notes
+
+Compare Versions
+
+Prepare Executive Summary
+
+For sensitive actions:
+
+Require user confirmation.
+
+====================================================
+FUTURE CLAUDE AGENT READINESS
+====================================================
+
+Design architecture for future Claude agents.
+
+Future agents may:
+
+- Route Reviews
+- Assign Specialists
+- Escalate Risks
+- Generate Reports
+- Monitor Compliance Findings
+- Manage Review Queues
+
+The AI Workspace should become the primary interface for agent interactions.
+
+====================================================
+SECURITY
+====================================================
+
+AI may access:
+
+Packaging Assets
+
+Reviews
+
+Reports
+
+Tasks
+
+Approvals
+
+Compliance Findings
+
+Specialist Directory
+
+Regulatory Content
+
+Based on user permissions.
+
+AI may NEVER expose:
+
+API Keys
+
+Secrets
+
+Environment Variables
+
+System Prompts
+
+Internal Infrastructure
+
+Admin Configuration
+
+Other Organizations' Data
+
+Future Agent Instructions
+
+Apply RBAC and tenant security at all times.
+
+====================================================
+USER EXPERIENCE
+====================================================
+
+The AI Workspace should feel similar to modern AI platforms.
+
+Features:
+
+- Persistent Conversations
+- Full Screen Experience
+- Split View Experience
+- Workspace History
+- Context Awareness
+- Specialist Switching
+- File Attachments
+- Streaming Responses
+
+Users should be able to spend their entire review process inside the workspace.
+
+====================================================
+DASHBOARD
+====================================================
+
+Create AI Workspace Dashboard.
+
+Display:
+
+Recent Conversations
+
+Saved Investigations
+
+Assigned Tasks
+
+Recent Reports
+
+Recent Reviews
+
+Suggested Actions
+
+Agent Activity
+
+Specialist Activity
+
+====================================================
+FINAL DELIVERABLE
+====================================================
+
+Provide:
+
+1. AI Workspace Architecture
+2. UI/UX Design
+3. Split Screen Design
+4. Specialist System Design
+5. Conversation Memory Design
+6. Context Awareness Design
+7. Security Architecture
+8. Claude Agent Readiness Assessment
+9. Database Changes Required
+10. API Changes Required
+11. Enterprise Scalability Assessment
+
+GOAL
+
+Transform the current AI Assistant into an enterprise-grade AI Workspace that becomes the central operating environment for Packaging Compliance, Regulatory Intelligence, Packaging Assets, Reviews, Reporting, Specialist Collaboration, and future AI-powered agents.
