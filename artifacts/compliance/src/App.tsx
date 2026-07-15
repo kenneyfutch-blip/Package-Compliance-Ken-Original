@@ -29,6 +29,7 @@ import MyDashboardPage from "@/pages/my-dashboard"
 import BulkQueuePage from "@/pages/bulk"
 import ReviewWorkspace from "@/pages/review-workspace"
 import AiWorkspacePage from "@/pages/ai-workspace"
+import AiWorkspaceHome from "@/pages/ai-workspace-home"
 import ActiveReviews from "@/pages/active-reviews"
 import AdminPage from "@/pages/admin"
 import AccountPage from "@/pages/account"
@@ -253,6 +254,7 @@ function AppRoutes() {
         <Route path="/reviews/:id" component={ReviewWorkspace} />
 
         {/* AI Workspace */}
+        <Route path="/ai-workspace/home" component={AiWorkspaceHome} />
         <Route path="/ai-workspace/:id" component={AiWorkspacePage} />
         <Route path="/ai-workspace" component={AiWorkspacePage} />
         <Route path="/queue/high-risk">

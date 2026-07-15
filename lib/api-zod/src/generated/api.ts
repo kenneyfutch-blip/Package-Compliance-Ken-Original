@@ -2659,6 +2659,33 @@ export const DeleteWorkspaceConversationResponse = zod.void()
 
 
 /**
+ * Aggregates the caller's AI Workspace landing surface: recent conversations, saved investigations, assigned reviews, recent reports, recent reviews, suggested actions, agent activity, and specialist activity. Every section is scoped to exactly what the caller may already see; a section the caller has no permission for is returned with visible=false and no items.
+ * @summary AI Workspace dashboard — permission-scoped landing aggregation
+ */
+export const GetWorkspaceHomeResponse = zod.object({
+  "provider": zod.object({
+  "key": zod.string(),
+  "label": zod.string(),
+  "model": zod.string()
+}),
+  "sections": zod.array(zod.object({
+  "key": zod.string(),
+  "title": zod.string(),
+  "description": zod.string(),
+  "visible": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "title": zod.string(),
+  "subtitle": zod.string().nullish(),
+  "href": zod.string().nullish(),
+  "badge": zod.string().nullish(),
+  "timestamp": zod.string().nullish()
+}))
+}))
+})
+
+
+/**
  * @summary Ask the AI compliance copilot a question about this package
  */
 export const AskCopilotParams = zod.object({

@@ -204,6 +204,7 @@ import type {
   WorkspaceConversation,
   WorkspaceConversationDetail,
   WorkspaceConversationList,
+  WorkspaceHome,
   WorkspaceSpecialistList
 } from './api.schemas';
 
@@ -4477,6 +4478,84 @@ export const useDeleteWorkspaceConversation = <TError = ErrorType<ApiError>,
       > => {
       return useMutation(getDeleteWorkspaceConversationMutationOptions(options));
     }
+
+export const getGetWorkspaceHomeUrl = () => {
+
+
+
+
+  return `/api/workspace/home`
+}
+
+/**
+ * Aggregates the caller's AI Workspace landing surface: recent conversations, saved investigations, assigned reviews, recent reports, recent reviews, suggested actions, agent activity, and specialist activity. Every section is scoped to exactly what the caller may already see; a section the caller has no permission for is returned with visible=false and no items.
+ * @summary AI Workspace dashboard — permission-scoped landing aggregation
+ */
+export const getWorkspaceHome = async ( options?: RequestInit): Promise<WorkspaceHome> => {
+
+  return customFetch<WorkspaceHome>(getGetWorkspaceHomeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWorkspaceHomeQueryKey = () => {
+    return [
+    `/api/workspace/home`
+    ] as const;
+    }
+
+
+export const getGetWorkspaceHomeQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspaceHome>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceHome>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkspaceHomeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkspaceHome>>> = ({ signal }) => getWorkspaceHome({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceHome>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWorkspaceHomeQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkspaceHome>>>
+export type GetWorkspaceHomeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary AI Workspace dashboard — permission-scoped landing aggregation
+ */
+
+export function useGetWorkspaceHome<TData = Awaited<ReturnType<typeof getWorkspaceHome>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspaceHome>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWorkspaceHomeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getAskCopilotUrl = (id: number,) => {
 

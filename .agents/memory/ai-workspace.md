@@ -108,3 +108,38 @@ codegen (like the stream endpoint) — the client calls them via fetch in
 message with a record link + citation. Derived AI outputs
 (draft_approval_notes/prepare_executive_summary) reuse the `copilot` telemetry
 workload (no new AiWorkload member needed).
+
+## Phase 4 — provider-agnostic agent layer + dashboard
+The workspace agent loop is now vendor-neutral. The ONLY provider-specific seam
+is `lib/agents/` (`AgentProvider.createSession()` → `AgentSession.streamTurn()`):
+the session resolves model+client ONCE per run and streams each round; the loop
+(perm gating, proposal interception, citation dedup, bounded rounds, telemetry,
+audit) never changes. Selection is `WORKSPACE_AGENT_PROVIDER` env → registry,
+falling back to the built-in OpenAI provider on unknown/unset (never breaks
+chat). Adding Claude = implement an AgentProvider, register it, set the env — no
+loop change. `buildAgentToolSurface(req)` assembles the perm-scoped read tools +
+actions into one offer + JSON-Schema tool defs. Full design in
+`docs/ai-workspace-architecture.md`.
+
+**Agent-run telemetry** (`agent-activity.ts` `recordAgentRun`, table
+`workspace_agent_runs`) is fire-and-forget + audited, called in BOTH success and
+failure paths of `runWorkspaceAgent` alongside `recordAiUsage`; must never
+break/delay chat. Org+user scoped; feeds the dashboard's Agent Activity.
+
+**Dashboard `GET /workspace/home`** (`routes/workspace-dashboard.ts`) normalizes
+8 sections into `{provider, sections[{key,title,description,visible,items[]}]}`
+so the UI renders generically; unauthorized sections come back `visible:false`
+empty. Each section resolves independently and degrades to empty on failure (one
+slow query can't blank the page).
+**The dashboard mirrors each source surface's EXACT scoping — it never widens OR
+narrows access.** Key gotcha: the real `/reports` list endpoint (routes/misc.ts)
+is scoped by **org + `reports:read` ONLY** (no packageConds/opsTeamScope), so the
+dashboard's recentReports must match that — adding package/team scoping there
+would be drift, not a security fix (a code-review flagged this as a false leak).
+Reviews sections DO apply `packageConds` + `opsTeamScope` because the reviews
+surface does. Rule: to decide a dashboard section's scope, read the endpoint it
+deep-links to and copy its gate exactly.
+**Routing:** dashboard is the landing at `/ai-workspace/home` (nav "AI
+Workspace"); chat stays at `/ai-workspace` + `/ai-workspace/:id` (nav "AI
+Assistant"), reached from the dashboard's "Open Assistant" button. `/ai-workspace/home`
+route must be registered BEFORE `/ai-workspace/:id` (wouter first-match).

@@ -36,6 +36,7 @@ import escalationRulesRouter from "./escalation-rules";
 import workloadRouter from "./workload";
 import assistantRouter from "./assistant";
 import workspaceRouter from "./workspace";
+import workspaceDashboardRouter from "./workspace-dashboard";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -79,5 +80,6 @@ router.use(escalationRulesRouter);
 router.use(workloadRouter);
 router.use(assistantRouter);
 router.use(workspaceRouter);
+router.use(workspaceDashboardRouter);
 
 export default router;

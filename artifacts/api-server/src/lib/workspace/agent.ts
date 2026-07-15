@@ -1,5 +1,4 @@
 import type { Request } from "express";
-import { resolveAiClientForTier } from "../ai-client";
 import { readUsage, WORKLOAD_LABELS } from "../ai-orchestration";
 import { recordAiUsage } from "../ai-usage";
 import { getSpecialist } from "../specialists";
@@ -9,18 +8,11 @@ import {
   type WorkspacePageContext,
 } from "../ai";
 import { logger } from "../logger";
-import {
-  availableToolsFor,
-  findTool,
-  toolStatusLabel,
-  type WorkspaceCitation,
-} from "./tools";
-import {
-  availableActionsFor,
-  findAction,
-  actionStatusLabel,
-  type WorkspaceAction,
-} from "./actions";
+import { getActiveAgentProvider } from "../agents/registry";
+import { buildAgentToolSurface } from "../agents/tool-surface";
+import { findTool, toolStatusLabel, type WorkspaceCitation } from "./tools";
+import { findAction, actionStatusLabel, type WorkspaceAction } from "./actions";
+import { recordAgentRun } from "./agent-activity";
 
 // A state-changing action the model has proposed and the user must confirm
 // before it runs. Carries only what the confirm flow needs; the authoritative
@@ -128,6 +120,9 @@ export async function runWorkspaceAgent(opts: {
   req: Request;
   organizationId: number;
   userId?: number | null;
+  // The conversation this turn belongs to, recorded on the agent-run telemetry
+  // (nullable — the run is still meaningful without it).
+  conversationId?: number | null;
   specialistKey: string;
   messages: AssistantChatMessage[];
   pageContext?: WorkspacePageContext | null;
@@ -144,6 +139,7 @@ export async function runWorkspaceAgent(opts: {
     req,
     organizationId,
     userId,
+    conversationId,
     specialistKey,
     messages,
     pageContext,
@@ -153,19 +149,10 @@ export async function runWorkspaceAgent(opts: {
     signal,
   } = opts;
 
-  const tools = availableToolsFor(req);
-  const actions = availableActionsFor(req);
   // The model is offered read tools AND actions under one function-calling
   // surface. Sensitive actions are intercepted at call time (proposed, not run);
   // non-sensitive actions execute inline like read tools.
-  const toolDefs = [...tools, ...actions].map((t) => ({
-    type: "function" as const,
-    function: {
-      name: t.name,
-      description: t.description,
-      parameters: t.parameters,
-    },
-  }));
+  const { tools, actions, toolDefs } = buildAgentToolSurface(req);
 
   const system = buildSystemPrompt({
     specialistKey,
@@ -183,12 +170,21 @@ export async function runWorkspaceAgent(opts: {
     })),
   ];
 
-  const { client, model } = await resolveAiClientForTier("standard");
+  // Resolve the active agent provider and open a bound session for this run.
+  // The provider is the ONLY vendor-specific seam; the loop below is identical
+  // no matter which model answers. The session resolves the model once and is
+  // reused for every round.
+  const provider = getActiveAgentProvider();
   const start = Date.now();
   const citations: WorkspaceCitation[] = [];
   const proposals: ProposedAction[] = [];
+  // Distinct tool/action names actually invoked this run — feeds the dashboard's
+  // Agent Activity telemetry.
+  const toolsUsed = new Set<string>();
   let full = "";
   let usage: unknown = null;
+  let providerKey = provider.key;
+  let model = "unknown";
 
   const logUsage = (success: boolean, errorMessage?: string): void => {
     const u = readUsage(usage);
@@ -208,66 +204,60 @@ export async function runWorkspaceAgent(opts: {
     });
   };
 
+  // Persist an org-scoped, audited agent-run record (fire-and-forget). Citation
+  // count is de-duplicated to match what the caller receives.
+  const recordRun = (
+    status: "succeeded" | "failed",
+    errorMessage?: string,
+  ): void => {
+    const uniqueCitationCount = new Set(
+      citations.map((c) => `${c.type}:${c.id}`),
+    ).size;
+    recordAgentRun(req, {
+      organizationId,
+      userId: userId ?? null,
+      conversationId: conversationId ?? null,
+      provider: providerKey,
+      model,
+      specialist: specialistKey,
+      status,
+      toolsUsed: [...toolsUsed],
+      citationCount: uniqueCitationCount,
+      proposalCount: proposals.length,
+      durationMs: Date.now() - start,
+      error: errorMessage ?? null,
+    });
+  };
+
   try {
+    const session = await provider.createSession();
+    model = session.model;
+    providerKey = session.provider;
+
     for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
       // On the final permitted round, forbid further tool calls so the model
       // must produce an answer with whatever it has gathered.
       const allowTools = toolDefs.length > 0 && round < MAX_TOOL_ROUNDS;
 
-      const stream = await client.chat.completions.create(
-        {
-          model,
-          messages: convo as never,
-          max_completion_tokens: 1400,
-          stream: true,
-          stream_options: { include_usage: true },
-          ...(allowTools ? { tools: toolDefs, tool_choice: "auto" } : {}),
+      const turn = await session.streamTurn({
+        messages: convo,
+        ...(allowTools ? { tools: toolDefs } : {}),
+        maxOutputTokens: 1400,
+        onDelta: (text) => {
+          full += text;
+          onDelta(text);
         },
-        signal ? { signal } : undefined,
-      );
-
-      let content = "";
-      const calls = new Map<number, AssembledToolCall>();
-      let finish: string | null = null;
-
-      for await (const chunk of stream) {
-        const choice = chunk.choices?.[0];
-        const delta = choice?.delta as
-          | {
-              content?: string | null;
-              tool_calls?: {
-                index?: number;
-                id?: string;
-                function?: { name?: string; arguments?: string };
-              }[];
-            }
-          | undefined;
-        if (delta?.content) {
-          content += delta.content;
-          full += delta.content;
-          onDelta(delta.content);
-        }
-        if (delta?.tool_calls) {
-          for (const tc of delta.tool_calls) {
-            const idx = tc.index ?? 0;
-            const cur = calls.get(idx) ?? { id: "", name: "", args: "" };
-            if (tc.id) cur.id = tc.id;
-            if (tc.function?.name) cur.name = tc.function.name;
-            if (tc.function?.arguments) cur.args += tc.function.arguments;
-            calls.set(idx, cur);
-          }
-        }
-        if (choice?.finish_reason) finish = choice.finish_reason;
-        if (chunk.usage) usage = chunk.usage;
-      }
+        ...(signal ? { signal } : {}),
+      });
+      if (turn.usage != null) usage = turn.usage;
 
       // Cap the number of tool calls executed per round so a single round can't
       // fan out unbounded work; we cap BEFORE recording the assistant turn so the
       // tool_call ids and the tool responses we feed back stay in lockstep.
-      const toolCalls = [...calls.values()]
+      const toolCalls = turn.toolCalls
         .filter((c) => c.name)
         .slice(0, MAX_TOOL_CALLS_PER_ROUND);
-      if (toolCalls.length === 0 || finish !== "tool_calls") {
+      if (toolCalls.length === 0 || turn.finishReason !== "tool_calls") {
         // Model produced its answer (already streamed). Done.
         break;
       }
@@ -276,7 +266,7 @@ export async function runWorkspaceAgent(opts: {
       // the results back for the next round.
       convo.push({
         role: "assistant",
-        content: content || null,
+        content: turn.content || null,
         tool_calls: toolCalls.map((c) => ({
           id: c.id,
           type: "function",
@@ -309,6 +299,9 @@ export async function runWorkspaceAgent(opts: {
           });
           continue;
         }
+        // Record the invocation for telemetry once we know it is an offered,
+        // permitted tool/action (proposed or executed).
+        toolsUsed.add(call.name);
         let parsed: Record<string, unknown> = {};
         try {
           parsed = call.args ? JSON.parse(call.args) : {};
@@ -385,8 +378,11 @@ export async function runWorkspaceAgent(opts: {
     }
 
     logUsage(true);
+    recordRun("succeeded");
   } catch (err) {
-    logUsage(false, err instanceof Error ? err.message : String(err));
+    const msg = err instanceof Error ? err.message : String(err);
+    logUsage(false, msg);
+    recordRun("failed", msg);
     throw err;
   }
 

@@ -1903,6 +1903,38 @@ export interface WorkspaceConversationDetail {
   messages: WorkspaceMessage[];
 }
 
+export interface WorkspaceAgentProviderInfo {
+  key: string;
+  label: string;
+  model: string;
+}
+
+export interface WorkspaceHomeItem {
+  id: string;
+  title: string;
+  /** @nullable */
+  subtitle?: string | null;
+  /** @nullable */
+  href?: string | null;
+  /** @nullable */
+  badge?: string | null;
+  /** @nullable */
+  timestamp?: string | null;
+}
+
+export interface WorkspaceHomeSection {
+  key: string;
+  title: string;
+  description: string;
+  visible: boolean;
+  items: WorkspaceHomeItem[];
+}
+
+export interface WorkspaceHome {
+  provider: WorkspaceAgentProviderInfo;
+  sections: WorkspaceHomeSection[];
+}
+
 export type CreateWorkspaceConversationInputSeedMessagesItem = {
   /** user | assistant */
   role: string;

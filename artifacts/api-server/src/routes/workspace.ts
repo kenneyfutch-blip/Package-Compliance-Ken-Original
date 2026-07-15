@@ -585,6 +585,7 @@ router.post(
         req,
         organizationId,
         userId,
+        conversationId: id,
         specialistKey: conv.specialist,
         messages: history,
         pageContext,

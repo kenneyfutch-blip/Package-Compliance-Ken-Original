@@ -58,6 +58,7 @@ import {
   Sparkles,
   LifeBuoy,
   BookMarked,
+  Bot,
 } from "lucide-react"
 import { UserRound, Network, Workflow as WorkflowIcon, TrendingUp } from "lucide-react"
 import { useUser, useClerk } from "@clerk/react"
@@ -131,7 +132,8 @@ const SECTIONS: NavSection[] = [
     items: [
       { name: "Dashboard", href: "/", icon: LayoutDashboard },
       { name: "New Package", href: "/upload", icon: Upload },
-      { name: "AI Workspace", href: "/ai-workspace", icon: Sparkles },
+      { name: "AI Workspace", href: "/ai-workspace/home", icon: Sparkles },
+      { name: "AI Assistant", href: "/ai-workspace", icon: Bot },
     ],
   },
   {

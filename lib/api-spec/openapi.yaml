@@ -1397,6 +1397,26 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /workspace/home:
+    get:
+      operationId: getWorkspaceHome
+      tags: [workspace]
+      summary: AI Workspace dashboard — permission-scoped landing aggregation
+      description: >-
+        Aggregates the caller's AI Workspace landing surface: recent
+        conversations, saved investigations, assigned reviews, recent reports,
+        recent reviews, suggested actions, agent activity, and specialist
+        activity. Every section is scoped to exactly what the caller may already
+        see; a section the caller has no permission for is returned with
+        visible=false and no items.
+      responses:
+        "200":
+          description: Dashboard sections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceHome"
+
   /packages/{id}/copilot:
     post:
       operationId: askCopilot
@@ -7618,6 +7638,74 @@ components:
         - createdAt
         - updatedAt
         - messages
+
+    WorkspaceAgentProviderInfo:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        model:
+          type: string
+      required:
+        - key
+        - label
+        - model
+
+    WorkspaceHomeItem:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: ["string", "null"]
+        href:
+          type: ["string", "null"]
+        badge:
+          type: ["string", "null"]
+        timestamp:
+          type: ["string", "null"]
+      required:
+        - id
+        - title
+
+    WorkspaceHomeSection:
+      type: object
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        visible:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceHomeItem"
+      required:
+        - key
+        - title
+        - description
+        - visible
+        - items
+
+    WorkspaceHome:
+      type: object
+      properties:
+        provider:
+          $ref: "#/components/schemas/WorkspaceAgentProviderInfo"
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceHomeSection"
+      required:
+        - provider
+        - sections
 
     CreateWorkspaceConversationInput:
       type: object

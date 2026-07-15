@@ -43,6 +43,7 @@ An AI-powered packaging compliance operating system: reviewers upload retail pro
 - Auth is deferred (no Clerk/Replit auth wired yet).
 - The AI engine runs through a configurable provider layer (`ai-client.ts` resolves the active provider), not a hardcoded client. Settings > AI Integrations manages providers; keys are encrypted at rest and `baseUrl` is SSRF-validated. See `.agents/memory/ai-providers.md`.
 - Detection is a fixed 8-engine taxonomy (spelling/grammar, contextual language, FDA, EPA, missing disclosures/warnings, packaging formatting, Dollar Tree standards, category regulation) enforced in the `analyzePackaging` prompt.
+- The AI Workspace assistant runs through a provider-agnostic agent layer (`api-server/src/lib/agents/`): the tool-calling loop, permission gating, proposals, citations, and audit are vendor-neutral; only the streaming/tool-call assembly is provider-specific (OpenAI today, Claude pluggable via `WORKSPACE_AGENT_PROVIDER`). Dashboard at `/ai-workspace/home` re-surfaces only data the user can already see. See `docs/ai-workspace-architecture.md`.
 
 ## Product
 
