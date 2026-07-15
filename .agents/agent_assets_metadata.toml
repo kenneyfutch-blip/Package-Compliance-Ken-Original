@@ -6,3 +6,9 @@ id = "a9ALekulAHO_q0clsWFtD"
 uri = "file://docs/compliance-audit-report.md"
 type = "text"
 title = "Packaging Version Control & Compliance Audit — Hardening Report"
+
+[[outputs]]
+id = "TAa14i5BE535Ns362gz2K"
+uri = "file://attached_assets/Packaging-Compliance-AI-Capabilities.pdf"
+type = "pdf"
+title = "Packaging Compliance AI — Capabilities Overview"
