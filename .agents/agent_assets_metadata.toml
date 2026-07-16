@@ -30,3 +30,9 @@ id = "j08Gx75aXrhYPMnwaOeJQ"
 uri = "file://attached_assets/Packaging-Compliance-AI-Team-Guide.pdf"
 type = "pdf"
 title = "Packaging Compliance AI — Team Guide (PDF)"
+
+[[outputs]]
+id = "VoDNZ3qgYwKrqK-PlwpDF"
+uri = "file://attached_assets/Packaging-Compliance-AI-Process-Guide.pdf"
+type = "pdf"
+title = "How We Work — Specialist Process Guide (PDF)"
