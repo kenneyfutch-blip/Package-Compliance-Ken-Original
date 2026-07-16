@@ -52,7 +52,7 @@ function newPage() {
 }
 function need(h) { if (y - h < MARGIN) newPage(); }
 function heading(text, size = 16) {
-  need(size + 22);
+  need(size + 90); // keep headings attached to at least a few lines of content
   page.drawRectangle({ x: MARGIN, y: y - size + 3, width: 4, height: size + 2, color: GREEN });
   page.drawText(text, { x: MARGIN + 12, y: y - size + 6, size, font: bold, color: DARK });
   y -= size + 16;
@@ -119,14 +119,20 @@ function callout(title, text) {
 async function shot(file, caption) {
   const bytes = fs.readFileSync(path.join(SHOTS, file));
   const img = await doc.embedJpg(bytes);
-  const w = CONTENT_W;
-  const h = (img.height / img.width) * w;
-  need(h + 26);
-  page.drawRectangle({ x: MARGIN - 1, y: y - h - 1, width: w + 2, height: h + 2, borderColor: rgb(0.8, 0.84, 0.81), borderWidth: 1 });
-  page.drawImage(img, { x: MARGIN, y: y - h, width: w, height: h });
+  // Fit the image into the space remaining on the current page when reasonable,
+  // so pages don't end up blank or image-only.
+  const capH = 300;
+  const remaining = y - MARGIN - 26;
+  let h = Math.min((img.height / img.width) * CONTENT_W, capH);
+  if (remaining >= 160 && h > remaining) h = remaining; // shrink to fit current page
+  else if (h > remaining) { newPage(); h = Math.min(h, y - MARGIN - 26); }
+  const w = (img.width / img.height) * h;
+  const x = MARGIN + (CONTENT_W - w) / 2;
+  page.drawRectangle({ x: x - 1, y: y - h - 1, width: w + 2, height: h + 2, borderColor: rgb(0.8, 0.84, 0.81), borderWidth: 1 });
+  page.drawImage(img, { x, y: y - h, width: w, height: h });
   y -= h + 6;
   if (caption) {
-    page.drawText(caption, { x: MARGIN, y: y - 8, size: 8, font, color: GRAY });
+    page.drawText(caption, { x, y: y - 8, size: 8, font, color: GRAY });
     y -= 20;
   } else y -= 10;
 }
