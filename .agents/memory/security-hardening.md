@@ -20,6 +20,10 @@ already in place; this layer adds infrastructure controls.
 - **Path matching gotcha:** middleware mounted at `/api` sees `req.path` with the prefix
   stripped — reconstruct with `req.baseUrl + req.path`, and strip trailing slashes, or
   variants like `/api/packages/` bypass the strict limiter.
+- **Every new endpoint that makes an LLM/OCR call must be added to `AI_POST_PATHS`**
+  (the strict `aiLimiter` regex list). Nothing enforces this — the compiler is silent, so
+  a forgotten endpoint silently rides the generous general limiter and becomes the cheapest
+  path to model-spend abuse for any authed user. Verify at review time when adding AI routes.
 
 ## Uploaded-file safety (defense in depth)
 Uploads go direct-to-object-storage via a presigned PUT URL, so the server never sees the

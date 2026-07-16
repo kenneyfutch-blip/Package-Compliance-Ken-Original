@@ -39,6 +39,7 @@ import { getSpecialistProfile } from "@/lib/specialist-profiles"
 import { usePageContext } from "@/lib/workspace-context"
 import {
   streamWorkspaceMessage,
+  fetchWorkspaceFollowups,
   confirmWorkspaceAction,
   cancelWorkspaceAction,
   type WorkspaceCitation,
@@ -148,6 +149,11 @@ export default function AiWorkspacePage() {
   const [attachments, setAttachments] = React.useState<StagedAttachment[]>([])
   const [attaching, setAttaching] = React.useState(false)
   const [attachError, setAttachError] = React.useState<string | null>(null)
+  // Suggested follow-up questions for the most recently completed turn. Cleared
+  // on each new turn / conversation switch; the seq ref ignores a stale result
+  // that resolves after the user has already moved on.
+  const [followups, setFollowups] = React.useState<string[]>([])
+  const followupSeqRef = React.useRef(0)
   const abortRef = React.useRef<null | (() => void)>(null)
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
@@ -393,6 +399,10 @@ export default function AiWorkspacePage() {
     setActiveId(conv.id)
     setLiveMessages([])
     setStreamError(null)
+    // Bump the seq so any in-flight follow-up fetch from the prior turn is
+    // dropped instead of populating chips in this fresh conversation.
+    followupSeqRef.current++
+    setFollowups([])
     navigate(`/ai-workspace/${conv.id}`)
     invalidateList()
   }
@@ -402,6 +412,9 @@ export default function AiWorkspacePage() {
     stopStream()
     setActiveId(id)
     setStreamError(null)
+    // Bump the seq so a late follow-up fetch can't repopulate chips here.
+    followupSeqRef.current++
+    setFollowups([])
     navigate(`/ai-workspace/${id}`)
   }
 
@@ -456,6 +469,8 @@ export default function AiWorkspacePage() {
     setAttachments([])
     setAttachError(null)
     setStreamError(null)
+    setFollowups([])
+    const followupSeq = ++followupSeqRef.current
     setLiveMessages((prev) => [
       ...prev,
       {
@@ -578,6 +593,15 @@ export default function AiWorkspacePage() {
           })
         },
         onDone: () => {
+          // Best-effort follow-up suggestions for this completed turn. Runs off
+          // the finished answer; a result from a superseded turn is dropped via
+          // the seq guard, and any failure just yields no chips.
+          const answer = streamTargetRef.current
+          if (answer.trim()) {
+            void fetchWorkspaceFollowups(text, answer).then((qs) => {
+              if (followupSeqRef.current === followupSeq) setFollowups(qs)
+            })
+          }
           // Network stream is complete; let the typewriter finish revealing the
           // buffered text, then finalize (see the interval above). If it has
           // already caught up, finalize immediately.
@@ -1434,6 +1458,21 @@ export default function AiWorkspacePage() {
             className="hidden"
             onChange={(e) => void onSelectFiles(e.target.files)}
           />
+          {!streaming && followups.length > 0 && (
+            <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-1.5 px-1">
+              {followups.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => void send(q)}
+                  className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-xs text-foreground shadow-sm transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                >
+                  <Sparkles className="h-3 w-3 shrink-0 text-primary" />
+                  <span>{q}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault()

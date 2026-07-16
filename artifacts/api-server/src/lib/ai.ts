@@ -1110,3 +1110,67 @@ Respond with JSON: {"summary":string,"changes":[{"changeType":string,"category":
     changes,
   };
 }
+
+// Suggest up to 3 short follow-up questions the user is likely to ask next,
+// given the last question and the assistant's answer. Best-effort and
+// non-critical: returns [] on ANY failure so the chat simply shows no chips.
+// Runs on the cheap FAST tier and records usage like every other billable call.
+export async function generateFollowups(
+  question: string,
+  answer: string,
+): Promise<string[]> {
+  const q = (question ?? "").trim().slice(0, 2000);
+  const a = (answer ?? "").trim().slice(0, 4000);
+  if (!a) return [];
+
+  const system = `You suggest short follow-up questions a user might ask next in a packaging-compliance assistant. Respond ONLY with valid minified JSON. Do not use emojis.`;
+  const user = `A user asked a compliance assistant a question and received an answer. Suggest up to 3 natural follow-up questions the user is most likely to ask next.
+
+Rules:
+- Phrase each from the user's point of view (a direct question or request).
+- Keep each under 12 words.
+- Make them specific to this topic; no generic filler.
+- Do not repeat the original question.
+
+ORIGINAL QUESTION:
+"""
+${q || "(none)"}
+"""
+
+ANSWER:
+"""
+${a}
+"""
+
+Respond with JSON: {"questions":["...","...","..."]}`;
+
+  try {
+    const { client, model } = await resolveAiClientForTier("fast");
+    const response = await trackDirectUsage(
+      {
+        workload: "followup",
+        model,
+        tier: "fast",
+        reviewType: WORKLOAD_LABELS.followup,
+      },
+      () =>
+        client.chat.completions.create({
+          model,
+          messages: [
+            { role: "system", content: system },
+            { role: "user", content: user },
+          ],
+          response_format: { type: "json_object" },
+          max_completion_tokens: 300,
+        }),
+    );
+    const parsed = safeParse(response.choices[0]?.message?.content ?? "{}");
+    const list = Array.isArray(parsed?.questions) ? parsed.questions : [];
+    return list
+      .map((x: unknown) => (typeof x === "string" ? x.trim() : ""))
+      .filter((x: string) => x.length > 0)
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
+}

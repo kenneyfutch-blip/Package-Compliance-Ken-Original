@@ -16,7 +16,8 @@ export type AiWorkload =
   | "copilot"
   | "ocr"
   | "field_extraction"
-  | "version_compare";
+  | "version_compare"
+  | "followup";
 
 export const WORKLOAD_LABELS: Record<AiWorkload, string> = {
   packaging_analysis: "Packaging compliance analysis",
@@ -26,6 +27,7 @@ export const WORKLOAD_LABELS: Record<AiWorkload, string> = {
   ocr: "Artwork OCR",
   field_extraction: "Metadata extraction",
   version_compare: "Version comparison",
+  followup: "Follow-up suggestions",
 };
 
 // Initial tier per workload. Substantive reasoning starts at standard; cheap,
@@ -38,6 +40,7 @@ export const WORKLOAD_INITIAL_TIER: Record<AiWorkload, AiTier> = {
   ocr: "fast",
   field_extraction: "fast",
   version_compare: "fast",
+  followup: "fast",
 };
 
 // Only substantive review workloads (with real confidence/risk signals)
@@ -50,6 +53,7 @@ export const WORKLOAD_ESCALATES: Record<AiWorkload, boolean> = {
   ocr: false,
   field_extraction: false,
   version_compare: false,
+  followup: false,
 };
 
 const TIER_ORDER: AiTier[] = ["fast", "standard", "reasoning"];

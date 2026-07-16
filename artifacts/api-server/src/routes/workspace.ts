@@ -17,6 +17,7 @@ import { parsePagination } from "../lib/pagination";
 import { writeAudit } from "../lib/audit";
 import {
   extractTextFromImage,
+  generateFollowups,
   type WorkspacePageContext,
 } from "../lib/ai";
 import { runWorkspaceAgent } from "../lib/workspace/agent";
@@ -237,6 +238,30 @@ router.get(
         suggestedPrompts: s.suggestedPrompts,
       })),
     });
+  },
+);
+
+// POST /workspace/followups — suggest up to 3 follow-up questions for the last
+// Q&A in the chat. Best-effort and non-critical: always 200s with a (possibly
+// empty) list so the UI simply shows no chips on failure. Uses only the caller's
+// own turn text supplied in the body — no cross-tenant data is read.
+router.post(
+  "/workspace/followups",
+  async (req: Request, res: Response): Promise<void> => {
+    const body = (req.body ?? {}) as { question?: unknown; answer?: unknown };
+    const question = typeof body.question === "string" ? body.question : "";
+    const answer = typeof body.answer === "string" ? body.answer : "";
+    if (!answer.trim()) {
+      res.json({ questions: [] });
+      return;
+    }
+    try {
+      const questions = await generateFollowups(question, answer);
+      res.json({ questions });
+    } catch (err) {
+      logger.warn({ err }, "workspace followups generation failed");
+      res.json({ questions: [] });
+    }
   },
 );
 

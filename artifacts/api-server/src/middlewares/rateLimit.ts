@@ -67,6 +67,9 @@ const AI_POST_PATHS: RegExp[] = [
   // AI Workspace streaming chat: a tool-calling LLM turn (may also OCR uploaded
   // attachments), open to every authenticated user — must ride the AI limiter.
   /^\/api\/workspace\/conversations\/[^/]+\/stream$/,
+  // AI Workspace follow-up suggestions: another LLM call open to every
+  // authenticated user, so it must ride the strict AI limiter too.
+  /^\/api\/workspace\/followups$/,
 ];
 
 const UPLOAD_POST_PATHS: RegExp[] = [/^\/api\/storage\/uploads\/request-url$/];

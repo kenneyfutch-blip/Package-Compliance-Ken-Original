@@ -171,6 +171,32 @@ export function streamWorkspaceMessage(
   return () => controller.abort();
 }
 
+/**
+ * Fetch up to 3 suggested follow-up questions for the last Q&A. Never throws —
+ * returns [] on any failure so the chat UI simply shows no suggestions.
+ */
+export async function fetchWorkspaceFollowups(
+  question: string,
+  answer: string,
+): Promise<string[]> {
+  try {
+    const res = await fetch(`${API_BASE}/workspace/followups`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ question, answer }),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as { questions?: unknown };
+    if (!Array.isArray(data.questions)) return [];
+    return data.questions
+      .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+      .slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+
 export type ConfirmActionResult = {
   proposal: WorkspaceProposedAction;
   message: {
