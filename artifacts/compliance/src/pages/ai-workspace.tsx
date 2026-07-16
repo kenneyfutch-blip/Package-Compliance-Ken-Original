@@ -33,6 +33,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
+import { SpecialistAvatar } from "@/components/specialist-avatar"
+import { getSpecialistProfile } from "@/lib/specialist-profiles"
 import { usePageContext } from "@/lib/workspace-context"
 import {
   streamWorkspaceMessage,
@@ -206,7 +208,7 @@ export default function AiWorkspacePage() {
     const measure = specialistMeasureRef.current
     if (!bar || !measure) return
     const GAP = 6 // matches gap-1.5 (0.375rem)
-    const MORE_RESERVE = 116 // room for the "More"/selected trigger chip
+    const MORE_RESERVE = 140 // room for the "More"/selected trigger chip (incl. avatar)
     const compute = () => {
       const available = bar.clientWidth
       const items = Array.from(measure.children) as HTMLElement[]
@@ -993,8 +995,9 @@ export default function AiWorkspacePage() {
                   {specialists.map((s) => (
                     <span
                       key={s.key}
-                      className="shrink-0 whitespace-nowrap rounded-md border px-3 py-1.5 text-xs font-medium"
+                      className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-1.5 text-xs font-medium"
                     >
+                      <SpecialistAvatar specialistKey={s.key} size={16} />
                       {s.label}
                     </span>
                   ))}
@@ -1005,8 +1008,12 @@ export default function AiWorkspacePage() {
                     type="button"
                     onClick={() => persistSpecialist(s.key)}
                     title={s.description}
-                    className={specialistBtn(s, s.key === specialist)}
+                    className={cn(
+                      specialistBtn(s, s.key === specialist),
+                      "flex items-center gap-1.5",
+                    )}
                   >
+                    <SpecialistAvatar specialistKey={s.key} size={16} />
                     {s.label}
                   </button>
                 ))}
@@ -1021,9 +1028,15 @@ export default function AiWorkspacePage() {
                             selectedOverflow ?? overflow[0],
                             Boolean(selectedOverflow),
                           ),
-                          "flex items-center gap-1",
+                          "flex items-center gap-1.5",
                         )}
                       >
+                        {selectedOverflow && (
+                          <SpecialistAvatar
+                            specialistKey={selectedOverflow.key}
+                            size={16}
+                          />
+                        )}
                         {selectedOverflow ? selectedOverflow.label : "More"}
                         <ChevronDown className="h-3.5 w-3.5" />
                       </button>
@@ -1095,16 +1108,30 @@ export default function AiWorkspacePage() {
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6">
           {liveMessages.length === 0 ? (
             <div className="mx-auto flex h-full max-w-2xl flex-col justify-center">
-              <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
-                <Sparkles className="h-5 w-5" />
-              </span>
-              <span className="mb-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
-                <Sparkles className="h-3 w-3" /> High-Powered AI Specialist
-              </span>
+              <div className="mb-4 flex items-center gap-3.5">
+                <SpecialistAvatar
+                  specialistKey={specialist}
+                  label={activeSpecialist?.label}
+                  size={56}
+                  showStatus
+                />
+                <div className="min-w-0">
+                  <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                    <Sparkles className="h-3 w-3" /> AI Specialist
+                  </span>
+                  <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-500">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    Online now
+                  </div>
+                </div>
+              </div>
               <h2 className="text-2xl font-semibold tracking-tight">
-                {activeSpecialist?.label ?? "AI Workspace"}
+                {getSpecialistProfile(specialist, activeSpecialist?.label).name}
               </h2>
-              <p className="mt-1.5 text-muted-foreground">
+              <p className="mt-0.5 text-sm font-medium text-muted-foreground">
+                {activeSpecialist?.label ?? "AI Workspace"}
+              </p>
+              <p className="mt-2 text-muted-foreground">
                 {activeSpecialist?.description ??
                   "Ask a compliance question or describe what you're trying to do."}
               </p>
@@ -1135,9 +1162,12 @@ export default function AiWorkspacePage() {
                   )}
                 >
                   {!isUser && (
-                    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
-                      <Sparkles className="h-3.5 w-3.5" />
-                    </div>
+                    <SpecialistAvatar
+                      specialistKey={specialist}
+                      label={activeSpecialist?.label}
+                      size={30}
+                      className="mt-0.5"
+                    />
                   )}
                   <div
                     className={cn(
@@ -1378,7 +1408,7 @@ export default function AiWorkspacePage() {
                 }
               }}
               rows={1}
-              placeholder={`Message the ${activeSpecialist?.label ?? "assistant"}...`}
+              placeholder={`Message ${getSpecialistProfile(specialist, activeSpecialist?.label).name}...`}
               className="max-h-40 min-h-[2.5rem] w-full resize-none bg-transparent px-2 py-1.5 text-sm focus:outline-none"
             />
             <Button
