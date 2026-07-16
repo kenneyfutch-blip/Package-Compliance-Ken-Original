@@ -25,6 +25,7 @@ import type {
 } from "@workspace/api-client-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -149,6 +150,9 @@ export default function AiWorkspacePage() {
   const [attachments, setAttachments] = React.useState<StagedAttachment[]>([])
   const [attaching, setAttaching] = React.useState(false)
   const [attachError, setAttachError] = React.useState<string | null>(null)
+  // A typed-but-unsent message or staged attachments are unsaved work —
+  // confirm before navigating away or closing the tab.
+  useUnsavedGuard(input.trim().length > 0 || attachments.length > 0)
   // Suggested follow-up questions for the most recently completed turn. Cleared
   // on each new turn / conversation switch; the seq ref ignores a stale result
   // that resolves after the user has already moved on.

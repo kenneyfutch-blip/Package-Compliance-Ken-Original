@@ -5,6 +5,7 @@ import {
   integer,
   timestamp,
   jsonb,
+  index,
 } from "drizzle-orm/pg-core";
 
 // A durable background job. This table IS the queue: a poller claims due rows
@@ -37,7 +38,16 @@ export const jobsTable = pgTable("jobs", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
-});
+}, (t) => [
+  // Claim query: WHERE status='pending' AND run_at<=now() ORDER BY priority DESC, run_at ASC.
+  index("idx_jobs_claim").on(t.status, t.priority.desc(), t.runAt.asc()),
+  // Stale-job reclaim: WHERE status='running' AND locked_at <= cutoff.
+  index("idx_jobs_reclaim").on(t.status, t.lockedAt),
+  // ensureScheduledJob / ensurePendingJob dedupe lookups by type+status(+dedupe_key).
+  index("idx_jobs_type_status").on(t.type, t.status),
+  // Deep-health recency probe (updated_at >= cutoff LIMIT 1) + retention prune.
+  index("idx_jobs_updated_at").on(t.updatedAt),
+]);
 
 export type JobRow = typeof jobsTable.$inferSelect;
 export type InsertJob = typeof jobsTable.$inferInsert;

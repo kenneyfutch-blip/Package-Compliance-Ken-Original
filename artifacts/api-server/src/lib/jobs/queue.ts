@@ -165,6 +165,23 @@ export async function heartbeatJob(id: number, workerId: string): Promise<void> 
 
 // Recover jobs left "running" by a crashed/restarted worker so they can be
 // retried instead of being stuck forever.
+// Retention pruning for the job queue: terminal rows (completed / failed /
+// canceled) older than the window are deleted so the queue table — which is
+// polled every few seconds — never grows unbounded. Pending/running rows are
+// never touched. Returns the number of rows removed.
+export async function pruneTerminalJobs(
+  now: Date,
+  olderThanDays = 30,
+): Promise<number> {
+  const cutoff = new Date(now.getTime() - olderThanDays * 24 * 60 * 60 * 1000);
+  const res = await db.execute(sql`
+    DELETE FROM jobs
+    WHERE status IN ('completed', 'failed', 'canceled')
+      AND updated_at < ${cutoff}
+  `);
+  return (res as unknown as { rowCount?: number }).rowCount ?? 0;
+}
+
 export async function requeueStaleJobs(olderThanMs = 5 * 60_000): Promise<number> {
   const cutoff = new Date(Date.now() - olderThanMs);
   const rows = await db

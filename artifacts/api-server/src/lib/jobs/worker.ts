@@ -31,6 +31,22 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 // when scaled out — is never reclaimed out from under a live worker.
 const STALE_JOB_MS = 120_000;
 let started = false;
+// Graceful-shutdown state: when stopping, the loop schedules no further ticks
+// and pokes are ignored; shutdown awaits the in-flight tick so a running job
+// finishes (or heartbeats keep it owned) instead of being killed mid-write.
+let stopping = false;
+let nextTickTimer: NodeJS.Timeout | null = null;
+// ALL in-flight ticks — scheduled loop ticks AND poke-triggered ticks — so
+// shutdown can await every one of them, not just the polling loop's.
+const inFlightTicks = new Set<Promise<void>>();
+
+function trackTick(): Promise<void> {
+  const p = tick().finally(() => {
+    inFlightTicks.delete(p);
+  });
+  inFlightTicks.add(p);
+  return p;
+}
 
 async function runOne(): Promise<boolean> {
   const job = await claimNextJob(WORKER_ID);
@@ -111,12 +127,37 @@ export function startJobWorker(): void {
     .catch((err) => logger.error({ err }, "Failed to requeue stale jobs"));
 
   const loop = () => {
-    void tick().finally(() => {
-      setTimeout(loop, POLL_INTERVAL_MS);
+    if (stopping) return;
+    void trackTick().finally(() => {
+      if (!stopping) nextTickTimer = setTimeout(loop, POLL_INTERVAL_MS);
     });
   };
-  setTimeout(loop, 2_000);
+  nextTickTimer = setTimeout(loop, 2_000);
   logger.info({ workerId: WORKER_ID }, "Background job worker started");
+}
+
+// Gracefully stop the worker: no new ticks are scheduled, and the in-flight
+// tick (if any) is awaited so the current job can finish and record its
+// terminal state. Bounded by the caller's overall shutdown deadline.
+export async function stopJobWorker(): Promise<void> {
+  if (!started || stopping) {
+    stopping = true;
+    return;
+  }
+  stopping = true;
+  if (nextTickTimer) {
+    clearTimeout(nextTickTimer);
+    nextTickTimer = null;
+  }
+  // Await every in-flight tick (loop-scheduled AND poke-triggered).
+  while (inFlightTicks.size > 0) {
+    try {
+      await Promise.allSettled([...inFlightTicks]);
+    } catch {
+      // tick() already logs its own errors; shutdown proceeds regardless.
+    }
+  }
+  logger.info({ workerId: WORKER_ID }, "Background job worker stopped");
 }
 
 // Wake the worker to drain due jobs immediately instead of waiting for the next
@@ -124,6 +165,6 @@ export function startJobWorker(): void {
 // analysis) so results start landing without the poll delay. No-op until the
 // worker has been started.
 export function pokeJobWorker(): void {
-  if (!started) return;
-  void tick();
+  if (!started || stopping) return;
+  void trackTick();
 }

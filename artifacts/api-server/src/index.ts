@@ -2,10 +2,11 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { ensureAuditImmutability } from "./lib/audit";
 import { initJobs } from "./lib/jobs";
+import { stopJobWorker } from "./lib/jobs/worker";
 import { ensureMemoryIndexes } from "./lib/memory/engine";
 import { ensureEcfrIndexes } from "./lib/ecfr/engine";
 import { ensurePolicyIndexes } from "./lib/policies/engine";
-import { initMaintenance } from "./lib/maintenance/archive";
+import { initMaintenance, stopMaintenance } from "./lib/maintenance/archive";
 import { backfillSupplierLinks } from "./lib/suppliers/link";
 import { initAiUsageWriteHealthHeartbeat } from "./lib/ai-usage";
 
@@ -23,7 +24,7 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
+const server = app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
@@ -59,3 +60,54 @@ app.listen(port, (err) => {
   // process. Off the AI path — never adds latency to AI responses.
   initAiUsageWriteHealthHeartbeat();
 });
+
+// ---------------------------------------------------------------------------
+// Graceful shutdown
+// ---------------------------------------------------------------------------
+// On SIGTERM/SIGINT (deploy restarts, scale-down, Ctrl-C): stop accepting new
+// connections, stop scheduling background work, let the in-flight job tick
+// finish so no job dies mid-write (the stale-job reclaim + ownership guards
+// cover anything that still gets cut off), then exit. A hard deadline ensures
+// a stuck connection or handler can never wedge the shutdown.
+const SHUTDOWN_DEADLINE_MS = 15_000;
+let shuttingDown = false;
+
+function shutdown(signal: string): void {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  logger.info({ signal }, "Shutting down gracefully");
+
+  // Hard deadline: never hang shutdown on a stuck socket or handler.
+  const deadline = setTimeout(() => {
+    logger.warn({ signal }, "Shutdown deadline reached; exiting");
+    process.exit(0);
+  }, SHUTDOWN_DEADLINE_MS);
+  if (typeof deadline.unref === "function") deadline.unref();
+
+  // Stop accepting new connections; existing keep-alive sockets are closed
+  // once their in-flight responses complete. Exit waits for BOTH the HTTP
+  // drain and the worker stop (or the hard deadline, whichever comes first).
+  const httpClosed = new Promise<void>((resolve) => {
+    server.close(() => {
+      logger.info("HTTP server closed");
+      resolve();
+    });
+  });
+  if (typeof server.closeIdleConnections === "function") {
+    server.closeIdleConnections();
+  }
+
+  stopMaintenance();
+  const workerStopped = stopJobWorker().catch((err) =>
+    logger.error({ err }, "Job worker stop failed"),
+  );
+
+  void Promise.allSettled([httpClosed, workerStopped]).then(() => {
+    clearTimeout(deadline);
+    logger.info({ signal }, "Shutdown complete");
+    process.exit(0);
+  });
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

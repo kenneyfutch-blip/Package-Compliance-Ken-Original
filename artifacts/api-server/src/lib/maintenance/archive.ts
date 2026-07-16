@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { logger } from "../logger";
 import { pruneStaleAiUsageWriteHealth } from "../ai-usage";
 import { purgeExpiredPackages } from "../packages/purge";
+import { pruneTerminalJobs } from "../jobs/queue";
 
 // ---------------------------------------------------------------------------
 // Scalability: partitioning + retention for the highest-volume time-series data.
@@ -177,6 +178,7 @@ export async function runMaintenance(now: Date): Promise<void> {
     const violations = await runViolationRetention();
     const staleHealthRows = await pruneStaleAiUsageWriteHealth(now);
     const purgedPackages = await purgeExpiredPackages(now);
+    const prunedJobs = await pruneTerminalJobs(now);
     logger.info(
       {
         auditMoved: audit.moved,
@@ -184,6 +186,7 @@ export async function runMaintenance(now: Date): Promise<void> {
         violationsPruned: violations.pruned,
         staleHealthRowsPruned: staleHealthRows,
         purgedPackages,
+        prunedJobs,
       },
       "Data maintenance pass complete",
     );
@@ -202,4 +205,13 @@ export function initMaintenance(): void {
   );
   // Do not keep the event loop alive solely for maintenance.
   if (typeof maintenanceTimer.unref === "function") maintenanceTimer.unref();
+}
+
+// Stop the maintenance schedule (graceful shutdown). A pass already in flight
+// finishes on its own; runMaintenance is non-fatal and never blocks shutdown.
+export function stopMaintenance(): void {
+  if (maintenanceTimer) {
+    clearInterval(maintenanceTimer);
+    maintenanceTimer = null;
+  }
 }

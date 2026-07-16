@@ -16,6 +16,7 @@ import {
   type ReviewTask as ApiReviewTask, type Citation,
 } from "@workspace/api-client-react"
 import { useRegisterPageContext } from "@/lib/workspace-context"
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -217,6 +218,8 @@ export default function ReviewWorkspace() {
   const [pendingPin, setPendingPin] = React.useState<AnnotationDraft | null>(null)
   const [pinText, setPinText] = React.useState("")
   const [pinPriority, setPinPriority] = React.useState("medium")
+  // A typed-but-unsaved annotation draft is real work — confirm before leaving.
+  useUnsavedGuard(pendingPin !== null && pinText.trim().length > 0)
   // Session undo stack: ids of markups this reviewer created, oldest→newest.
   // Reverting deletes the most recent one that still exists.
   const [undoStack, setUndoStack] = React.useState<number[]>([])
@@ -820,6 +823,8 @@ function FindingsPanel({ pkg, selectedId, onSelect, onChange }: { pkg: Pkg; sele
 
   const [pending, setPending] = React.useState<{ v: Violation; reason: string } | null>(null)
   const [note, setNote] = React.useState("")
+  // An in-progress dismissal note is unsaved work — confirm before leaving.
+  useUnsavedGuard(pending !== null && note.trim().length > 0)
 
   const openDismiss = (v: Violation, reason: string) => { setNote(""); setPending({ v, reason }) }
   const handleDismiss = () => {
@@ -1022,6 +1027,8 @@ function CommentCard({ a, num, selected, onSelect, onChange }: {
   const reply = useAddCommentReply()
   const [replyText, setReplyText] = React.useState("")
   const [showReply, setShowReply] = React.useState(false)
+  // A typed-but-unsent reply is unsaved work — confirm before leaving.
+  useUnsavedGuard(showReply && replyText.trim().length > 0)
   const meta = priorityMeta(a.priority)
   const isAi = a.source === "ai"
 
@@ -1114,6 +1121,8 @@ function TasksPanel({ pkg, packageId, onChange }: { pkg: Pkg; packageId: number;
   const [title, setTitle] = React.useState("")
   const [assignee, setAssignee] = React.useState<string>(UNASSIGNED)
   const [priority, setPriority] = React.useState("medium")
+  // A drafted-but-uncreated task is unsaved work — confirm before leaving.
+  useUnsavedGuard(title.trim().length > 0)
 
   const statusMeta: Record<string, { label: string; badge: string }> = {
     open: { label: "Open", badge: "bg-muted text-muted-foreground border-border" },
@@ -1466,6 +1475,8 @@ function ApprovalBar({ pkg, packageId, onChange }: { pkg: Pkg; packageId: number
   const [note, setNote] = React.useState("")
   const [feedback, setFeedback] = React.useState<{ type: "success" | "error"; text: string } | null>(null)
   const [overriding, setOverriding] = React.useState(false)
+  // A typed-but-unsubmitted approval note is unsaved work — confirm first.
+  useUnsavedGuard(note.trim().length > 0)
 
   const latest = pkg.approvals.length ? pkg.approvals[pkg.approvals.length - 1] : null
   // Approved / Rejected are settled outcomes; Needs Revision and Escalated still

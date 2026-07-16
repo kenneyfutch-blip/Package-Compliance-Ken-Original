@@ -3,6 +3,7 @@ import { db, teamsTable, teamMembersTable, usersTable } from "@workspace/db";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { mapTeam } from "../lib/mappers";
 import { requirePermission, orgId } from "../lib/rbac/context";
+import { invalidateAuthCache } from "../lib/rbac/provision";
 import { writeAudit } from "../lib/audit";
 
 const router: IRouter = Router();
@@ -148,7 +149,11 @@ router.post(
     }
     // Only users in the same org may be added to a team.
     const [user] = await db
-      .select({ id: usersTable.id, name: usersTable.name })
+      .select({
+        id: usersTable.id,
+        name: usersTable.name,
+        clerkUserId: usersTable.clerkUserId,
+      })
       .from(usersTable)
       .where(and(eq(usersTable.id, userId), eq(usersTable.organizationId, orgId(req))))
       .limit(1);
@@ -160,6 +165,9 @@ router.post(
       .insert(teamMembersTable)
       .values({ teamId: id, userId })
       .onConflictDoNothing();
+    // Team membership feeds the cached auth context's team scope — drop the
+    // stale entry so the change takes effect immediately, not after TTL.
+    if (user.clerkUserId) invalidateAuthCache(user.clerkUserId);
     await writeAudit(req, {
       action: "Team.AddMember",
       entityType: "team",
@@ -185,6 +193,14 @@ router.delete(
     await db
       .delete(teamMembersTable)
       .where(and(eq(teamMembersTable.teamId, id), eq(teamMembersTable.userId, userId)));
+    // Team membership feeds the cached auth context's team scope — drop the
+    // stale entry so the removal takes effect immediately, not after TTL.
+    const [removed] = await db
+      .select({ clerkUserId: usersTable.clerkUserId })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1);
+    if (removed?.clerkUserId) invalidateAuthCache(removed.clerkUserId);
     await writeAudit(req, {
       action: "Team.RemoveMember",
       entityType: "team",
