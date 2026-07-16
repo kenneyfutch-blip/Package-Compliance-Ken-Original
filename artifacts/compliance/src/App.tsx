@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Route, Switch, Redirect, useLocation, Router as WouterRouter } from "wouter"
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query"
 import {
@@ -399,6 +399,82 @@ function ProtectedArea() {
   )
 }
 
+// Recovers from mid-session auth expiry WITHOUT losing on-page work. When any
+// API call returns 401 (customFetch broadcasts "api:unauthorized"), this shows
+// a non-navigating banner: the page — and any typed-but-unsaved drafts — stays
+// exactly as it is. "Sign in again" opens Clerk's modal over the current page;
+// once the session is valid again we refetch queries and dismiss. A plain
+// reload (which would destroy work) is never forced.
+function SessionExpiredWatcher() {
+  const clerk = useClerk()
+  const qc = useQueryClient()
+  const [expired, setExpired] = useState(false)
+
+  useEffect(() => {
+    const onUnauthorized = () => setExpired(true)
+    window.addEventListener("api:unauthorized", onUnauthorized)
+    return () => window.removeEventListener("api:unauthorized", onUnauthorized)
+  }, [])
+
+  useEffect(() => {
+    if (!expired) return
+    // Dismiss automatically once Clerk reports a live session again (modal
+    // sign-in completed or the SDK refreshed the token in the background).
+    const unsubscribe = clerk.addListener(({ session }) => {
+      if (session?.status === "active") {
+        setExpired(false)
+        void qc.invalidateQueries()
+      }
+    })
+    return unsubscribe
+  }, [expired, clerk, qc])
+
+  const retry = async () => {
+    // Deterministic auth probe: hit an authenticated endpoint directly and only
+    // dismiss when it does NOT come back 401. (refetchQueries resolves even
+    // when individual queries fail, so it can't be trusted as an auth signal.)
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/reviews/presence`, {
+        credentials: "include",
+        headers: { accept: "application/json" },
+      })
+      if (res.status !== 401) {
+        setExpired(false)
+        void qc.invalidateQueries()
+      }
+    } catch {
+      /* network error — keep the banner */
+    }
+  }
+
+  if (!expired) return null
+  return (
+    <div
+      role="alert"
+      className="fixed inset-x-0 top-0 z-[100] flex items-center justify-center gap-3 border-b border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 shadow-sm dark:border-amber-700 dark:bg-amber-950 dark:text-amber-100"
+    >
+      <span>
+        Your session has expired. Your unsaved work is still on this page — sign
+        in again to continue.
+      </span>
+      <button
+        type="button"
+        onClick={() => clerk.openSignIn()}
+        className="rounded-md bg-amber-600 px-3 py-1 font-medium text-white hover:bg-amber-700"
+      >
+        Sign in again
+      </button>
+      <button
+        type="button"
+        onClick={() => void retry()}
+        className="rounded-md border border-amber-400 px-3 py-1 font-medium hover:bg-amber-100 dark:hover:bg-amber-900"
+      >
+        Retry
+      </button>
+    </div>
+  )
+}
+
 // Invalidates cached queries when the signed-in user changes.
 function ClerkQueryClientCacheInvalidator() {
   const { addListener } = useClerk()
@@ -440,6 +516,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <SessionExpiredWatcher />
         <Switch>
           <Route path="/sign-in/*?" component={SignInPage} />
           <Route path="/sign-up/*?" component={SignUpPage} />

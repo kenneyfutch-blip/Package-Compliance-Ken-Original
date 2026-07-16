@@ -130,7 +130,16 @@ router.get(
         db
           .select()
           .from(packagesTable)
-          .where(and(eq(packagesTable.vendor, supplier.name), eq(packagesTable.organizationId, org)))
+          // Join strictly by supplier ID. No runtime name fallback: matching
+          // free-text vendor names at read time can attach legacy rows to the
+          // wrong supplier after a rename or name reuse. Legacy rows are linked
+          // once by the startup backfill (backfillSupplierLinks) instead.
+          .where(
+            and(
+              eq(packagesTable.organizationId, org),
+              eq(packagesTable.supplierId, id),
+            ),
+          )
           .orderBy(desc(packagesTable.createdAt)),
         db
           .select()

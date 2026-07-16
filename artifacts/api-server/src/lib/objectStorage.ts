@@ -214,6 +214,29 @@ export class ObjectStorageService {
     return objectFile;
   }
 
+  // Best-effort deletion of a stored object by its normalized "/objects/..."
+  // path. Used when the owning DB row is hard-purged so files don't accumulate
+  // as unreachable orphans in the bucket. Missing objects and non-entity paths
+  // are treated as success (idempotent; the goal is "not present afterwards").
+  async deleteObjectEntity(objectPath: string): Promise<void> {
+    if (!objectPath.startsWith('/objects/')) return;
+    const parts = objectPath.slice(1).split('/');
+    if (parts.length < 2) return;
+    const entityId = parts.slice(1).join('/');
+    let entityDir = this.getPrivateObjectDir();
+    if (!entityDir.endsWith('/')) {
+      entityDir = `${entityDir}/`;
+    }
+    const { bucketName, objectName } = parseObjectPath(`${entityDir}${entityId}`);
+    try {
+      await objectStorageClient.bucket(bucketName).file(objectName).delete();
+    } catch (err) {
+      const code = (err as { code?: number }).code;
+      if (code === 404) return; // already gone — fine
+      throw err;
+    }
+  }
+
   normalizeObjectEntityPath(rawPath: string): string {
     if (!rawPath.startsWith('https://storage.googleapis.com/')) {
       return rawPath;

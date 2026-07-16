@@ -23,6 +23,7 @@ import {
   complianceMemoryTable,
 } from "@workspace/db";
 import { logger } from "../logger";
+import { ObjectStorageService } from "../objectStorage";
 
 // How long a soft-deleted (trashed) package is recoverable before the daily
 // maintenance pass hard-purges it. Chosen to give reviewers a comfortable
@@ -63,6 +64,71 @@ async function teardownLivePackageState(tx: Tx, id: number): Promise<void> {
 // on an explicit permanent delete). audit_events are preserved as compliance
 // history; supplier_submissions are preserved but unlinked so no view renders a
 // dead "open package" link. Mirrors the historical inline delete cascade.
+// Collect every object-storage path referenced by a package (artwork + all
+// version files/previews) BEFORE the rows are deleted, so the caller can
+// remove the underlying files after the purge commits. Object deletion happens
+// OUTSIDE the transaction on purpose: storage calls can't roll back, so we
+// only delete files once the DB purge is final; a failed file delete leaves a
+// harmless orphan (logged), never a dangling DB reference.
+export async function collectPackageObjectPaths(tx: Tx, id: number): Promise<string[]> {
+  const [pkg] = await tx
+    .select({ artworkUrl: packagesTable.artworkUrl })
+    .from(packagesTable)
+    .where(eq(packagesTable.id, id))
+    .limit(1);
+  const versions = await tx
+    .select({
+      fileUrl: packageVersionsTable.fileUrl,
+      previewUrl: packageVersionsTable.previewUrl,
+    })
+    .from(packageVersionsTable)
+    .where(eq(packageVersionsTable.packageId, id));
+  const paths = new Set<string>();
+  const add = (p: string | null | undefined) => {
+    if (p && p.startsWith("/objects/")) paths.add(p);
+  };
+  add(pkg?.artworkUrl);
+  for (const v of versions) {
+    add(v.fileUrl);
+    add(v.previewUrl);
+  }
+  return [...paths];
+}
+
+// True when any surviving DB row still references this object path. Checked
+// AFTER the purge commits (the purged package's own rows are already gone), so
+// a path shared with another package/version/proof/policy is never deleted out
+// from under it.
+async function isObjectPathStillReferenced(path: string): Promise<boolean> {
+  const result = await db.execute(sql`
+    SELECT 1 AS r WHERE EXISTS (SELECT 1 FROM packages WHERE artwork_url = ${path})
+       OR EXISTS (SELECT 1 FROM package_versions WHERE file_url = ${path} OR preview_url = ${path})
+       OR EXISTS (SELECT 1 FROM proofs WHERE object_path = ${path})
+       OR EXISTS (SELECT 1 FROM policies WHERE document_url = ${path})
+  `);
+  const rows = (result as unknown as { rows: unknown[] }).rows ?? [];
+  return rows.length > 0;
+}
+
+// Best-effort file cleanup after a committed purge. Never throws. Each path is
+// reference-counted against every object-bearing table first; deletion only
+// happens when nothing references it anymore.
+export async function deleteObjectsBestEffort(packageId: number, paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  const storage = new ObjectStorageService();
+  for (const path of paths) {
+    try {
+      if (await isObjectPathStillReferenced(path)) {
+        logger.info({ packageId, path }, "Skipping object delete: still referenced by another row");
+        continue;
+      }
+      await storage.deleteObjectEntity(path);
+    } catch (err) {
+      logger.warn({ err, packageId, path }, "Failed to delete stored object for purged package");
+    }
+  }
+}
+
 export async function purgePackageCascade(tx: Tx, id: number): Promise<void> {
   await teardownLivePackageState(tx, id);
   await tx
@@ -140,6 +206,7 @@ export async function purgeExpiredPackages(now: Date): Promise<number> {
       // Re-check eligibility INSIDE the transaction under a row lock. A package
       // restored (deletedAt cleared) between the snapshot above and its turn in
       // the loop must NOT be purged — that would break the recovery guarantee.
+      let objectPaths: string[] = [];
       const didPurge = await db.transaction(async (tx) => {
         const [row] = await tx
           .select({ id: packagesTable.id })
@@ -153,10 +220,15 @@ export async function purgeExpiredPackages(now: Date): Promise<number> {
           )
           .for("update");
         if (!row) return false;
+        objectPaths = await collectPackageObjectPaths(tx, id);
         await purgePackageCascade(tx, id);
         return true;
       });
-      if (didPurge) purged += 1;
+      if (didPurge) {
+        purged += 1;
+        // Only after the DB purge is committed — see collectPackageObjectPaths.
+        await deleteObjectsBestEffort(id, objectPaths);
+      }
     } catch (err) {
       logger.error({ err, packageId: id }, "Failed to purge expired package");
     }

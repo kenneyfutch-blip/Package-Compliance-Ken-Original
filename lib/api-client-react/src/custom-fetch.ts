@@ -363,6 +363,12 @@ export async function customFetch<T = unknown>(
   const response = await fetch(input, { ...init, method, headers });
 
   if (!response.ok) {
+    // Broadcast auth failures so the app shell can prompt a re-login WITHOUT
+    // navigating away (typed-but-unsaved work stays on the page). Browser-only;
+    // listeners decide what to do — this layer stays UI-agnostic.
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("api:unauthorized", { detail: requestInfo }));
+    }
     const errorData = await parseErrorBody(response, method);
     throw new ApiError(response, errorData, requestInfo);
   }

@@ -55,5 +55,7 @@
 - [AI specialist avatars](specialist-avatars.md) — personas as "AI employees" w/ name+headshot; identity mapped client-side (not API schema); SpecialistAvatar broken-state must reset on photo change; selector-chip avatar must mirror the responsive measurement row.
 - [Prompt-injection hardening](prompt-injection-hardening.md) — every LLM call site must append the untrusted-data directive + wrapUntrusted() fences; user's own chat stays unfenced.
 - [Package soft-delete](package-soft-delete.md) — delete = trash (deletedAt) + live-row teardown; 30-day locked purge; packageConds predicate counts asserted in authz tests.
+- [Storage orphan cleanup](storage-orphan-cleanup.md) — purge deletes files AFTER commit, reference-counted across all object-bearing tables; never delete inside the txn.
+- [Session-expiry banner](session-expiry-banner.md) — 401s broadcast "api:unauthorized"; non-navigating banner + Clerk modal preserves unsaved work; auth probes must check status, not refetchQueries success.
 - [Graceful shutdown & health](graceful-shutdown-health.md) — SIGTERM awaits HTTP drain + ALL worker ticks (pokes too) under a hard deadline; /healthz static, /healthz/deep gated by DB only.
 - [Brand green token](brand-green-token.md) — --brand pinned to Tailwind green-600 to match the New Package button; do NOT re-darken for WCAG (deliberate ~3.3:1 tradeoff the user chose).
