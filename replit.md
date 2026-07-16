@@ -63,3 +63,6 @@ Dashboard command center, single + bulk upload, bulk processing queue, split-scr
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+
+## Deployment
+- Publish as **Reserved VM**, not Autoscale (already preset via `deploymentTarget = "vm"`). The API server runs background job workers and daily maintenance that Autoscale would pause between requests.
