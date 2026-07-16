@@ -1165,7 +1165,7 @@ export default function AiWorkspacePage() {
                     <SpecialistAvatar
                       specialistKey={specialist}
                       label={activeSpecialist?.label}
-                      size={30}
+                      size={90}
                       className="mt-0.5"
                     />
                   )}
@@ -1174,7 +1174,7 @@ export default function AiWorkspacePage() {
                       "min-w-0 text-sm leading-relaxed",
                       isUser
                         ? "max-w-[80%] rounded-2xl rounded-br-sm bg-brand px-4 py-2.5 text-brand-foreground shadow-sm"
-                        : "max-w-[calc(100%-2.5rem)] flex-1 pt-0.5 text-foreground",
+                        : "max-w-[calc(100%-6.75rem)] flex-1 pt-0.5 text-foreground",
                     )}
                   >
                     {m.attachmentNames && m.attachmentNames.length > 0 && (

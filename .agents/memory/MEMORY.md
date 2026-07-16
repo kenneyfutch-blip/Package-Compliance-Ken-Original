@@ -53,3 +53,4 @@
 - [Package artwork thumbnails](package-thumbnails.md) — render card previews server-side (poppler pdftoppm, cached), never per-card pdf.js; poppler-utils must be a declared system dep; reading a DB-stored object path still needs object-owner auth (IDOR guard).
 - [AI Workspace grounded data](ai-workspace.md) — read-only tool registry; two-layer tenancy (perm-offer + query-scope) + required supplierSafe gate; streamed tool-calling (lockstep tool_call ids); attachments-in-jsonb; citations column + SSE events.
 - [AI specialist avatars](specialist-avatars.md) — personas as "AI employees" w/ name+headshot; identity mapped client-side (not API schema); SpecialistAvatar broken-state must reset on photo change; selector-chip avatar must mirror the responsive measurement row.
+- [Brand green token](brand-green-token.md) — --brand pinned to Tailwind green-600 to match the New Package button; do NOT re-darken for WCAG (deliberate ~3.3:1 tradeoff the user chose).

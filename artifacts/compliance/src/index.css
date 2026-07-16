@@ -97,9 +97,9 @@
   --primary: 230 100% 55%;
   --primary-foreground: 0 0% 100%;
 
-  /* Dollar Tree brand green (used for chat bubbles). Darkened to keep white
-     text at WCAG AA contrast (>=4.5:1). */
-  --brand: 146 100% 26%;
+  /* Dollar Tree brand green (used for chat bubbles). Matches the "New Package"
+     button (Tailwind green-600 / #16a34a) so the two greens are identical. */
+  --brand: 142 76% 36%;
   --brand-foreground: 0 0% 100%;
 
   --secondary: 210 40% 96%;
@@ -157,7 +157,7 @@
   --primary: 0 0% 98%;
   --primary-foreground: 0 0% 9%;
 
-  --brand: 146 100% 26%;
+  --brand: 142 76% 36%;
   --brand-foreground: 0 0% 100%;
 
   --secondary: 0 0% 16%;
