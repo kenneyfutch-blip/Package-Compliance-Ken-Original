@@ -1108,11 +1108,11 @@ export default function AiWorkspacePage() {
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 sm:p-6">
           {liveMessages.length === 0 ? (
             <div className="mx-auto flex h-full max-w-2xl flex-col justify-center">
-              <div className="mb-4 flex items-center gap-3.5">
+              <div className="mb-5 flex flex-col items-start gap-4">
                 <SpecialistAvatar
                   specialistKey={specialist}
                   label={activeSpecialist?.label}
-                  size={56}
+                  size={224}
                   showStatus
                 />
                 <div className="min-w-0">
