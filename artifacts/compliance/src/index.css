@@ -203,7 +203,10 @@
   }
 }
 
-/* Custom scrollbar for data dense views */
+/* Custom scrollbar for data dense views.
+   The thumb stays invisible until you hover the scrollable area, so the gray
+   track/thumb never shows just sitting there. The gutter width is reserved at
+   all times so content doesn't shift when the thumb fades in. */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -212,11 +215,25 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
+  background: transparent;
   border-radius: 3px;
+  transition: background 0.2s ease;
+}
+/* Reveal the thumb while hovering (or actively scrolling) the element. */
+:hover::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Firefox: transparent thumb by default, revealed on hover of the scroller. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+*:hover {
+  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
 }
 
 .hotspot-box {
