@@ -690,10 +690,10 @@ export default function AiWorkspacePage() {
                 onClick={() => persistSpecialist(s.key)}
                 title={s.description}
                 className={cn(
-                  "shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
+                  "shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
                   s.key === specialist
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                    : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted hover:text-foreground",
                 )}
               >
                 {s.label}
