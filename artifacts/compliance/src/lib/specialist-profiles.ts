@@ -64,10 +64,10 @@ export const SPECIALIST_PROFILES: Record<string, SpecialistProfile> = {
     fallbackClass: "bg-primary/10 text-primary ring-primary/15",
   },
   agent_router: {
-    // The router is a dispatcher, not a person — no headshot by design.
-    name: "Workspace Router",
+    name: "Priya Nair",
     title: "Workspace Router",
-    fallbackClass: "bg-brand/15 text-brand ring-brand/25",
+    photo: photo("agent-router.jpg"),
+    fallbackClass: "bg-primary/10 text-primary ring-primary/15",
   },
 }
 

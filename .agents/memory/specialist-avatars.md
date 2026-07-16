@@ -19,8 +19,8 @@ openapi schema would force an orval codegen + lib rebuild cycle for zero functio
 
 **How to apply:** to add/replace a specialist face, drop a square jpg in `public/specialists/` and add/edit
 the entry in `specialist-profiles.ts`. `getSpecialistProfile(key,label)` synthesizes a fallback (initials
-from label) for unknown keys. `agent_router` ("Workspace Router") intentionally has NO photo — it's a
-dispatcher, not a person, so it renders a branded initials chip.
+from label) for unknown keys. All 8 personas (including `agent_router` / "Workspace Router") now have real
+headshots; the initials fallback only triggers for unknown keys or a failed image load.
 
 ## SpecialistAvatar component gotcha
 `components/specialist-avatar.tsx` exports ONLY the component (Fast-Refresh boundary rule — keep the plain
