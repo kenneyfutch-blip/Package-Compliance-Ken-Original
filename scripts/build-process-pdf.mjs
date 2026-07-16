@@ -11,7 +11,8 @@ const { PDFDocument, StandardFonts, rgb } = await import(
   url.pathToFileURL(path.join(root, "node_modules/.pnpm", pdfLibPath, "node_modules/pdf-lib/dist/pdf-lib.esm.js")).href
 );
 
-const OUT = path.join(root, "attached_assets/Packaging-Compliance-AI-Process-Guide.pdf");
+const OUT = path.join(root, "attached_assets/Packaging Compliance AI - How We Work (Specialist Process Guide).pdf");
+const SHOTS = path.join(root, "attached_assets/guide_shots");
 const PAGE_W = 612, PAGE_H = 792, MARGIN = 54;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 const GREEN = rgb(0.086, 0.639, 0.29);
@@ -115,6 +116,21 @@ function callout(title, text) {
   y -= h + 12;
 }
 
+async function shot(file, caption) {
+  const bytes = fs.readFileSync(path.join(SHOTS, file));
+  const img = await doc.embedJpg(bytes);
+  const w = CONTENT_W;
+  const h = (img.height / img.width) * w;
+  need(h + 26);
+  page.drawRectangle({ x: MARGIN - 1, y: y - h - 1, width: w + 2, height: h + 2, borderColor: rgb(0.8, 0.84, 0.81), borderWidth: 1 });
+  page.drawImage(img, { x: MARGIN, y: y - h, width: w, height: h });
+  y -= h + 6;
+  if (caption) {
+    page.drawText(caption, { x: MARGIN, y: y - 8, size: 8, font, color: GRAY });
+    y -= 20;
+  } else y -= 10;
+}
+
 // ---------- Cover ----------
 newPage();
 page.drawRectangle({ x: 0, y: 0, width: PAGE_W, height: PAGE_H, color: rgb(0.04, 0.07, 0.05) });
@@ -148,6 +164,7 @@ bullet("Check My Notifications", "at the start of each session — mentions, sta
 bullet("Clear My Tasks", "before picking up new reviews; open tasks are commitments you've already made.");
 bullet("Record decisions same-day", "if you've finished reading a package, record the decision. A finished-but-undecided review is invisible work.");
 callout("Rule of thumb", "If a package will sit with you for more than a day, say why — either a comment on the package or a task assigned to whoever you're waiting on. Silence is how reviews get lost.");
+await shot("dashboard.jpg", "My Work lives in the left sidebar — dashboard, reviews, tasks and notifications.");
 
 // ---------- 2. Reading AI findings ----------
 newPage();
@@ -159,6 +176,7 @@ bullet("Low-confidence findings are questions, not violations", "the platform la
 bullet("Dismissals need a reason", "when you dismiss a finding, write one line on why. That note feeds Compliance Memory and stops the same false positive from wasting the next reviewer's time.");
 bullet("Suggested fixes are drafts", "check them against Approved Language before sending wording to a vendor. If approved phrasing exists for the situation, use it verbatim.");
 callout("Never do this", "Never approve a package on the AI grade alone, and never tell a vendor 'the AI flagged it' as the whole justification. Every finding we act on should be traceable to a regulation, an internal standard, or approved language.");
+await shot("violations.jpg", "Each finding shows severity, confidence, the cited regulation, and a suggested fix — verify before acting.");
 
 // ---------- 3. Deep Analysis ----------
 heading("3. When to run Deep Analysis");
@@ -186,6 +204,7 @@ sub("Reject");
 bullet("Reserve for fundamental problems", "unsubstantiatable claims central to the product, prohibited ingredients or content, or repeated failure to fix the same Critical issues.");
 bullet("Second set of eyes", "before rejecting, flag a manager or senior specialist in the comments. Rejections trigger vendor escalations — the case needs to be airtight.");
 callout("Severity floor", "A package with an unresolved Critical finding can never be Approved, whatever the deadline pressure. If the business needs it faster, escalate — don't lower the bar.");
+await shot("review.jpg", "The Review Workspace — findings on the right, and the Approve / Revise / Reject decision with its note at the bottom.");
 
 // ---------- 5. Escalation ----------
 newPage();
@@ -196,6 +215,7 @@ bullet("SLA at risk", "you can see you won't make the date. Escalating two days 
 bullet("Vendor pushback on a Critical finding", "if a vendor disputes a Critical or legal-risk finding, that conversation moves up a level; don't negotiate compliance one-on-one.");
 bullet("Cross-category products", "if a package straddles categories (e.g. a food item with a toy inside), escalate so routing puts both specialties on it.");
 para("Use the platform's escalation action on the review itself — not a hallway conversation — so the escalation, its reason, and its resolution are all on the record.", { gap: 12 });
+await shot("workload.jpg", "Workload & SLA — overdue and escalated counts are visible to the whole team; escalate before you land there.");
 
 heading("6. Working with vendors");
 bullet("Everything through the platform", "vendor-facing feedback goes out as the exported annotated proof plus the decision note. No side-channel spreadsheets or marked-up email screenshots.");
@@ -203,6 +223,7 @@ bullet("Use Approved Language", "when telling a vendor what wording to use, pull
 bullet("Be specific and finite", "a Revise decision should read like a checklist the vendor can complete in one round. 'Fix compliance issues' is not feedback.");
 bullet("New versions, fresh eyes", "when revised artwork arrives, add it as a new version and re-run analysis. Compare versions side by side; confirm each requested fix landed before looking at anything new.");
 bullet("Supplier portal data is theirs alone", "never share one vendor's findings, scores or artwork with another vendor, in any form.");
+await shot("scorecards.jpg", "Vendor Scorecards — review outcomes feed these rankings automatically.");
 
 // ---------- 7. Collaboration ----------
 newPage();
