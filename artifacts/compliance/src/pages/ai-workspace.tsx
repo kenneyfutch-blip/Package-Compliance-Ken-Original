@@ -8,6 +8,12 @@ import {
   useUpdateWorkspaceConversation,
   useDeleteWorkspaceConversation,
   useAssistantExtract,
+  useGetDashboardStats,
+  useGetComplianceTrends,
+  useListReports,
+  getGetDashboardStatsQueryKey,
+  getGetComplianceTrendsQueryKey,
+  getListReportsQueryKey,
   getListWorkspaceConversationsQueryKey,
   getGetWorkspaceConversationQueryKey,
 } from "@workspace/api-client-react"
@@ -52,7 +58,17 @@ import {
   FileText,
   Paperclip,
   Link2,
+  RefreshCw,
+  BarChart3,
 } from "lucide-react"
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  Tooltip,
+} from "recharts"
+import { servingUrl } from "@/lib/proof-utils"
 
 // A locally-tracked message (persisted messages plus the in-flight streaming
 // assistant turn, which has no id yet).
@@ -83,6 +99,32 @@ export default function AiWorkspacePage() {
   const [, navigate] = useLocation()
   const queryClient = useQueryClient()
   const pageContext = usePageContext()
+
+  // On-demand live snapshot for the Context pane. Nothing is fetched until the
+  // user explicitly asks for it (enabled gate), so it never auto-polls.
+  const [liveOpen, setLiveOpen] = React.useState(false)
+  const liveStats = useGetDashboardStats({
+    query: { enabled: liveOpen, queryKey: getGetDashboardStatsQueryKey() },
+  })
+  const liveTrends = useGetComplianceTrends({
+    query: { enabled: liveOpen, queryKey: getGetComplianceTrendsQueryKey() },
+  })
+  const liveReports = useListReports({
+    query: { enabled: liveOpen, queryKey: getListReportsQueryKey() },
+  })
+  const liveLoading =
+    liveOpen &&
+    (liveStats.isLoading || liveTrends.isLoading || liveReports.isLoading)
+  const liveFetching =
+    liveStats.isFetching || liveTrends.isFetching || liveReports.isFetching
+  const liveError =
+    liveOpen &&
+    (liveStats.isError || liveTrends.isError || liveReports.isError)
+  const refreshLive = () => {
+    void liveStats.refetch()
+    void liveTrends.refetch()
+    void liveReports.refetch()
+  }
 
   const routeId = params.id ? Number(params.id) : null
   const [activeId, setActiveId] = React.useState<number | null>(routeId)
@@ -674,6 +716,198 @@ export default function AiWorkspacePage() {
                 details here for context-aware answers.
               </p>
             )}
+
+            {/* On-demand live snapshot: fetched only when the user asks. */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium uppercase text-muted-foreground">
+                  Live snapshot
+                </p>
+                {liveOpen && (
+                  <button
+                    type="button"
+                    onClick={refreshLive}
+                    title="Refresh live data"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "h-3.5 w-3.5",
+                        liveFetching && "animate-spin",
+                      )}
+                    />
+                  </button>
+                )}
+              </div>
+
+              {!liveOpen ? (
+                <div className="mt-1.5">
+                  <p className="text-xs text-muted-foreground">
+                    Pull live compliance metrics, recent reports, and trends on
+                    demand.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 h-8 gap-1.5"
+                    onClick={() => setLiveOpen(true)}
+                  >
+                    <BarChart3 className="h-3.5 w-3.5" /> Load live snapshot
+                  </Button>
+                </div>
+              ) : liveLoading ? (
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Pulling live
+                  data…
+                </div>
+              ) : liveError ? (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-destructive">
+                    Couldn't load live data. Try again.
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 gap-1.5"
+                    onClick={refreshLive}
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" /> Retry
+                  </Button>
+                </div>
+              ) : (
+                <div className="mt-3 space-y-4">
+                  {/* Key metrics */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      {
+                        label: "Reviewed",
+                        value: liveStats.data?.totalPackages ?? 0,
+                        tone: "text-foreground",
+                      },
+                      {
+                        label: "Passed",
+                        value: liveStats.data?.passed ?? 0,
+                        tone: "text-success",
+                      },
+                      {
+                        label: "Critical",
+                        value: liveStats.data?.criticalViolations ?? 0,
+                        tone: "text-destructive",
+                      },
+                      {
+                        label: "Today",
+                        value: liveStats.data?.reviewedToday ?? 0,
+                        tone: "text-foreground",
+                      },
+                    ].map((m) => (
+                      <div
+                        key={m.label}
+                        className="rounded-md border bg-card px-2.5 py-2"
+                      >
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {m.label}
+                        </p>
+                        <p className={cn("text-lg font-bold", m.tone)}>
+                          {m.value.toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Compact compliance trend */}
+                  {(liveTrends.data?.length ?? 0) > 0 && (
+                    <div>
+                      <p className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        Pass / fail trend
+                      </p>
+                      <div className="h-[110px] w-full rounded-md border bg-card p-2">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={liveTrends.data ?? []}>
+                            <XAxis
+                              dataKey="date"
+                              hide
+                            />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: "hsl(var(--popover))",
+                                border: "1px solid hsl(var(--border))",
+                                borderRadius: "8px",
+                                fontSize: "11px",
+                              }}
+                              itemStyle={{ color: "hsl(var(--foreground))" }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="passed"
+                              stroke="hsl(var(--success))"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="failed"
+                              stroke="hsl(var(--destructive))"
+                              strokeWidth={2}
+                              dot={false}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent reports */}
+                  <div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        Recent reports
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => goTo("/reports")}
+                        className="text-[11px] text-primary hover:underline"
+                      >
+                        View all
+                      </button>
+                    </div>
+                    {(liveReports.data?.length ?? 0) === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        No reports generated yet.
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {(liveReports.data ?? []).slice(0, 4).map((r) => {
+                          const url = servingUrl(r.objectPath)
+                          return (
+                            <button
+                              key={r.id}
+                              type="button"
+                              onClick={() => {
+                                if (url)
+                                  window.open(url, "_blank", "noopener,noreferrer")
+                                else goTo("/reports")
+                              }}
+                              className="group flex w-full items-start gap-2 rounded-md border bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/30 hover:bg-primary/5"
+                            >
+                              <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-xs font-medium">
+                                  {r.title}
+                                </span>
+                                <span className="block text-[10px] text-muted-foreground">
+                                  {r.type} ·{" "}
+                                  {new Date(r.createdAt).toLocaleDateString()}
+                                </span>
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       )}
