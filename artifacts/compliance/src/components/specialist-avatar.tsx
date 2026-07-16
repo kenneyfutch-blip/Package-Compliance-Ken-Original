@@ -14,6 +14,8 @@ interface SpecialistAvatarProps {
   size?: number
   /** Show a small "online" presence dot (for the active persona). */
   showStatus?: boolean
+  /** Avatar shape. Defaults to a circle; "square" uses rounded corners. */
+  shape?: "circle" | "square"
   className?: string
 }
 
@@ -26,6 +28,7 @@ export function SpecialistAvatar({
   label,
   size = 28,
   showStatus = false,
+  shape = "circle",
   className,
 }: SpecialistAvatarProps) {
   const profile = getSpecialistProfile(specialistKey, label)
@@ -36,6 +39,7 @@ export function SpecialistAvatar({
   React.useEffect(() => setBroken(false), [profile.photo])
   const showPhoto = Boolean(profile.photo) && !broken
   const statusSize = Math.max(7, Math.round(size * 0.28))
+  const radiusClass = shape === "square" ? "rounded-xl" : "rounded-full"
 
   return (
     <span
@@ -50,12 +54,16 @@ export function SpecialistAvatar({
           height={size}
           loading="lazy"
           onError={() => setBroken(true)}
-          className="h-full w-full rounded-full object-cover ring-1 ring-border"
+          className={cn(
+            "h-full w-full object-cover ring-1 ring-border",
+            radiusClass,
+          )}
         />
       ) : (
         <span
           className={cn(
-            "flex h-full w-full items-center justify-center rounded-full font-semibold uppercase ring-1",
+            "flex h-full w-full items-center justify-center font-semibold uppercase ring-1",
+            radiusClass,
             profile.fallbackClass,
           )}
           style={{ fontSize: Math.max(9, Math.round(size * 0.38)) }}

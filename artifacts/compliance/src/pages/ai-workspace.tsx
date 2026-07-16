@@ -1113,6 +1113,7 @@ export default function AiWorkspacePage() {
                   specialistKey={specialist}
                   label={activeSpecialist?.label}
                   size={112}
+                  shape="square"
                   showStatus
                 />
                 <div className="min-w-0">
