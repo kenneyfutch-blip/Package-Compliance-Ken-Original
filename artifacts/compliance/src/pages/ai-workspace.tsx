@@ -669,7 +669,7 @@ export default function AiWorkspacePage() {
 
       {/* Split-screen context pane */}
       {mode === "split" && (
-        <section className="hidden w-96 shrink-0 flex-col border-r bg-background lg:flex">
+        <section className="hidden min-w-0 flex-1 flex-col border-r bg-background lg:flex">
           <div className="flex items-center gap-2 border-b p-3">
             <FileText className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">Context</span>
