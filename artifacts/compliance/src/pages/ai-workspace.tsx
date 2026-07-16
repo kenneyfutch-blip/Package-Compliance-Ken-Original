@@ -1112,7 +1112,7 @@ export default function AiWorkspacePage() {
                 <SpecialistAvatar
                   specialistKey={specialist}
                   label={activeSpecialist?.label}
-                  size={224}
+                  size={112}
                   showStatus
                 />
                 <div className="min-w-0">
