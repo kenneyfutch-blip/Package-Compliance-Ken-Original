@@ -151,6 +151,15 @@ export default function AiWorkspacePage() {
   const abortRef = React.useRef<null | (() => void)>(null)
   const scrollRef = React.useRef<HTMLDivElement>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
+  // Client-side typewriter buffer. The network may deliver the answer in bursts
+  // (reasoning models "think" then dump tokens, and the AI proxy can buffer), so
+  // we accumulate the true received text in `streamTargetRef` and reveal it at a
+  // steady pace, giving a smooth live-writing effect regardless of arrival.
+  const streamTargetRef = React.useRef("")
+  const streamDoneRef = React.useRef(false)
+  const displayedLenRef = React.useRef(0)
+  const typewriterRef = React.useRef<number | null>(null)
+  const finalizeStreamRef = React.useRef<(() => void) | null>(null)
   const extract = useAssistantExtract()
 
   // Reuse the shared attachment pipeline: text/PDF are read client-side, images
@@ -326,16 +335,35 @@ export default function AiWorkspacePage() {
   const stopStream = React.useCallback(() => {
     abortRef.current?.()
     abortRef.current = null
+    // Stop the typewriter loop too — abort fires no onDone/onError, so nothing
+    // else would ever clear it, leaving a 20ms timer ticking forever.
+    if (typewriterRef.current) {
+      window.clearInterval(typewriterRef.current)
+      typewriterRef.current = null
+    }
+    finalizeStreamRef.current = null
+    streamDoneRef.current = false
     setStreaming(false)
     setLiveMessages((prev) => {
       const next = [...prev]
       const last = next[next.length - 1]
       if (last && last.streaming) {
-        if (!last.content) next.pop()
-        else next[next.length - 1] = { ...last, streaming: false }
+        // Text may still be buffered in the target ref (not yet revealed), so
+        // finalize with whatever actually arrived rather than the shown slice.
+        const buffered = streamTargetRef.current
+        if (!buffered && !last.content) next.pop()
+        else
+          next[next.length - 1] = {
+            ...last,
+            content: buffered || last.content,
+            streaming: false,
+            status: null,
+          }
       }
       return next
     })
+    streamTargetRef.current = ""
+    displayedLenRef.current = 0
   }, [])
 
   const seedFromHandoff = async (
@@ -439,6 +467,63 @@ export default function AiWorkspacePage() {
     ])
     setStreaming(true)
 
+    // Start the typewriter buffer for this turn.
+    streamTargetRef.current = ""
+    streamDoneRef.current = false
+    displayedLenRef.current = 0
+    if (typewriterRef.current) window.clearInterval(typewriterRef.current)
+
+    const finalize = () => {
+      if (typewriterRef.current) {
+        window.clearInterval(typewriterRef.current)
+        typewriterRef.current = null
+      }
+      setStreaming(false)
+      setLiveMessages((prev) => {
+        const next = [...prev]
+        const last = next[next.length - 1]
+        if (last && last.streaming) {
+          next[next.length - 1] = {
+            ...last,
+            content: streamTargetRef.current || last.content,
+            streaming: false,
+            status: null,
+          }
+        }
+        return next
+      })
+      if (convId != null) {
+        void queryClient.invalidateQueries({
+          queryKey: getGetWorkspaceConversationQueryKey(convId),
+        })
+      }
+      invalidateList()
+    }
+    finalizeStreamRef.current = finalize
+
+    // Reveal buffered text a little each tick. Step scales with how far behind
+    // we are, so bursts catch up quickly while a steady stream stays smooth.
+    typewriterRef.current = window.setInterval(() => {
+      const target = streamTargetRef.current
+      const shown = displayedLenRef.current
+      if (shown >= target.length) {
+        if (streamDoneRef.current) finalize()
+        return
+      }
+      const step = Math.max(2, Math.ceil((target.length - shown) / 6))
+      const nextLen = Math.min(target.length, shown + step)
+      displayedLenRef.current = nextLen
+      const slice = target.slice(0, nextLen)
+      setLiveMessages((prev) => {
+        const next = [...prev]
+        const last = next[next.length - 1]
+        if (last && last.role === "assistant" && last.streaming) {
+          next[next.length - 1] = { ...last, content: slice, status: null }
+        }
+        return next
+      })
+    }, 20)
+
     const ctxPayload = pageContext
       ? {
           path: pageContext.path ?? null,
@@ -456,19 +541,8 @@ export default function AiWorkspacePage() {
       },
       {
         onDelta: (delta) => {
-          setLiveMessages((prev) => {
-            const next = [...prev]
-            const last = next[next.length - 1]
-            if (last && last.role === "assistant" && last.streaming) {
-              next[next.length - 1] = {
-                ...last,
-                content: last.content + delta,
-                // First token arrived — clear the "searching…" status.
-                status: null,
-              }
-            }
-            return next
-          })
+          // Accumulate the true received text; the typewriter loop reveals it.
+          streamTargetRef.current += delta
         },
         onStatus: (info) => {
           setLiveMessages((prev) => {
@@ -504,33 +578,35 @@ export default function AiWorkspacePage() {
           })
         },
         onDone: () => {
-          setStreaming(false)
-          setLiveMessages((prev) => {
-            const next = [...prev]
-            const last = next[next.length - 1]
-            if (last && last.streaming) {
-              next[next.length - 1] = { ...last, streaming: false }
-            }
-            return next
-          })
-          // Refresh persisted messages + list ordering/title.
-          if (convId != null) {
-            void queryClient.invalidateQueries({
-              queryKey: getGetWorkspaceConversationQueryKey(convId),
-            })
+          // Network stream is complete; let the typewriter finish revealing the
+          // buffered text, then finalize (see the interval above). If it has
+          // already caught up, finalize immediately.
+          streamDoneRef.current = true
+          if (displayedLenRef.current >= streamTargetRef.current.length) {
+            finalizeStreamRef.current?.()
           }
-          invalidateList()
         },
         onError: (message) => {
+          if (typewriterRef.current) {
+            window.clearInterval(typewriterRef.current)
+            typewriterRef.current = null
+          }
           setStreaming(false)
           setStreamError(message)
           setLiveMessages((prev) => {
             const next = [...prev]
             const last = next[next.length - 1]
-            if (last && last.streaming && !last.content) {
+            // Reveal whatever text arrived before the error.
+            const buffered = streamTargetRef.current
+            if (last && last.streaming && !buffered) {
               next.pop()
             } else if (last && last.streaming) {
-              next[next.length - 1] = { ...last, streaming: false }
+              next[next.length - 1] = {
+                ...last,
+                content: buffered || last.content,
+                streaming: false,
+                status: null,
+              }
             }
             return next
           })
@@ -539,7 +615,13 @@ export default function AiWorkspacePage() {
     )
   }
 
-  React.useEffect(() => () => abortRef.current?.(), [])
+  React.useEffect(
+    () => () => {
+      abortRef.current?.()
+      if (typewriterRef.current) window.clearInterval(typewriterRef.current)
+    },
+    [],
+  )
 
   // Track which proposals are mid-request so their buttons can disable/spinner.
   const [pendingProposal, setPendingProposal] = React.useState<number | null>(null)

@@ -79,6 +79,39 @@ non-tenant reference material (internal regulations, live eCFR, FDA recalls).
 The workspace stream path must be listed in the AI POST-paths regex in
 `middlewares/rateLimit.ts` or streamed AI turns bypass the AI rate limiter.
 
+## Client-side typewriter buffer (live-writing effect)
+The whole pipeline genuinely streams token-by-token (OpenAI `stream:true` in
+`agents/openai-provider.ts` → server SSE `delta` → client `onDelta`), yet answers
+still "pop in" as one chunk in the UI. Cause is upstream, not the app: reasoning
+models (gpt-5.x / o4-mini) spend ~10s+ "thinking" then burst all output tokens,
+and the managed AI proxy can buffer the SSE. So network arrival is bursty.
+**Decision:** decouple display from arrival with a client-side typewriter in
+`pages/ai-workspace.tsx` `send()`: `onDelta` only appends to `streamTargetRef`;
+a `setInterval(20ms)` reveals the buffer into the streaming message's content,
+step `= max(2, ceil((target-shown)/6))` chars/tick (fast on burst, smooth when
+keeping pace). `onDone` sets `streamDoneRef` and the loop finalizes once caught
+up (invalidate → hydrate from DB). This is what ChatGPT does too.
+**Why:** fixing the proxy/model buffering isn't possible from the app; smoothing
+guarantees the effect regardless of chunking.
+**How to apply:** any interruption path (`stopStream`, unmount, `onError`) MUST
+`clearInterval(typewriterRef)` — abort fires no onDone/onError, so nothing else
+clears it and the 20ms timer leaks forever. Finalize/pop decisions must read
+`streamTargetRef` (buffered), NOT the rendered `last.content`, or early
+interrupts lose received text.
+
+## AI Usage & Cost dashboard is a structural UNDERCOUNT (expected, not a bug)
+"Estimated Spend" ≠ the OpenAI invoice, and will always read low. Three causes:
+(1) it's a rate-card estimate (`estimateCostUsd` in `lib/ai-usage.ts`) over
+tokens the app itself logged; (2) `MODEL_RATES` is incomplete — real heavy models
+(e.g. `gpt-5.5`, `gpt-4o`) aren't listed so they fall back to a cheap
+`DEFAULT_RATE` ($1/$3 per 1M); (3) only 3 call paths log usage (the `recordAiUsage`
+helper is called from `ai.ts`, `workspace/agent.ts`, `ai-orchestration.ts`) —
+embeddings/pgvector recall, OCR/vision extraction, retries never hit the ledger.
+Plus dashboard windows (7/30/90d) rarely match the user's OpenAI export window.
+**How to apply:** to close the gap you'd have to both put real per-model rates in
+`MODEL_RATES` AND instrument the missing OpenAI call sites through
+`recordAiUsage`; a rate fix alone can't match the invoice.
+
 ## Phase 3 — actions with confirmation
 The Workspace can now PROPOSE and, on explicit user approval, INITIATE platform
 actions. Action registry lives in `.../workspace/actions.ts`, alongside the
