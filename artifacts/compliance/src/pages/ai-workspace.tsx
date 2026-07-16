@@ -538,8 +538,12 @@ export default function AiWorkspacePage() {
       <aside className="hidden w-72 shrink-0 flex-col border-r bg-muted/30 md:flex">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-3.5">
           <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15">
-              <Sparkles className="h-4 w-4" />
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white p-1 ring-1 ring-black/5">
+              <img
+                src={`${import.meta.env.BASE_URL}dollar-tree-icon.png`}
+                alt="Dollar Tree"
+                className="h-full w-full object-contain"
+              />
             </span>
             <span className="text-sm font-semibold tracking-tight">AI Workspace</span>
           </div>
@@ -678,7 +682,7 @@ export default function AiWorkspacePage() {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Toolbar: specialist switcher + mode controls */}
         <div className="flex items-center justify-between gap-3 border-b px-3 py-2.5">
-          <div className="flex min-w-0 items-center gap-1 overflow-x-auto pr-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5 pr-2">
             {specialists.map((s) => (
               <button
                 key={s.key}
@@ -686,7 +690,7 @@ export default function AiWorkspacePage() {
                 onClick={() => persistSpecialist(s.key)}
                 title={s.description}
                 className={cn(
-                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all",
+                  "shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
                   s.key === specialist
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
