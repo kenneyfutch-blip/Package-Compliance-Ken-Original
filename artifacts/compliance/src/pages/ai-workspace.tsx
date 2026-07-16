@@ -27,6 +27,12 @@ import { useQueryClient } from "@tanstack/react-query"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import { usePageContext } from "@/lib/workspace-context"
 import {
   streamWorkspaceMessage,
@@ -60,6 +66,7 @@ import {
   Link2,
   RefreshCw,
   BarChart3,
+  ChevronDown,
 } from "lucide-react"
 import {
   ResponsiveContainer,
@@ -916,24 +923,76 @@ export default function AiWorkspacePage() {
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Toolbar: specialist switcher + mode controls */}
         <div className="flex items-center justify-between gap-3 border-b px-3 py-2.5">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5 pr-2">
-            {specialists.map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => persistSpecialist(s.key)}
-                title={s.description}
-                className={cn(
-                  "shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
-                  s.key === specialist
-                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                    : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted hover:text-foreground",
+          {(() => {
+            const VISIBLE = 5
+            const inline = specialists.slice(0, VISIBLE)
+            const overflow = specialists.slice(VISIBLE)
+            const selectedOverflow = overflow.find((s) => s.key === specialist)
+            const specialistBtn = (
+              s: (typeof specialists)[number],
+              active: boolean,
+            ) =>
+              cn(
+                "shrink-0 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+                active
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted hover:text-foreground",
+              )
+            return (
+              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden pr-2">
+                {inline.map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => persistSpecialist(s.key)}
+                    title={s.description}
+                    className={specialistBtn(s, s.key === specialist)}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+                {overflow.length > 0 && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        title="More specialists"
+                        className={cn(
+                          specialistBtn(
+                            selectedOverflow ?? overflow[0],
+                            Boolean(selectedOverflow),
+                          ),
+                          "flex items-center gap-1",
+                        )}
+                      >
+                        {selectedOverflow ? selectedOverflow.label : "More"}
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      {overflow.map((s) => (
+                        <DropdownMenuItem
+                          key={s.key}
+                          onSelect={() => persistSpecialist(s.key)}
+                          className={cn(
+                            "flex flex-col items-start gap-0.5",
+                            s.key === specialist && "bg-accent",
+                          )}
+                        >
+                          <span className="text-xs font-medium">{s.label}</span>
+                          {s.description && (
+                            <span className="line-clamp-1 text-[10px] text-muted-foreground">
+                              {s.description}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
+              </div>
+            )
+          })()}
           <div className="flex shrink-0 items-center gap-1">
             <Button
               size="icon"
