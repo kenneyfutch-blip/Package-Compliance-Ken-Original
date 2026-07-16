@@ -191,6 +191,47 @@ export default function AiWorkspacePage() {
   const activeSpecialist =
     specialists.find((s) => s.key === specialist) ?? specialists[0] ?? null
 
+  // Responsive overflow for the specialist bar: measure how many chips actually
+  // fit on one row at the current width and tuck the rest into the "More" menu.
+  // Recomputed whenever the bar resizes, so shrinking the screen never hides a
+  // chip abruptly — chips flow into the menu as space runs out.
+  const specialistBarRef = React.useRef<HTMLDivElement>(null)
+  const specialistMeasureRef = React.useRef<HTMLDivElement>(null)
+  const [visibleSpecialists, setVisibleSpecialists] = React.useState(
+    specialists.length,
+  )
+
+  React.useLayoutEffect(() => {
+    const bar = specialistBarRef.current
+    const measure = specialistMeasureRef.current
+    if (!bar || !measure) return
+    const GAP = 6 // matches gap-1.5 (0.375rem)
+    const MORE_RESERVE = 116 // room for the "More"/selected trigger chip
+    const compute = () => {
+      const available = bar.clientWidth
+      const items = Array.from(measure.children) as HTMLElement[]
+      let used = 0
+      let count = 0
+      for (let i = 0; i < items.length; i++) {
+        const w = items[i].getBoundingClientRect().width
+        const withGap = used + w + (count > 0 ? GAP : 0)
+        const isLast = i === items.length - 1
+        const reserve = isLast ? 0 : MORE_RESERVE + GAP
+        if (withGap + reserve <= available) {
+          used = withGap
+          count++
+        } else break
+      }
+      setVisibleSpecialists(Math.max(1, count))
+    }
+    compute()
+    const ro = new ResizeObserver(compute)
+    ro.observe(bar)
+    // Recompute once fonts settle (chip widths shift after webfont load).
+    document.fonts?.ready.then(compute).catch(() => {})
+    return () => ro.disconnect()
+  }, [specialists])
+
   const listQuery = useListWorkspaceConversations({
     q: search || undefined,
     favorite: favoritesOnly || undefined,
@@ -924,9 +965,8 @@ export default function AiWorkspacePage() {
         {/* Toolbar: specialist switcher + mode controls */}
         <div className="flex items-center justify-between gap-3 border-b px-3 py-2.5">
           {(() => {
-            const VISIBLE = 5
-            const inline = specialists.slice(0, VISIBLE)
-            const overflow = specialists.slice(VISIBLE)
+            const inline = specialists.slice(0, visibleSpecialists)
+            const overflow = specialists.slice(visibleSpecialists)
             const selectedOverflow = overflow.find((s) => s.key === specialist)
             const specialistBtn = (
               s: (typeof specialists)[number],
@@ -939,7 +979,26 @@ export default function AiWorkspacePage() {
                   : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted hover:text-foreground",
               )
             return (
-              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden pr-2">
+              <div
+                ref={specialistBarRef}
+                className="relative flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden pr-2"
+              >
+                {/* Hidden measurement row: natural chip widths drive how many
+                    fit on the visible row. Absolute + invisible = no layout. */}
+                <div
+                  ref={specialistMeasureRef}
+                  aria-hidden
+                  className="pointer-events-none invisible absolute left-0 top-0 flex items-center gap-1.5"
+                >
+                  {specialists.map((s) => (
+                    <span
+                      key={s.key}
+                      className="shrink-0 whitespace-nowrap rounded-md border px-3 py-1.5 text-xs font-medium"
+                    >
+                      {s.label}
+                    </span>
+                  ))}
+                </div>
                 {inline.map((s) => (
                   <button
                     key={s.key}
