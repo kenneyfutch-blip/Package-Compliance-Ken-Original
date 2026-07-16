@@ -190,21 +190,26 @@ export default function UsageAnalytics() {
             <CardTitle className="flex items-center gap-2"><BarChart2 className="w-5 h-5 text-primary" /> Violations by Engine</CardTitle>
             <CardDescription>Distribution of compliance engine triggers.</CardDescription>
           </CardHeader>
-          <CardContent className="h-80">
+          <CardContent>
             {violationsLoading ? (
-              <CardLoading />
+              <div className="h-80"><CardLoading /></div>
             ) : violations && violations.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={violations} layout="vertical" margin={{ top: 0, right: 20, left: 20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis type="number" hide />
-                  <YAxis type="category" dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} width={100} />
-                  <Tooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px", color: "hsl(var(--foreground))" }} />
-                  <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} barSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
+              // Height scales with the number of engines so bars keep clear
+              // spacing and multi-line labels never collide, no matter how many
+              // categories come back.
+              <div style={{ height: Math.max(320, violations.length * 48) }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={violations} layout="vertical" barCategoryGap="35%" margin={{ top: 0, right: 20, left: 20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis type="number" hide />
+                    <YAxis type="category" dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--foreground))" }} width={148} />
+                    <Tooltip cursor={{ fill: "hsl(var(--muted))" }} contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px", color: "hsl(var(--foreground))" }} />
+                    <Bar dataKey="count" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} maxBarSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             ) : (
-              <CardEmpty text="No violation data available" />
+              <div className="h-80"><CardEmpty text="No violation data available" /></div>
             )}
           </CardContent>
         </Card>
