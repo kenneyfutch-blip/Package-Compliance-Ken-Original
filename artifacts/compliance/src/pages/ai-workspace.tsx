@@ -1446,6 +1446,9 @@ export default function AiWorkspacePage() {
               )}
             </Button>
           </form>
+          <p className="mx-auto mt-2 max-w-3xl text-center text-xs text-muted-foreground">
+            Powered by Clause Agentic AI · claude-haiku-4.5
+          </p>
         </div>
       </div>
     </div>
