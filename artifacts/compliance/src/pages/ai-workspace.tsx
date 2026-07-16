@@ -999,7 +999,7 @@ export default function AiWorkspacePage() {
               e.preventDefault()
               void send(input)
             }}
-            className="mx-auto flex max-w-3xl items-end gap-2 rounded-2xl border bg-background p-2 shadow-sm transition-all focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10"
+            className="pba-rainbow-input mx-auto flex max-w-3xl items-end gap-2 rounded-2xl p-2 shadow-sm transition-all focus-within:ring-2 focus-within:ring-primary/10"
           >
             <Button
               type="button"

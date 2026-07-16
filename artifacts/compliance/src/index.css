@@ -280,9 +280,21 @@
     ) border-box;
   animation: pba-rotate 4s linear infinite;
 }
+/* Same rotating rainbow border on the themed input fill (used by the chat composer). */
+.pba-rainbow-input {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(hsl(var(--background)), hsl(var(--background))) padding-box,
+    conic-gradient(
+      from var(--pba-angle),
+      #ff0040, #ff8000, #ffe000, #00e05a, #00d0ff, #4060ff, #a000ff, #ff00a0, #ff0040
+    ) border-box;
+  animation: pba-rotate 4s linear infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .pba-rainbow,
-  .pba-rainbow-dark {
+  .pba-rainbow-dark,
+  .pba-rainbow-input {
     animation: none;
   }
 }
