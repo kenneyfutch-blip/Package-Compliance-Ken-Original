@@ -24,3 +24,9 @@ id = "FPVJO5LECpXoxp3rA_jGx"
 uri = "file://docs/sentinel-ai-workspace-build-spec.md"
 type = "text"
 title = "AI Workspace — Full Build & Capabilities Spec (for Sentinel)"
+
+[[outputs]]
+id = "j08Gx75aXrhYPMnwaOeJQ"
+uri = "file://attached_assets/Packaging-Compliance-AI-Team-Guide.pdf"
+type = "pdf"
+title = "Packaging Compliance AI — Team Guide (PDF)"
