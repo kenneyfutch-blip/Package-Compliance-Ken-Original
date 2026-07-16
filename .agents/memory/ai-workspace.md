@@ -99,18 +99,24 @@ clears it and the 20ms timer leaks forever. Finalize/pop decisions must read
 `streamTargetRef` (buffered), NOT the rendered `last.content`, or early
 interrupts lose received text.
 
-## AI Usage & Cost dashboard is a structural UNDERCOUNT (expected, not a bug)
-"Estimated Spend" ≠ the OpenAI invoice, and will always read low. Three causes:
-(1) it's a rate-card estimate (`estimateCostUsd` in `lib/ai-usage.ts`) over
-tokens the app itself logged; (2) `MODEL_RATES` is incomplete — real heavy models
-(e.g. `gpt-5.5`, `gpt-4o`) aren't listed so they fall back to a cheap
-`DEFAULT_RATE` ($1/$3 per 1M); (3) only 3 call paths log usage (the `recordAiUsage`
-helper is called from `ai.ts`, `workspace/agent.ts`, `ai-orchestration.ts`) —
-embeddings/pgvector recall, OCR/vision extraction, retries never hit the ledger.
-Plus dashboard windows (7/30/90d) rarely match the user's OpenAI export window.
-**How to apply:** to close the gap you'd have to both put real per-model rates in
-`MODEL_RATES` AND instrument the missing OpenAI call sites through
-`recordAiUsage`; a rate fix alone can't match the invoice.
+## AI Usage & Cost dashboard reads UNDER the invoice (mostly by design)
+"Estimated Spend" (`estimateCostUsd` in `lib/ai-usage.ts`) will always run a bit
+below the real OpenAI bill. AUDITED: telemetry coverage is already COMPLETE — every
+billable completion records usage (all `ai.ts` fns via `trackDirectUsage`/
+`recordAiUsage`, `ai-orchestration.runTiered` which SUMS all escalation legs into
+one row, streaming paths capture `usage` via `stream_options.include_usage`,
+claims/language via runTiered). Embeddings are LOCAL (hashed bag-of-words in
+`lib/memory/embedding.ts`, no API cost). Only the 5-token provider connectivity
+test (`routes/ai-providers.ts`) is untracked — negligible, deliberately skipped
+(would need a new AiWorkload label). So do NOT go hunting for "missing call paths".
+The residual gap to the invoice is: cached input tokens priced at full rate, and
+provider-side SDK retries the app can't observe.
+**Fixed:** `MODEL_RATES` was the real error — `gpt-5.5`/`gpt-4o` were missing and
+fell back to cheap `DEFAULT_RATE` ($1/$3). Added them; `gpt-5.5`={5,25} flagship
+was calibrated so the user's export tokens reproduce ~$6.4 (real bill ~$7+). Also
+fixed `rateForModel` to match the LONGEST prefix first (was pricing
+`gpt-5.4-mini-*` as `gpt-5.4`, 16x too high). Rates are list-price estimates —
+update them in `MODEL_RATES` (the single source) when OpenAI pricing changes.
 
 ## Phase 3 — actions with confirmation
 The Workspace can now PROPOSE and, on explicit user approval, INITIATE platform

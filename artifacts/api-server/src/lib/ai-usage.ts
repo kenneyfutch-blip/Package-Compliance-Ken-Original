@@ -43,14 +43,24 @@ export function currentAiUsageIdentity(): AiUsageIdentity {
 // ---------------------------------------------------------------------------
 // Cost estimation
 // ---------------------------------------------------------------------------
-// Rate card in USD per 1M tokens. This is an *estimate* for the cost dashboard,
-// not billed spend (billing/invoicing is explicitly out of scope). Unknown /
-// custom models fall back to DEFAULT_RATE.
+// Rate card in USD per 1M tokens, covering every model this app actually calls.
+// These are OpenAI list-price ESTIMATES for the cost dashboard, NOT billed spend
+// (invoicing is out of scope). This is the ONLY place rates live — verify against
+// platform.openai.com/pricing and update here whenever pricing changes.
+//
+// The dashboard will still read a little UNDER a real invoice, by design: it
+// prices cached input tokens at the full rate (OpenAI discounts them) and cannot
+// see provider-side SDK retries (which OpenAI bills but the app never observes).
+// Unknown / custom models fall back to DEFAULT_RATE.
 type Rate = { input: number; output: number };
 
 const MODEL_RATES: Record<string, Rate> = {
+  // Flagship reasoning tier — by far the most expensive; dominates spend when a
+  // review escalates to it.
+  "gpt-5.5": { input: 5, output: 25 },
   "gpt-5.4": { input: 2.5, output: 10 },
   "gpt-5.4-mini": { input: 0.15, output: 0.6 },
+  "gpt-4o": { input: 2.5, output: 10 },
   "o4-mini": { input: 1.1, output: 4.4 },
 };
 const DEFAULT_RATE: Rate = { input: 1.0, output: 3.0 };
@@ -58,8 +68,12 @@ const DEFAULT_RATE: Rate = { input: 1.0, output: 3.0 };
 export function rateForModel(model: string): Rate {
   const key = (model || "").trim().toLowerCase();
   if (MODEL_RATES[key]) return MODEL_RATES[key]!;
-  // Prefix match handles versioned suffixes (e.g. "gpt-5.4-2026-01").
-  const hit = Object.keys(MODEL_RATES).find((m) => key.startsWith(m));
+  // Prefix match handles versioned suffixes (e.g. "gpt-5.4-2026-01"). Check the
+  // LONGEST prefix first so "gpt-5.4-mini-2026-03" matches "gpt-5.4-mini" and not
+  // the shorter, pricier "gpt-5.4".
+  const hit = Object.keys(MODEL_RATES)
+    .sort((a, b) => b.length - a.length)
+    .find((m) => key.startsWith(m));
   return hit ? MODEL_RATES[hit]! : DEFAULT_RATE;
 }
 

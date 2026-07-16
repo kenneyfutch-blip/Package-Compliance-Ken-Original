@@ -161,6 +161,12 @@ export default function AiUsageDashboard() {
             Spend, volume, model mix, escalations and reliability across every AI
             request.
           </p>
+          <p className="text-xs text-muted-foreground/80 mt-1 max-w-2xl">
+            Spend is a list-price estimate from logged tokens. It runs under a
+            real provider invoice: it prices cached input at full rate and can't
+            see provider-side retries. Update per-model rates in the API server's
+            rate card as pricing changes.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1 rounded-lg border bg-card p-1">
