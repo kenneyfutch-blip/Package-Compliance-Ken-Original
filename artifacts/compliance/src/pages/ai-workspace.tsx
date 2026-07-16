@@ -65,7 +65,6 @@ import {
   Loader2,
   FileText,
   Paperclip,
-  Link2,
   RefreshCw,
   BarChart3,
   ChevronDown,
@@ -78,6 +77,60 @@ import {
   Tooltip,
 } from "recharts"
 import { servingUrl } from "@/lib/proof-utils"
+
+// Render assistant text with inline source links, OpenAI-style: wherever the
+// answer mentions a cited record by name, that mention becomes a clickable link
+// to the record — so the source sits next to the text instead of in a separate
+// list at the bottom. Only the first mention of each record is linked, to avoid
+// clutter. Citations whose label never appears in the text are left out by
+// design (the bottom "Sources" list was intentionally removed).
+function renderInlineCitations(
+  content: string,
+  citations: WorkspaceCitation[] | null | undefined,
+  onNavigate: (href: string) => void,
+): React.ReactNode {
+  const linkable = (citations ?? []).filter(
+    (c): c is WorkspaceCitation & { href: string } =>
+      Boolean(c.href) && Boolean(c.label),
+  )
+  if (linkable.length === 0) return content
+  // Match longer labels first so a label that contains another isn't shadowed.
+  const byLength = [...linkable].sort((a, b) => b.label.length - a.label.length)
+  const used = new Set<string>()
+  const nodes: React.ReactNode[] = []
+  let rest = content
+  // Each iteration consumes at least one character (labels are non-empty and we
+  // slice past each match), so this always terminates without a guard counter —
+  // and remaining text is never dropped.
+  while (rest.length > 0) {
+    let best: { idx: number; cite: (typeof byLength)[number] } | null = null
+    for (const cite of byLength) {
+      if (used.has(cite.label)) continue
+      const idx = rest.indexOf(cite.label)
+      if (idx === -1) continue
+      if (!best || idx < best.idx) best = { idx, cite }
+    }
+    if (!best) {
+      nodes.push(rest)
+      break
+    }
+    if (best.idx > 0) nodes.push(rest.slice(0, best.idx))
+    const { cite } = best
+    used.add(cite.label)
+    nodes.push(
+      <button
+        key={`cite-${cite.type}-${cite.id}-${nodes.length}`}
+        type="button"
+        onClick={() => onNavigate(cite.href)}
+        className="font-medium text-primary underline decoration-primary/40 underline-offset-2 transition-colors hover:decoration-primary"
+      >
+        {cite.label}
+      </button>,
+    )
+    rest = rest.slice(best.idx + cite.label.length)
+  }
+  return nodes
+}
 
 // A locally-tracked message (persisted messages plus the in-flight streaming
 // assistant turn, which has no id yet).
@@ -1198,7 +1251,9 @@ export default function AiWorkspacePage() {
                       </p>
                     )}
                     <p className="whitespace-pre-wrap">
-                      {m.content}
+                      {isUser
+                        ? m.content
+                        : renderInlineCitations(m.content, m.citations, goTo)}
                       {m.streaming && !m.content && !m.status && (
                         <Loader2 className="inline h-4 w-4 animate-spin" />
                       )}
@@ -1206,41 +1261,6 @@ export default function AiWorkspacePage() {
                         <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-current align-middle" />
                       )}
                     </p>
-                    {m.citations && m.citations.length > 0 && (
-                      <div className="mt-3 border-t border-border/60 pt-2">
-                        <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-                          Sources
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {m.citations.map((c, j) => {
-                            const key = `${c.type}-${c.id}-${j}`
-                            const content = (
-                              <>
-                                <Link2 className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{c.label}</span>
-                              </>
-                            )
-                            return c.href ? (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() => goTo(c.href as string)}
-                                className="flex max-w-full items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
-                              >
-                                {content}
-                              </button>
-                            ) : (
-                              <span
-                                key={key}
-                                className="flex max-w-full items-center gap-1 rounded-md border bg-muted px-2 py-1 text-xs text-muted-foreground"
-                              >
-                                {content}
-                              </span>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
                     {m.proposedActions && m.proposedActions.length > 0 && (
                       <div className="mt-3 space-y-2">
                         {m.proposedActions.map((p) => (
