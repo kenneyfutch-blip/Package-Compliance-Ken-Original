@@ -746,6 +746,9 @@ export default function AiWorkspacePage() {
               <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
                 <Sparkles className="h-5 w-5" />
               </span>
+              <span className="mb-2.5 inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                <Sparkles className="h-3 w-3" /> High-Powered AI Specialist
+              </span>
               <h2 className="text-2xl font-semibold tracking-tight">
                 {activeSpecialist?.label ?? "AI Workspace"}
               </h2>
