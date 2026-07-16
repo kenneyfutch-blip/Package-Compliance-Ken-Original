@@ -158,7 +158,12 @@ export default function AiWorkspaceHome() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
-            <Sparkles className="h-7 w-7 text-primary" /> AI Workspace
+            <img
+              src={`${import.meta.env.BASE_URL}dollar-tree-icon.png`}
+              alt="Dollar Tree"
+              className="h-8 w-8 object-contain"
+            />{" "}
+            AI Workspace
           </h1>
           <p className="mt-1 text-muted-foreground">
             Your assistant home: pick up recent work, review what needs attention, and start a new conversation.
