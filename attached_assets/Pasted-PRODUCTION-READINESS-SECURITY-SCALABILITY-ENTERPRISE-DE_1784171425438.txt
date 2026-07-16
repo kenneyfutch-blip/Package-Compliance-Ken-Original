@@ -1,0 +1,426 @@
+PRODUCTION READINESS, SECURITY, SCALABILITY & ENTERPRISE DEPLOYMENT AUDIT
+
+OBJECTIVE
+
+Conduct a comprehensive, evidence-based production readiness audit of the entire Compliance AI platform.
+
+Assume this platform is intended for enterprise use and may be deployed to production tomorrow.
+
+Perform a complete assessment across:
+
+- Frontend
+- Backend
+- Database
+- Authentication
+- Authorization
+- AI Workspace
+- Packaging Asset Hub
+- Compliance Reviews
+- Regulatory Intelligence
+- Version Control
+- Audit Trail
+- Specialist Directory
+- Routing Engine
+- Reporting
+- Multi-Tenancy
+- Storage
+- Infrastructure
+- Scalability
+- Security
+
+DO NOT ASSUME ANYTHING WORKS.
+
+Validate all findings.
+
+Provide evidence.
+
+====================================================
+EXECUTIVE QUESTION
+====================================================
+
+Answer:
+
+Is this platform production-ready and deployable tomorrow?
+
+Possible Responses:
+
+GO
+
+GO WITH RISKS
+
+NO-GO
+
+Support all conclusions with evidence.
+
+====================================================
+SECURITY AUDIT
+====================================================
+
+Perform a complete security review.
+
+Verify:
+
+- Authentication security
+- Clerk implementation
+- Session handling
+- Role Based Access Control
+- Permission boundaries
+- Tenant isolation
+- API protection
+- Route protection
+- Authentication middleware
+- Input validation
+- File upload security
+- XSS protection
+- CSRF protection
+- Injection protection
+- Prompt injection protection
+- AI Workspace protection
+
+Verify platform prevents access to:
+
+- API Keys
+- Environment Variables
+- Secrets
+- Source Code
+- Internal Infrastructure
+- Hidden Admin Functions
+
+Test for privilege escalation.
+
+Attempt role bypass.
+
+Attempt tenant bypass.
+
+Attempt unauthorized data access.
+
+====================================================
+MULTI-TENANT AUDIT
+====================================================
+
+Verify true tenant isolation.
+
+Ensure:
+
+Organization A cannot access:
+
+- Files
+- Reviews
+- Assets
+- Reports
+- Users
+- Conversations
+- Findings
+
+belonging to Organization B.
+
+Perform isolation tests.
+
+Identify any leakage risk.
+
+====================================================
+DATABASE AUDIT
+====================================================
+
+Audit:
+
+- Schema Design
+- Relationships
+- Indexing
+- Query Performance
+- Data Integrity
+- Versioning
+- Audit Logging
+
+Verify support for:
+
+- 50,000+ Assets
+- Millions of Findings
+- Millions of Audit Records
+
+Identify scaling bottlenecks.
+
+====================================================
+FILE STORAGE AUDIT
+====================================================
+
+Verify architecture can support:
+
+- 50,000 PDFs
+- 100,000 Assets
+- Large Artwork Repositories
+- Version Storage
+- Archive Storage
+
+Verify:
+
+- Backups
+- Recovery
+- Redundancy
+- Retention
+
+Ensure files cannot be accidentally lost.
+
+====================================================
+AI WORKSPACE AUDIT
+====================================================
+
+Reference the approved AI Workspace architecture.
+
+Verify:
+
+- AI Assistant
+- Launch AI Workspace
+- Full Screen Mode
+- Split Screen Mode
+- Context Awareness
+- AI Specialists
+- Conversation Memory
+
+Verify AI permissions are enforced.
+
+Verify AI cannot access:
+
+- Source Code
+- Secrets
+- Prompts
+- Infrastructure
+
+Score implementation quality.
+
+====================================================
+AI COST & PERFORMANCE AUDIT
+====================================================
+
+Verify:
+
+- OpenAI integration
+- Request logging
+- Token tracking
+- Cost tracking
+- Error handling
+- Retry handling
+
+Simulate:
+
+- 50 concurrent users
+- Multiple simultaneous reviews
+- Burst traffic
+
+Identify failure points.
+
+====================================================
+AUTHENTICATION AUDIT
+====================================================
+
+Verify:
+
+- Clerk sessions
+- Session refresh
+- Autosave protection
+- Long-running review protection
+
+Test:
+
+- 8-hour active sessions
+- Browser refreshes
+- Reauthentication flows
+
+Ensure users do not lose work.
+
+====================================================
+LOAD TESTING & SCALABILITY
+====================================================
+
+Determine whether platform supports:
+
+50 concurrent users
+
+100 concurrent users
+
+500 concurrent users
+
+without architecture changes.
+
+Test:
+
+- Dashboard loading
+- Asset retrieval
+- Search
+- File uploads
+- Compliance reviews
+- AI interactions
+
+Estimate:
+
+- Throughput
+- Latency
+- Bottlenecks
+
+====================================================
+COMPLIANCE WORKFLOW AUDIT
+====================================================
+
+Verify:
+
+- Review creation
+- Findings generation
+- Risk scoring
+- Review history
+- Version comparisons
+- Approvals
+- Rejections
+- Audit trails
+
+Ensure workflows cannot lose data.
+
+====================================================
+PACKAGING ASSET HUB AUDIT
+====================================================
+
+Verify:
+
+- Uploads
+- Asset storage
+- Metadata extraction
+- Versioning
+- Search
+- Archive
+- Auditability
+
+Confirm support for:
+
+PDF
+
+AI
+
+EPS
+
+SVG
+
+PNG
+
+JPG
+
+DOCX
+
+XLSX
+
+====================================================
+DATA LOSS PREVENTION AUDIT
+====================================================
+
+Verify no user actions can accidentally destroy:
+
+- Assets
+- Reviews
+- Findings
+- Approvals
+- Audit History
+- Versions
+
+Recommend:
+
+Soft Deletes
+
+Recovery Procedures
+
+Retention Policies
+
+====================================================
+ENTERPRISE RELIABILITY AUDIT
+====================================================
+
+Assess:
+
+- Error Handling
+- Logging
+- Monitoring
+- Observability
+- Recovery Procedures
+- Backup Strategy
+- Disaster Recovery
+
+Identify gaps.
+
+====================================================
+PRODUCTION DEPLOYMENT REVIEW
+====================================================
+
+Review:
+
+- Environment Variables
+- Production Config
+- SSL/TLS
+- Storage
+- Monitoring
+- API Limits
+- Database Capacity
+- Hosting Configuration
+
+Identify launch blockers.
+
+====================================================
+MISSING DEPENDENCIES REVIEW
+====================================================
+
+Acknowledge:
+
+- Google Document AI not yet integrated
+- Claude Agents not yet integrated
+
+Determine whether their absence blocks launch.
+
+If not, explain why.
+
+====================================================
+FINAL SCORECARD
+====================================================
+
+Provide:
+
+Security Score /100
+
+Authentication Score /100
+
+Multi-Tenant Score /100
+
+Database Score /100
+
+Storage Score /100
+
+Scalability Score /100
+
+AI Workspace Score /100
+
+ Workflow Score /100
+
+Reliability Score /100
+
+Enterprise Readiness Score /100
+
+====================================================
+FINAL ANSWER
+====================================================
+
+Provide:
+
+1. Deploy Tomorrow: YES or NO
+2. Launch Blockers
+3. Critical Issues
+4. High Priority Fixes
+5. Medium Priority Fixes
+6. Nice-to-Have Improvements
+7. 30-Day Risk Assessment
+8. Estimated Concurrent User Capacity
+9. Estimated Asset Capacity
+10. Estimated Review Capacity
+11. Production Readiness Summary
+
+Be brutally honest.
+
+Do not assume.
+
+Validate everything.
+
+Only recommend deployment if evidence supports it.

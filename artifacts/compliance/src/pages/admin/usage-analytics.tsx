@@ -9,19 +9,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  BarChart, Bar, PieChart, Pie, Cell 
+  BarChart, Bar 
 } from "recharts";
 import { Loader2, TrendingUp, PieChart as PieChartIcon, BarChart2, Briefcase } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-
-const CHART_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
 
 // Inline loading spinner for a single card body. Each widget renders its own so
 // one slow/failed query can never freeze the whole page (previously the page
@@ -142,43 +134,45 @@ export default function UsageAnalytics() {
             <CardTitle className="flex items-center gap-2"><PieChartIcon className="w-5 h-5 text-primary" /> Category Distribution</CardTitle>
             <CardDescription>Review volume by product category.</CardDescription>
           </CardHeader>
-          <CardContent className="min-h-80">
+          <CardContent>
             {categoriesLoading ? (
               <div className="h-72"><CardLoading /></div>
             ) : categories && categories.length > 0 ? (
-              <div className="flex flex-col gap-4">
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie data={categories} dataKey="count" nameKey="label" cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={2}>
-                        {categories.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px", color: "hsl(var(--foreground))" }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Custom legend: hierarchical category paths are long, so each
-                    entry gets its own wrapping chip (color marker + truncated
-                    label with the full path on hover) instead of Recharts'
-                    fixed-height legend, which overlaps long labels. */}
-                <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
-                  {categories.map((cat, index) => (
-                    <li key={`legend-${index}`} className="flex items-center gap-1.5 min-w-0 max-w-full">
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                        aria-hidden
-                      />
-                      <span className="truncate text-muted-foreground" title={cat.label}>
-                        {cat.label}
-                      </span>
-                      <span className="shrink-0 font-medium tabular-nums text-foreground">{cat.count}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              // A pie with this many near-equal, low-count categories is
+              // unreadable (repeating colors, no slice-to-label mapping). A
+              // ranked bar list scans top-to-bottom: sorted by volume, full
+              // labels, count and relative size visible at a glance.
+              (() => {
+                const ranked = [...categories].sort(
+                  (a, b) => b.count - a.count || a.label.localeCompare(b.label),
+                );
+                const max = ranked[0]?.count ?? 0;
+                return (
+                  <ul className="space-y-3">
+                    {ranked.map((cat, index) => (
+                      <li key={`cat-${index}`} className="space-y-1.5">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="text-sm text-foreground truncate" title={cat.label}>
+                            {cat.label}
+                          </span>
+                          <span className="text-sm font-semibold tabular-nums text-foreground shrink-0">
+                            {cat.count}
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-muted overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: `${max > 0 ? (cat.count / max) * 100 : 0}%`,
+                              backgroundColor: "hsl(var(--chart-1))",
+                            }}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                );
+              })()
             ) : (
               <div className="h-72"><CardEmpty text="No category data available" /></div>
             )}
