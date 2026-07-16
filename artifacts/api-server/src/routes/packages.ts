@@ -32,6 +32,7 @@ import {
   or,
   ilike,
   inArray,
+  isNotNull,
   gte,
   lt,
   type SQL,
@@ -90,6 +91,7 @@ import {
   setCachedThumbnail,
   ThumbnailError,
 } from "../lib/thumbnail";
+import { softDeletePackage, restorePackage } from "../lib/packages/purge";
 
 const objectStorage = new ObjectStorageService();
 
@@ -524,6 +526,29 @@ async function loadOwnedPackage(
   return pkg;
 }
 
+// GET /packages/trash
+// List packages currently in the recovery trash (soft-deleted, still
+// restorable). Registered BEFORE "/packages/:id" so "trash" is not captured as
+// an id. Queries deletedAt directly, bypassing the scope helper that hides them.
+router.get(
+  "/packages/trash",
+  requirePermission("packages:delete"),
+  async (req: Request, res: Response): Promise<void> => {
+    const rows = await db
+      .select()
+      .from(packagesTable)
+      .where(
+        and(
+          eq(packagesTable.organizationId, orgId(req)),
+          isNotNull(packagesTable.deletedAt),
+        ),
+      )
+      .orderBy(desc(packagesTable.deletedAt))
+      .limit(MAX_LIMIT);
+    res.json(rows.map(mapPackage));
+  },
+);
+
 // GET /packages/:id
 router.get(
   "/packages/:id",
@@ -749,51 +774,56 @@ router.delete(
       detail: `${existing.name} (${existing.sku}) deleted.`,
       before: { name: existing.name, sku: existing.sku },
     });
-    // Clean up every operational row that references this package before we drop
-    // it. These tables have no FK/cascade to packages, so without this the delete
-    // orphans notifications ("Open review" → dead link), review assignments,
-    // findings, etc. document_extractions/proofs cascade automatically on the
-    // final package delete; audit_events and supplier_submissions are preserved
-    // as historical/compliance records.
-    await db.transaction(async (tx) => {
-      // Drop per-user notification state (read/archive overlay) for this
-      // package's notifications first — it links by notificationId with no
-      // cascade, so it would otherwise orphan when the notifications go.
-      await tx.delete(notificationStatesTable).where(
-        inArray(
-          notificationStatesTable.notificationId,
-          tx
-            .select({ id: notificationsTable.id })
-            .from(notificationsTable)
-            .where(eq(notificationsTable.packageId, id)),
+    // Soft-delete: the package moves to the recovery "trash" instead of being
+    // destroyed, so an accidental delete can be undone within the recovery
+    // window (see the restore/trash endpoints). Its live operational rows
+    // (notifications, assignments, tasks, locks, presence, history, metrics) are
+    // torn down so no dead "Open review" links remain, while the analytical
+    // record (versions, findings, analyses, memory, reports) is preserved for
+    // restore. A maintenance job hard-purges the row once the window elapses.
+    await softDeletePackage(id, new Date());
+    res.status(204).send();
+  },
+);
+
+// POST /packages/:id/restore
+// Bring a soft-deleted package back from the recovery trash. Bypasses
+// loadOwnedPackage (which hides trashed rows) and resolves the row directly
+// under the caller's org scope.
+router.post(
+  "/packages/:id/restore",
+  requirePermission("packages:delete"),
+  async (req: Request, res: Response): Promise<void> => {
+    const id = requireId(req.params["id"], res);
+    if (id === null) return;
+    const [existing] = await db
+      .select()
+      .from(packagesTable)
+      .where(
+        and(
+          eq(packagesTable.id, id),
+          eq(packagesTable.organizationId, orgId(req)),
+          isNotNull(packagesTable.deletedAt),
         ),
       );
-      await tx.delete(notificationsTable).where(eq(notificationsTable.packageId, id));
-      // Preserve the supplier's submission record, but unlink the now-deleted
-      // package so no downstream view can render a dead "open package" link.
-      await tx
-        .update(supplierSubmissionsTable)
-        .set({ packageId: null })
-        .where(eq(supplierSubmissionsTable.packageId, id));
-      await tx.delete(reviewAssignmentsTable).where(eq(reviewAssignmentsTable.packageId, id));
-      await tx.delete(reviewTasksTable).where(eq(reviewTasksTable.packageId, id));
-      await tx.delete(reviewLocksTable).where(eq(reviewLocksTable.packageId, id));
-      await tx.delete(reviewerPresenceTable).where(eq(reviewerPresenceTable.packageId, id));
-      await tx.delete(reviewHistoryTable).where(eq(reviewHistoryTable.packageId, id));
-      await tx.delete(reviewMetricsTable).where(eq(reviewMetricsTable.packageId, id));
-      await tx.delete(annotationsTable).where(eq(annotationsTable.packageId, id));
-      await tx.delete(approvalDecisionsTable).where(eq(approvalDecisionsTable.packageId, id));
-      await tx.delete(languageFindingsTable).where(eq(languageFindingsTable.packageId, id));
-      await tx.delete(languageReviewsTable).where(eq(languageReviewsTable.packageId, id));
-      await tx.delete(claimFindingsTable).where(eq(claimFindingsTable.packageId, id));
-      await tx.delete(claimAnalysesTable).where(eq(claimAnalysesTable.packageId, id));
-      await tx.delete(complianceMemoryTable).where(eq(complianceMemoryTable.packageId, id));
-      await tx.delete(reportsTable).where(eq(reportsTable.packageId, id));
-      await tx.delete(packageVersionsTable).where(eq(packageVersionsTable.packageId, id));
-      await tx.delete(violationsTable).where(eq(violationsTable.packageId, id));
-      await tx.delete(packagesTable).where(eq(packagesTable.id, id));
+    if (!existing) {
+      res.status(404).json({ error: "Package not found in trash" });
+      return;
+    }
+    await restorePackage(id);
+    await writeAudit(req, {
+      action: "Package restored",
+      entityType: "package",
+      entityId: id,
+      packageId: id,
+      detail: `${existing.name} (${existing.sku}) restored from trash.`,
+      after: { name: existing.name, sku: existing.sku },
     });
-    res.status(204).send();
+    const [restored] = await db
+      .select()
+      .from(packagesTable)
+      .where(eq(packagesTable.id, id));
+    res.json(await buildDetail(restored!));
   },
 );
 

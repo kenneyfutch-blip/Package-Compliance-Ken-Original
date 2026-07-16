@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import { eq, type SQL } from "drizzle-orm";
+import { eq, isNull, type SQL } from "drizzle-orm";
 import { packagesTable, type PackageRow } from "@workspace/db";
 import { getAuthContext } from "./context";
 
@@ -14,6 +14,10 @@ const NO_SUPPLIER = -1;
 export function packageConds(req: Request): SQL[] {
   const ctx = getAuthContext(req);
   const conds: SQL[] = [eq(packagesTable.organizationId, ctx.organizationId)];
+  // Soft-deleted (trashed) packages are hidden from every scoped read. The
+  // trash/restore endpoints query deletedAt directly and deliberately bypass
+  // this helper.
+  conds.push(isNull(packagesTable.deletedAt));
   if (ctx.roleKey === "supplier_user") {
     conds.push(eq(packagesTable.supplierId, ctx.supplierId ?? NO_SUPPLIER));
   }
@@ -24,6 +28,9 @@ export function packageConds(req: Request): SQL[] {
 export function canAccessPackage(req: Request, pkg: PackageRow): boolean {
   const ctx = getAuthContext(req);
   if (pkg.organizationId !== ctx.organizationId) return false;
+  // A soft-deleted (trashed) package is not accessible through normal loads;
+  // the restore/trash endpoints resolve it directly, bypassing this helper.
+  if (pkg.deletedAt) return false;
   if (ctx.roleKey === "supplier_user") {
     // Deny-by-default: an unlinked supplier user (null id) or an unlinked
     // package (null supplierId) must never match — null === null is not access.

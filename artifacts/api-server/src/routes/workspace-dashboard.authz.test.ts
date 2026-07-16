@@ -89,28 +89,30 @@ test("a supplier user's review scope adds a supplier predicate on top of the org
   const internal = resolveDashboardAccess(
     reqWith(ctx({ roleKey: "reviewer", permissions: new Set(["packages:read"]) })),
   );
-  // Internal role: org-only package scope (1 predicate). Supplier: org + supplier
-  // (2 predicates) — the extra predicate is what confines them to their own rows.
-  assert.equal(internal.reviewScope.packageScope.length, 1);
-  assert.equal(supplier.reviewScope.packageScope.length, 2);
+  // Every scope carries the org predicate plus the "hide soft-deleted" predicate
+  // (2 for an internal role). A supplier adds a third predicate confining them to
+  // their own rows.
+  assert.equal(internal.reviewScope.packageScope.length, 2);
+  assert.equal(supplier.reviewScope.packageScope.length, 3);
 });
 
 test("packageConds (the review scope primitive) is supplier-scoped only for supplier users", () => {
-  assert.equal(packageConds(reqWith(ctx({ roleKey: "reviewer" }))).length, 1);
+  // Baseline for any role is 2 predicates: org scope + hide-soft-deleted.
+  assert.equal(packageConds(reqWith(ctx({ roleKey: "reviewer" }))).length, 2);
   assert.equal(
     packageConds(reqWith(ctx({ roleKey: "compliance_specialist" }))).length,
-    1,
+    2,
   );
   assert.equal(
     packageConds(reqWith(ctx({ roleKey: "supplier_user", supplierId: 7 }))).length,
-    2,
+    3,
   );
   // Deny-by-default: an UNLINKED supplier still gets the supplier predicate (it
   // resolves to a sentinel id that matches no row), never falls back to org-wide.
   assert.equal(
     packageConds(reqWith(ctx({ roleKey: "supplier_user", supplierId: null })))
       .length,
-    2,
+    3,
   );
 });
 

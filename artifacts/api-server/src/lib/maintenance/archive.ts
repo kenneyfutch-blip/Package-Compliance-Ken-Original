@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { logger } from "../logger";
 import { pruneStaleAiUsageWriteHealth } from "../ai-usage";
+import { purgeExpiredPackages } from "../packages/purge";
 
 // ---------------------------------------------------------------------------
 // Scalability: partitioning + retention for the highest-volume time-series data.
@@ -175,12 +176,14 @@ export async function runMaintenance(now: Date): Promise<void> {
     const audit = await runAuditArchival(now);
     const violations = await runViolationRetention();
     const staleHealthRows = await pruneStaleAiUsageWriteHealth(now);
+    const purgedPackages = await purgeExpiredPackages(now);
     logger.info(
       {
         auditMoved: audit.moved,
         droppedPartitions: audit.droppedPartitions,
         violationsPruned: violations.pruned,
         staleHealthRowsPruned: staleHealthRows,
+        purgedPackages,
       },
       "Data maintenance pass complete",
     );

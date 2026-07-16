@@ -152,8 +152,9 @@ test("packageConds adds a supplier filter for supplier users only", () => {
   );
   // Org-wide role: organization scope only. Supplier user: an extra supplier
   // condition on top of the org scope.
-  assert.equal(orgWide.length, 1);
-  assert.equal(supplier.length, 2);
+  // Baseline 2 predicates (org + hide-soft-deleted); supplier adds a third.
+  assert.equal(orgWide.length, 2);
+  assert.equal(supplier.length, 3);
 });
 
 test("canAccessPackage denies cross-org and cross-supplier access", () => {

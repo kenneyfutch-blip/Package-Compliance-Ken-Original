@@ -85,6 +85,11 @@ export const packagesTable = pgTable("packages", {
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),
+  // Soft-delete marker. NULL = live; a timestamp = the package is in the
+  // recovery "trash". Deleting a package sets this instead of destroying the
+  // row, so an accidental delete can be restored within the recovery window; a
+  // maintenance job hard-purges rows once the window elapses.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 }, (t) => [
   // Nearly every read is org-scoped; the composite indexes back the dashboard
   // filters and the paginated package list (which orders by createdAt desc).
@@ -95,6 +100,9 @@ export const packagesTable = pgTable("packages", {
   index("idx_packages_org_vendor").on(t.organizationId, t.vendor),
   index("idx_packages_org_supplier").on(t.organizationId, t.supplierId),
   index("idx_packages_sku").on(t.sku),
+  // Backs both the "hide soft-deleted" filter on every scoped read and the
+  // recovery-window purge scan (deletedAt older than the retention cutoff).
+  index("idx_packages_org_deleted").on(t.organizationId, t.deletedAt),
 ]);
 
 export type PackageRow = typeof packagesTable.$inferSelect;

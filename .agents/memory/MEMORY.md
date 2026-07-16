@@ -53,4 +53,6 @@
 - [Package artwork thumbnails](package-thumbnails.md) — render card previews server-side (poppler pdftoppm, cached), never per-card pdf.js; poppler-utils must be a declared system dep; reading a DB-stored object path still needs object-owner auth (IDOR guard).
 - [AI Workspace grounded data](ai-workspace.md) — read-only tool registry; two-layer tenancy (perm-offer + query-scope) + required supplierSafe gate; streamed tool-calling (lockstep tool_call ids); attachments-in-jsonb; citations column + SSE events.
 - [AI specialist avatars](specialist-avatars.md) — personas as "AI employees" w/ name+headshot; identity mapped client-side (not API schema); SpecialistAvatar broken-state must reset on photo change; selector-chip avatar must mirror the responsive measurement row.
+- [Prompt-injection hardening](prompt-injection-hardening.md) — every LLM call site must append the untrusted-data directive + wrapUntrusted() fences; user's own chat stays unfenced.
+- [Package soft-delete](package-soft-delete.md) — delete = trash (deletedAt) + live-row teardown; 30-day locked purge; packageConds predicate counts asserted in authz tests.
 - [Brand green token](brand-green-token.md) — --brand pinned to Tailwind green-600 to match the New Package button; do NOT re-darken for WCAG (deliberate ~3.3:1 tradeoff the user chose).

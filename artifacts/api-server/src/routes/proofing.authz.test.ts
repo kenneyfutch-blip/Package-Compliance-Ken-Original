@@ -130,14 +130,16 @@ test("canAccessPackage denies a linked supplier user against an unlinked package
 
 test("packageConds scopes internal roles to their org only", () => {
   const conds = packageConds(reqWith(ctx({ roleKey: "reviewer" })));
-  assert.equal(conds.length, 1);
+  // org scope + hide-soft-deleted = 2 predicates for an internal role.
+  assert.equal(conds.length, 2);
 });
 
 test("packageConds adds a supplier filter for supplier users", () => {
   const conds = packageConds(
     reqWith(ctx({ roleKey: "supplier_user", supplierId: 7 })),
   );
-  assert.equal(conds.length, 2);
+  // org + hide-soft-deleted + supplier filter = 3 predicates.
+  assert.equal(conds.length, 3);
 });
 
 // --- Per-route permission gates (requirePermission / requireAnyPermission) ---

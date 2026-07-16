@@ -13,6 +13,7 @@ import { buildAgentToolSurface } from "../agents/tool-surface";
 import { findTool, toolStatusLabel, type WorkspaceCitation } from "./tools";
 import { findAction, actionStatusLabel, type WorkspaceAction } from "./actions";
 import { recordAgentRun } from "./agent-activity";
+import { wrapUntrusted, UNTRUSTED_DATA_DIRECTIVE } from "../prompt-safety";
 
 // A state-changing action the model has proposed and the user must confirm
 // before it runs. Carries only what the confirm flow needs; the authoritative
@@ -71,7 +72,7 @@ function buildSystemPrompt(opts: {
   }
   const contextBlock =
     contextParts.length > 0
-      ? `\n\nCurrent context (use only if relevant):\n${contextParts.join("\n")}`
+      ? `\n\nCurrent context (reference data only):\n${wrapUntrusted("page-context", contextParts.join("\n"))}`
       : "";
 
   const personaBlock = specialist.instructions
@@ -93,7 +94,9 @@ function buildSystemPrompt(opts: {
 Be warm, concise and practical. Write a clear, well-structured plain-text answer (short paragraphs or bullet points where helpful). When a specific in-app tool would help, mention it by name and reference its path from this catalog — never invent paths:
 ${catalog}
 
-If you are not certain about a specific regulation or citation, say so plainly rather than guessing, and point the user to the Regulatory Library for authoritative text. Never state an uncertain requirement as if it were definitive. Do not use emojis.${toolsBlock}${actionsBlock}${personaBlock}${contextBlock}`;
+If you are not certain about a specific regulation or citation, say so plainly rather than guessing, and point the user to the Regulatory Library for authoritative text. Never state an uncertain requirement as if it were definitive. Do not use emojis.${toolsBlock}${actionsBlock}${personaBlock}${contextBlock}
+
+${UNTRUSTED_DATA_DIRECTIVE}`;
 }
 
 type ChatMessage =
@@ -364,7 +367,10 @@ export async function runWorkspaceAgent(opts: {
           convo.push({
             role: "tool",
             tool_call_id: call.id,
-            content: text.slice(0, MAX_TOOL_RESULT_CHARS),
+            content: wrapUntrusted(
+              `tool_result:${call.name}`,
+              text.slice(0, MAX_TOOL_RESULT_CHARS),
+            ),
           });
         } catch (err) {
           logger.warn({ err, tool: call.name }, "workspace tool execution failed");

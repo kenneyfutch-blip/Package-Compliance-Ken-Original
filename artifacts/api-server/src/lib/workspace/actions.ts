@@ -22,6 +22,7 @@ import { trackDirectUsage } from "../ai-usage";
 import { WORKLOAD_LABELS } from "../ai-orchestration";
 import { logger } from "../logger";
 import type { WorkspaceCitation } from "./tools";
+import { wrapUntrusted, UNTRUSTED_DATA_DIRECTIVE } from "../prompt-safety";
 
 // ---------------------------------------------------------------------------
 // Workspace action layer (Phase 3)
@@ -607,10 +608,10 @@ const draftApprovalNotes: WorkspaceAction = {
     try {
       const draft = await runDerivedCompletion(
         ctx.organizationId,
-        `You are a packaging compliance reviewer drafting internal approval/decision notes. Write clear, professional notes a reviewer can edit before submitting. Reference the concrete findings. Do NOT state uncertain findings as definitive violations. Do not use emojis. Keep it under 180 words.`,
+        `You are a packaging compliance reviewer drafting internal approval/decision notes. Write clear, professional notes a reviewer can edit before submitting. Reference the concrete findings. Do NOT state uncertain findings as definitive violations. Do not use emojis. Keep it under 180 words.\n\n${UNTRUSTED_DATA_DIRECTIVE}`,
         `Package "${pkg.name}" (SKU ${pkg.sku}).\nCompliance status: ${
           pkg.complianceStatus ?? "?"
-        } (grade ${pkg.grade ?? "?"}).\nFindings:\n${findingsBlock(findings)}\n\nDraft the approval/decision notes.`,
+        } (grade ${pkg.grade ?? "?"}).\nFindings:\n${wrapUntrusted("findings", findingsBlock(findings))}\n\nDraft the approval/decision notes.`,
       );
       const text = `Draft approval notes for "${pkg.name}" (review and edit before submitting):\n\n${
         draft || "Could not generate a draft."
@@ -728,12 +729,12 @@ const executiveSummary: WorkspaceAction = {
     try {
       const summary = await runDerivedCompletion(
         ctx.organizationId,
-        `You write concise executive summaries of packaging compliance status for leadership. Lead with the bottom line, then the top risks and the recommended next step. Do not state uncertain findings as definitive. Do not use emojis. Under 150 words.`,
+        `You write concise executive summaries of packaging compliance status for leadership. Lead with the bottom line, then the top risks and the recommended next step. Do not state uncertain findings as definitive. Do not use emojis. Under 150 words.\n\n${UNTRUSTED_DATA_DIRECTIVE}`,
         `Package "${pkg.name}" (SKU ${pkg.sku}).\nStatus ${pkg.complianceStatus ?? "?"}, grade ${
           pkg.grade ?? "?"
         }, risk ${pkg.riskScore ?? "?"}.\nCounts — critical ${pkg.criticalCount ?? 0}, major ${
           pkg.majorCount ?? 0
-        }, minor ${pkg.minorCount ?? 0}.\nFindings:\n${findingsBlock(findings)}`,
+        }, minor ${pkg.minorCount ?? 0}.\nFindings:\n${wrapUntrusted("findings", findingsBlock(findings))}`,
       );
       const text = `Executive summary — "${pkg.name}":\n\n${
         summary || "Could not generate a summary."
