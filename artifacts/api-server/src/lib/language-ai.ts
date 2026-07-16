@@ -11,6 +11,7 @@ import {
   type AiOrchestration,
 } from "./ai-orchestration";
 import { cachedAiCall } from "./cache/ai-cache";
+import { UNTRUSTED_DATA_DIRECTIVE, wrapUntrusted } from "./prompt-safety";
 
 // Bump when the language-review prompt changes to invalidate cached results.
 const LANGUAGE_PROMPT_VERSION = 1;
@@ -113,6 +114,8 @@ export async function analyzeLanguage(
 
   const system = `You are an enterprise AI Language Review Engine for retail product packaging at a major US discount retailer (Dollar Tree). You review packaging copy, marketing language, and compliance language BEFORE production. You are NOT a traditional spell checker — you reason about product category, packaging purpose, marketing intent, and regulatory context. Respond ONLY with valid minified JSON. Do not use emojis.
 
+${UNTRUSTED_DATA_DIRECTIVE}
+
 Run ALL SIX language review layers and label each finding's "issueType" with the exact matching value:
 1. "Spelling" — misspelled words, typographical errors, packaging copy errors (e.g. "Ingrediants"->"Ingredients", "Nutriton"->"Nutrition", "Refridgerate"->"Refrigerate", "Recylable"->"Recyclable").
 2. "Grammar" — grammar errors, sentence-structure issues, punctuation, pluralization/agreement (e.g. "Keep product away childrens."->"Keep product away from children.").
@@ -137,9 +140,7 @@ PRODUCT METADATA:
 - Country of sale: ${pkg.country ?? "USA"}
 
 PACKAGING ARTWORK TEXT (extracted copy):
-"""
-${pkg.extractedText ?? "(no artwork text provided; infer typical requirements for this product category and flag missing mandatory language)"}
-"""
+${pkg.extractedText ? wrapUntrusted("packaging-artwork-text", pkg.extractedText) : '"""(no artwork text provided; infer typical requirements for this product category and flag missing mandatory language)"""'}
 
 APPLICABLE REGULATIONS KNOWLEDGE BASE:
 ${regContext || "(none provided; rely on standard US packaging regulations)"}

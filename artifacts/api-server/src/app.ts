@@ -53,10 +53,45 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    // Explicit enterprise-hardening headers (helmet defaults cover most; these
+    // pin the values so a helmet upgrade can't silently weaken them).
+    strictTransportSecurity: {
+      maxAge: 31536000, // 1 year
+      includeSubDomains: true,
+    },
+    referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   }),
 );
 
-app.use(cors({ credentials: true, origin: true }));
+// CORS: allowlist instead of blanket origin reflection. Same-origin requests
+// (the web artifact reaches the API through the shared proxy) send no Origin
+// or a matching one; only Replit-hosted origins for this app are permitted for
+// credentialed cross-origin calls.
+const corsAllowedHosts = new Set(
+  [
+    process.env["REPLIT_DEV_DOMAIN"],
+    ...(process.env["REPLIT_DOMAINS"]?.split(",") ?? []),
+  ]
+    .map((d) => d?.trim())
+    .filter((d): d is string => !!d),
+);
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, cb) => {
+      // No Origin header = same-origin / curl / server-to-server: allow.
+      if (!origin) return cb(null, true);
+      try {
+        const { hostname, protocol } = new URL(origin);
+        const allowed =
+          protocol === "https:" ? corsAllowedHosts.has(hostname) : hostname === "localhost";
+        return cb(null, allowed);
+      } catch {
+        return cb(null, false);
+      }
+    },
+  }),
+);
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 

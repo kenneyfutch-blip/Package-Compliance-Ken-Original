@@ -7,6 +7,7 @@ import {
   type AiOrchestration,
 } from "./ai-orchestration";
 import { cachedAiCall } from "./cache/ai-cache";
+import { UNTRUSTED_DATA_DIRECTIVE, wrapUntrusted } from "./prompt-safety";
 
 // Bump when the claims prompt changes to invalidate cached results.
 const CLAIMS_PROMPT_VERSION = 1;
@@ -95,6 +96,8 @@ export async function analyzeClaims(
 
   const system = `You are an enterprise AI Claims Compliance Engine for retail product packaging at a major US discount retailer (Dollar Tree). You audit every marketing and label CLAIM that appears on packaging artwork and determine whether it is substantiated and compliant BEFORE production. Respond ONLY with valid minified JSON. Do not use emojis.
 
+${UNTRUSTED_DATA_DIRECTIVE}
+
 Detect and evaluate product claims. Always look explicitly for these tracked claim types (use the exact label in "claimType" when one matches):
 ${TRACKED_CLAIM_TYPES.map((c) => `- ${c}`).join("\n")}
 Also surface any OTHER regulated claim you observe (e.g. "Clinically Proven", "Chemical Free", "Doctor Recommended", "All Natural", "Made with Real X", "FDA Approved", "Kills 99.9% of Germs"), using a concise claimType label.
@@ -127,9 +130,7 @@ PRODUCT METADATA:
 - Country of sale: ${pkg.country ?? "USA"}
 
 PACKAGING ARTWORK TEXT (extracted copy):
-"""
-${pkg.extractedText ?? "(no artwork text provided; if no claims can be identified, return an empty findings array)"}
-"""
+${pkg.extractedText ? wrapUntrusted("packaging-artwork-text", pkg.extractedText) : '"""(no artwork text provided; if no claims can be identified, return an empty findings array)"""'}
 
 APPLICABLE REGULATIONS KNOWLEDGE BASE:
 ${regContext || "(none provided; rely on standard US claim-substantiation rules: USDA NOP, FTC Green Guides, FDA labeling)"}

@@ -5,6 +5,20 @@ import { mapTeam } from "../lib/mappers";
 import { requirePermission, orgId } from "../lib/rbac/context";
 import { invalidateAuthCache } from "../lib/rbac/provision";
 import { writeAudit } from "../lib/audit";
+import { z } from "zod";
+
+// Schema-validated bodies (no ad-hoc casting of req.body).
+const teamCreateSchema = z.object({
+  name: z.string().trim().min(1, "Team name is required").max(200),
+  description: z.string().trim().max(2000).nullish(),
+});
+const teamUpdateSchema = z.object({
+  name: z.string().trim().min(1, "Team name cannot be empty").max(200).optional(),
+  description: z.string().trim().max(2000).nullish().optional(),
+});
+const teamMemberSchema = z.object({
+  userId: z.coerce.number().int().positive(),
+});
 
 const router: IRouter = Router();
 
@@ -76,12 +90,13 @@ router.post(
   "/teams",
   requirePermission("teams:write"),
   async (req: Request, res: Response): Promise<void> => {
-    const name = String(req.body?.name ?? "").trim();
-    const description = req.body?.description ? String(req.body.description).trim() : null;
-    if (!name) {
-      res.status(400).json({ error: "Team name is required" });
+    const parsed = teamCreateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request body" });
       return;
     }
+    const name = parsed.data.name;
+    const description = parsed.data.description || null;
     const [created] = await db
       .insert(teamsTable)
       .values({ organizationId: orgId(req), name, description })
@@ -107,17 +122,15 @@ router.patch(
       res.status(404).json({ error: "Team not found" });
       return;
     }
-    const update: { name?: string; description?: string | null } = {};
-    if (req.body?.name !== undefined) {
-      const name = String(req.body.name).trim();
-      if (!name) {
-        res.status(400).json({ error: "Team name cannot be empty" });
-        return;
-      }
-      update.name = name;
+    const parsed = teamUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request body" });
+      return;
     }
-    if (req.body?.description !== undefined) {
-      update.description = req.body.description ? String(req.body.description).trim() : null;
+    const update: { name?: string; description?: string | null } = {};
+    if (parsed.data.name !== undefined) update.name = parsed.data.name;
+    if (parsed.data.description !== undefined) {
+      update.description = parsed.data.description || null;
     }
     const [updated] = await db
       .update(teamsTable)
@@ -141,7 +154,12 @@ router.post(
   requirePermission("teams:write"),
   async (req: Request, res: Response): Promise<void> => {
     const id = parseId(req.params["id"]);
-    const userId = Number(req.body?.userId);
+    const parsedMember = teamMemberSchema.safeParse(req.body);
+    if (!parsedMember.success) {
+      res.status(400).json({ error: "A valid userId is required" });
+      return;
+    }
+    const userId = parsedMember.data.userId;
     const team = await loadOrgTeam(orgId(req), id);
     if (!team) {
       res.status(404).json({ error: "Team not found" });

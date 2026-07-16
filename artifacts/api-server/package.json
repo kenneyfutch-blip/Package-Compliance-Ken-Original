@@ -20,6 +20,7 @@
     "@google-cloud/documentai": "^9.6.2",
     "@google-cloud/storage": "^7.21.0",
     "@workspace/api-zod": "workspace:*",
+    "zod": "catalog:",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-openai-ai-server": "workspace:*",
     "cookie-parser": "^1.4.7",

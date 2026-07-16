@@ -14,6 +14,7 @@ import {
   supplierSubmissionsTable,
 } from '@workspace/db';
 import { eq, or } from 'drizzle-orm';
+import { writeAudit } from '../lib/audit';
 
 import {
   ObjectNotFoundError,
@@ -290,6 +291,14 @@ router.get(
       res.status(404).json({ error: 'Object not found' });
       return;
     }
+
+    // Audit trail for sensitive-file access. Fire-and-forget: an audit write
+    // failure must never block the download itself.
+    void writeAudit(req, {
+      action: 'Object.Download',
+      entityType: 'object',
+      detail: `Downloaded stored object ${objectPath}`,
+    }).catch((err) => req.log.warn({ err, objectPath }, 'Failed to audit object download'));
 
     const objectFile =
       await objectStorageService.getObjectEntityFile(objectPath);

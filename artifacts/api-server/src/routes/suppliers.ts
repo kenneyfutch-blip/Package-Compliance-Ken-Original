@@ -9,6 +9,22 @@ import {
   supplierStatusHistoryTable,
 } from "@workspace/db";
 import { eq, and, desc, type SQL } from "drizzle-orm";
+import { z } from "zod";
+
+// Schema-validated supplier bodies (no ad-hoc casting of req.body). Optional
+// text fields accept string | null; empty strings normalize to null below.
+const optionalText = (max: number) => z.string().trim().max(max).nullish();
+const supplierBodySchema = z.object({
+  name: z.string().trim().max(300).optional(),
+  status: z.string().optional(),
+  code: optionalText(100),
+  category: optionalText(200),
+  riskLevel: optionalText(50),
+  contactEmail: optionalText(320),
+  country: optionalText(100),
+  externalSource: optionalText(200),
+  externalId: optionalText(200),
+});
 import {
   mapSupplier,
   mapPackage,
@@ -78,27 +94,33 @@ router.post(
   "/suppliers",
   requirePermission("suppliers:write"),
   async (req: Request, res: Response): Promise<void> => {
-    const name = str(req.body?.name);
+    const parsed = supplierBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request body" });
+      return;
+    }
+    const body = parsed.data;
+    const name = str(body.name);
     if (!name) {
       res.status(400).json({ error: "Supplier name is required" });
       return;
     }
-    const status = SUPPLIER_STATUSES.includes(req.body?.status)
-      ? req.body.status
+    const status = SUPPLIER_STATUSES.includes(body.status as never)
+      ? (body.status as string)
       : "Active";
     const [row] = await db
       .insert(suppliersTable)
       .values({
         organizationId: orgId(req),
         name,
-        code: str(req.body?.code),
-        category: str(req.body?.category),
-        riskLevel: str(req.body?.riskLevel) ?? "Low",
+        code: str(body.code),
+        category: str(body.category),
+        riskLevel: str(body.riskLevel) ?? "Low",
         status,
-        contactEmail: str(req.body?.contactEmail),
-        country: str(req.body?.country),
-        externalSource: str(req.body?.externalSource),
-        externalId: str(req.body?.externalId),
+        contactEmail: str(body.contactEmail),
+        country: str(body.country),
+        externalSource: str(body.externalSource),
+        externalId: str(body.externalId),
       })
       .returning();
     await writeAudit(req, {
@@ -190,31 +212,37 @@ router.patch(
       return;
     }
 
+    const parsed = supplierBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid request body" });
+      return;
+    }
+    const body = parsed.data;
     const update: Partial<typeof suppliersTable.$inferInsert> = {};
-    if (req.body?.name !== undefined) {
-      const name = str(req.body.name);
+    if (body.name !== undefined) {
+      const name = str(body.name);
       if (!name) {
         res.status(400).json({ error: "Supplier name cannot be empty" });
         return;
       }
       update.name = name;
     }
-    if (req.body?.code !== undefined) update.code = str(req.body.code);
-    if (req.body?.category !== undefined) update.category = str(req.body.category);
-    if (req.body?.riskLevel !== undefined) update.riskLevel = str(req.body.riskLevel) ?? existing.riskLevel;
-    if (req.body?.contactEmail !== undefined) update.contactEmail = str(req.body.contactEmail);
-    if (req.body?.country !== undefined) update.country = str(req.body.country);
-    if (req.body?.externalSource !== undefined) update.externalSource = str(req.body.externalSource);
-    if (req.body?.externalId !== undefined) update.externalId = str(req.body.externalId);
+    if (body.code !== undefined) update.code = str(body.code);
+    if (body.category !== undefined) update.category = str(body.category);
+    if (body.riskLevel !== undefined) update.riskLevel = str(body.riskLevel) ?? existing.riskLevel;
+    if (body.contactEmail !== undefined) update.contactEmail = str(body.contactEmail);
+    if (body.country !== undefined) update.country = str(body.country);
+    if (body.externalSource !== undefined) update.externalSource = str(body.externalSource);
+    if (body.externalId !== undefined) update.externalId = str(body.externalId);
 
     // Status transition — records to the append-only status history.
     let statusChanged = false;
-    if (req.body?.status !== undefined && req.body.status !== existing.status) {
-      if (!SUPPLIER_STATUSES.includes(req.body.status)) {
+    if (body.status !== undefined && body.status !== existing.status) {
+      if (!SUPPLIER_STATUSES.includes(body.status as never)) {
         res.status(400).json({ error: "Invalid supplier status" });
         return;
       }
-      update.status = req.body.status;
+      update.status = body.status;
       statusChanged = true;
     }
 

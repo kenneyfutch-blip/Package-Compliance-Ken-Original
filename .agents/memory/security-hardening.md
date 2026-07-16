@@ -47,3 +47,12 @@ bytes at upload time and the signed URL does not constrain content-type. Therefo
   `entity.too.large`→413, else generic 500/status. JSON 404 for unmatched `/api`.
 - The dependency scanner reports Python django/pyjwt CVEs — those are **not** app deps
   (only a Replit skill helper `.local/skills/canvas/init.py` exists); ignore them.
+
+## Scorecard hardening round (July 2026)
+- CORS is an allowlist callback (REPLIT_DEV_DOMAIN + REPLIT_DOMAINS hostnames, https only; no-Origin and localhost-http allowed) — never revert to `origin: true` reflection. Verified: disallowed origins get no ACAO header.
+- helmet pins HSTS (1y, includeSubDomains) + referrerPolicy explicitly so a helmet upgrade can't silently weaken them.
+- AI-key crypto: AES-256-GCM with explicit authTagLength:16 and tag-length reject; encryption prefers AI_KEY_ENCRYPTION_SECRET, decrypt tries dedicated key THEN SESSION_SECRET (backward compat for pre-dedicated ciphertexts — review-caught). Tests in crypto.test.ts cover mixed-key migration.
+- Private object downloads write fire-and-forget Object.Download audit events.
+- teams/suppliers bodies are zod-validated (zod added via catalog: to api-server) — stricter 400s replaced String()/Number() coercion, deliberate.
+- Dependency-audit pyjwt/django (PyPI) findings are environment artifacts — the project has NO Python deps; don't chase them.
+- SAST sql.raw hits in maintenance/archive.ts are internally-generated identifiers/dates (no user input) — accepted.
