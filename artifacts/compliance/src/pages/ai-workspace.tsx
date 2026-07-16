@@ -1025,7 +1025,7 @@ export default function AiWorkspacePage() {
                     className={cn(
                       "min-w-0 text-sm leading-relaxed",
                       isUser
-                        ? "max-w-[80%] rounded-2xl rounded-br-sm bg-primary px-4 py-2.5 text-primary-foreground shadow-sm"
+                        ? "max-w-[80%] rounded-2xl rounded-br-sm bg-brand px-4 py-2.5 text-brand-foreground shadow-sm"
                         : "max-w-[calc(100%-2.5rem)] flex-1 pt-0.5 text-foreground",
                     )}
                   >

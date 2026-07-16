@@ -272,7 +272,7 @@ export function AssistantPanel({
                     className={cn(
                       "max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
                       m.role === "user"
-                        ? "bg-green-600 text-white rounded-br-sm"
+                        ? "bg-brand text-brand-foreground rounded-br-sm"
                         : "bg-white/10 text-white/90 rounded-bl-sm",
                     )}
                   >
