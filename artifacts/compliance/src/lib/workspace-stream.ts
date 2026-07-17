@@ -22,6 +22,9 @@ export type WorkspaceCitation = {
   id: string | number;
   label: string;
   href?: string | null;
+  // Package citations carry the artwork URL so the context panel can render a
+  // visual snapshot, not just a link.
+  artworkUrl?: string | null;
 };
 
 // A state-changing action the assistant has PROPOSED and the user must confirm

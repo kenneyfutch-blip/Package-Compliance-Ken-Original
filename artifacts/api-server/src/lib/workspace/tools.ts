@@ -40,6 +40,9 @@ export type WorkspaceCitation = {
   id: number | string;
   label: string;
   href: string | null;
+  // For package citations: the artwork source URL so the client can render a
+  // visual snapshot in the context panel (same serving rules as package cards).
+  artworkUrl?: string | null;
 };
 
 export type ToolResult = {
@@ -143,6 +146,7 @@ const searchPackages: WorkspaceTool = {
         id: packagesTable.id,
         name: packagesTable.name,
         sku: packagesTable.sku,
+        artworkUrl: packagesTable.artworkUrl,
         brand: packagesTable.brand,
         vendor: packagesTable.vendor,
         category: packagesTable.category,
@@ -167,8 +171,9 @@ const searchPackages: WorkspaceTool = {
       citations: rows.map((r) => ({
         type: "package",
         id: r.id,
-        label: `${r.name} (${r.sku})`,
+        label: r.sku ? `${r.name} (${r.sku})` : r.name,
         href: `/reviews/${r.id}`,
+        artworkUrl: r.artworkUrl ?? null,
       })),
     };
   },
@@ -237,8 +242,9 @@ const getPackageDetails: WorkspaceTool = {
         {
           type: "package",
           id: pkg.id,
-          label: `${pkg.name} (${pkg.sku})`,
+          label: pkg.sku ? `${pkg.name} (${pkg.sku})` : pkg.name,
           href: `/reviews/${pkg.id}`,
+          artworkUrl: pkg.artworkUrl ?? null,
         },
       ],
     };

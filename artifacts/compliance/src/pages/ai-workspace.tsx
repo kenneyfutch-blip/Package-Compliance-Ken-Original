@@ -79,7 +79,7 @@ import {
   XAxis,
   Tooltip,
 } from "recharts"
-import { servingUrl } from "@/lib/proof-utils"
+import { servingUrl, fileTypeFromName } from "@/lib/proof-utils"
 
 // A locally-tracked message (persisted messages plus the in-flight streaming
 // assistant turn, which has no id yet).
@@ -104,6 +104,40 @@ type ViewMode = "chat" | "fullscreen" | "split"
 
 // Handoff payload written by the assistant panel's "Launch Workspace" action.
 const HANDOFF_KEY = "ai-workspace-handoff"
+
+// Visual snapshot of a cited package's artwork in the Context panel. Same
+// source rules as the package cards: direct images load from their serving
+// URL; PDFs/.ai use the server-rendered cached thumbnail; if the URL is
+// unknown (older messages) we still try the thumbnail endpoint; anything
+// unrenderable simply hides the snapshot (the card text/link remains).
+function CitationSnapshot({
+  id,
+  url,
+  name,
+}: {
+  id: string | number
+  url: string | null | undefined
+  name: string
+}) {
+  const [broken, setBroken] = React.useState(false)
+  const src = servingUrl(url ?? null)
+  const type = url ? fileTypeFromName(url) : "other"
+  const isImage = type === "png" || type === "jpg"
+  const showImage = Boolean(src) && isImage && !broken
+  const showThumb = !showImage && type !== "indd" && !broken
+  if (!showImage && !showThumb) return null
+  return (
+    <div className="aspect-[16/9] w-full overflow-hidden border-b bg-white">
+      <img
+        src={showImage ? src! : `/api/packages/${id}/thumbnail`}
+        alt={`${name} artwork`}
+        loading="lazy"
+        className="h-full w-full object-contain"
+        onError={() => setBroken(true)}
+      />
+    </div>
+  )
+}
 
 export default function AiWorkspacePage() {
   const params = useParams()
@@ -898,23 +932,32 @@ export default function AiWorkspacePage() {
                   {citedEntities.map((c) => (
                     <div
                       key={`${c.type}:${c.id}`}
-                      className="flex items-center justify-between gap-2 rounded-md border bg-card px-2.5 py-1.5"
+                      className="overflow-hidden rounded-md border bg-card"
                     >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{c.label}</p>
-                        <p className="text-[11px] capitalize text-muted-foreground">
-                          {c.type.replace(/_/g, " ")}
-                        </p>
-                      </div>
-                      {c.href && (
-                        <button
-                          type="button"
-                          onClick={() => goTo(c.href!)}
-                          className="inline-flex shrink-0 items-center gap-1 text-xs text-primary hover:underline"
-                        >
-                          Open <ArrowRight className="h-3 w-3" />
-                        </button>
+                      {c.type === "package" && (
+                        <CitationSnapshot
+                          id={c.id}
+                          url={c.artworkUrl}
+                          name={c.label}
+                        />
                       )}
+                      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{c.label}</p>
+                          <p className="text-[11px] capitalize text-muted-foreground">
+                            {c.type.replace(/_/g, " ")}
+                          </p>
+                        </div>
+                        {c.href && (
+                          <button
+                            type="button"
+                            onClick={() => goTo(c.href!)}
+                            className="inline-flex shrink-0 items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            Open <ArrowRight className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
