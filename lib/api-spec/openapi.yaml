@@ -4500,6 +4500,81 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /mcp/tokens:
+    get:
+      operationId: listMcpTokens
+      tags: [mcp]
+      summary: List the caller's MCP access tokens (metadata only, never the secret)
+      responses:
+        "200":
+          description: The caller's tokens
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/McpToken"
+    post:
+      operationId: createMcpToken
+      tags: [mcp]
+      summary: Mint a new MCP access token (plaintext returned exactly once)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/McpTokenInput"
+      responses:
+        "201":
+          description: Created token including one-time plaintext
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/McpTokenCreated"
+
+  /mcp/tokens/{id}/revoke:
+    post:
+      operationId: revokeMcpToken
+      tags: [mcp]
+      summary: Revoke one of the caller's MCP access tokens
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /mcp/tool-calls:
+    get:
+      operationId: listMcpToolCalls
+      tags: [mcp]
+      summary: Admin view of the org's AI tool-call audit ledger
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Recent tool calls, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/McpToolCall"
+
 components:
   schemas:
     Certification:
@@ -10318,4 +10393,80 @@ components:
           type: string
           description: open | in_progress | resolved | closed
         adminResponse:
+          type: string
+
+    McpToken:
+      type: object
+      required: [id, name, tokenPrefix, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        tokenPrefix:
+          type: string
+        lastUsedAt:
+          type: string
+          nullable: true
+        revokedAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+
+    McpTokenInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    McpTokenCreated:
+      type: object
+      required: [id, name, tokenPrefix, createdAt, token]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        tokenPrefix:
+          type: string
+        createdAt:
+          type: string
+        token:
+          type: string
+          description: The full plaintext token. Shown exactly once; only a hash is stored.
+
+    McpToolCall:
+      type: object
+      required: [id, userId, userName, source, tool, permissionOk, success, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        source:
+          type: string
+          description: mcp (external gateway) or workspace (in-app AI)
+        tool:
+          type: string
+        args:
+          type: object
+          additionalProperties: true
+        permissionOk:
+          type: boolean
+        success:
+          type: boolean
+        resultChars:
+          type: integer
+          nullable: true
+        errorText:
+          type: string
+          nullable: true
+        durationMs:
+          type: integer
+          nullable: true
+        createdAt:
           type: string

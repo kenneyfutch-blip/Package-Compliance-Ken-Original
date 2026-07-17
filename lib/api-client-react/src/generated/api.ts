@@ -93,6 +93,7 @@ import type {
   ListGlossaryEntriesParams,
   ListLanguageFindingsParams,
   ListLanguageReviewsParams,
+  ListMcpToolCallsParams,
   ListPackagesParams,
   ListPoliciesParams,
   ListRegulationsParams,
@@ -103,6 +104,10 @@ import type {
   ListSupplierSubmissionsParams,
   ListViolationsParams,
   ListWorkspaceConversationsParams,
+  McpToken,
+  McpTokenCreated,
+  McpTokenInput,
+  McpToolCall,
   Me,
   MutationResult,
   MyWorkResponse,
@@ -149,6 +154,7 @@ import type {
   ReviewTaskInput,
   ReviewTaskUpdate,
   ReviewerPresence,
+  RevokeMcpToken200,
   RoleInfo,
   RoutingPreviewInput,
   RoutingPreviewResult,
@@ -14329,4 +14335,307 @@ export const useUpdateSupportRequest = <TError = ErrorType<ApiError>,
       > => {
       return useMutation(getUpdateSupportRequestMutationOptions(options));
     }
+
+export const getListMcpTokensUrl = () => {
+
+
+
+
+  return `/api/mcp/tokens`
+}
+
+/**
+ * @summary List the caller's MCP access tokens (metadata only, never the secret)
+ */
+export const listMcpTokens = async ( options?: RequestInit): Promise<McpToken[]> => {
+
+  return customFetch<McpToken[]>(getListMcpTokensUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMcpTokensQueryKey = () => {
+    return [
+    `/api/mcp/tokens`
+    ] as const;
+    }
+
+
+export const getListMcpTokensQueryOptions = <TData = Awaited<ReturnType<typeof listMcpTokens>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMcpTokens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMcpTokensQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMcpTokens>>> = ({ signal }) => listMcpTokens({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMcpTokens>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMcpTokensQueryResult = NonNullable<Awaited<ReturnType<typeof listMcpTokens>>>
+export type ListMcpTokensQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the caller's MCP access tokens (metadata only, never the secret)
+ */
+
+export function useListMcpTokens<TData = Awaited<ReturnType<typeof listMcpTokens>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMcpTokens>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMcpTokensQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateMcpTokenUrl = () => {
+
+
+
+
+  return `/api/mcp/tokens`
+}
+
+/**
+ * @summary Mint a new MCP access token (plaintext returned exactly once)
+ */
+export const createMcpToken = async (mcpTokenInput: McpTokenInput, options?: RequestInit): Promise<McpTokenCreated> => {
+
+  return customFetch<McpTokenCreated>(getCreateMcpTokenUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(mcpTokenInput)
+  }
+);}
+
+
+
+
+
+export const getCreateMcpTokenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMcpToken>>, TError,{data: BodyType<McpTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMcpToken>>, TError,{data: BodyType<McpTokenInput>}, TContext> => {
+
+const mutationKey = ['createMcpToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMcpToken>>, {data: BodyType<McpTokenInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMcpToken(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMcpTokenMutationResult = NonNullable<Awaited<ReturnType<typeof createMcpToken>>>
+    export type CreateMcpTokenMutationBody = BodyType<McpTokenInput>
+    export type CreateMcpTokenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Mint a new MCP access token (plaintext returned exactly once)
+ */
+export const useCreateMcpToken = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMcpToken>>, TError,{data: BodyType<McpTokenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMcpToken>>,
+        TError,
+        {data: BodyType<McpTokenInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMcpTokenMutationOptions(options));
+    }
+
+export const getRevokeMcpTokenUrl = (id: number,) => {
+
+
+
+
+  return `/api/mcp/tokens/${id}/revoke`
+}
+
+/**
+ * @summary Revoke one of the caller's MCP access tokens
+ */
+export const revokeMcpToken = async (id: number, options?: RequestInit): Promise<RevokeMcpToken200> => {
+
+  return customFetch<RevokeMcpToken200>(getRevokeMcpTokenUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeMcpTokenMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeMcpToken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeMcpToken>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['revokeMcpToken'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeMcpToken>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeMcpToken(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeMcpTokenMutationResult = NonNullable<Awaited<ReturnType<typeof revokeMcpToken>>>
+
+    export type RevokeMcpTokenMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Revoke one of the caller's MCP access tokens
+ */
+export const useRevokeMcpToken = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeMcpToken>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeMcpToken>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRevokeMcpTokenMutationOptions(options));
+    }
+
+export const getListMcpToolCallsUrl = (params?: ListMcpToolCallsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/mcp/tool-calls?${stringifiedParams}` : `/api/mcp/tool-calls`
+}
+
+/**
+ * @summary Admin view of the org's AI tool-call audit ledger
+ */
+export const listMcpToolCalls = async (params?: ListMcpToolCallsParams, options?: RequestInit): Promise<McpToolCall[]> => {
+
+  return customFetch<McpToolCall[]>(getListMcpToolCallsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMcpToolCallsQueryKey = (params?: ListMcpToolCallsParams,) => {
+    return [
+    `/api/mcp/tool-calls`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListMcpToolCallsQueryOptions = <TData = Awaited<ReturnType<typeof listMcpToolCalls>>, TError = ErrorType<unknown>>(params?: ListMcpToolCallsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMcpToolCalls>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMcpToolCallsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMcpToolCalls>>> = ({ signal }) => listMcpToolCalls(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMcpToolCalls>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMcpToolCallsQueryResult = NonNullable<Awaited<ReturnType<typeof listMcpToolCalls>>>
+export type ListMcpToolCallsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Admin view of the org's AI tool-call audit ledger
+ */
+
+export function useListMcpToolCalls<TData = Awaited<ReturnType<typeof listMcpToolCalls>>, TError = ErrorType<unknown>>(
+ params?: ListMcpToolCallsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMcpToolCalls>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMcpToolCallsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

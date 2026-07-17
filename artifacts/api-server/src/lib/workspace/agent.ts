@@ -13,6 +13,7 @@ import { buildAgentToolSurface } from "../agents/tool-surface";
 import { findTool, toolStatusLabel, type WorkspaceCitation } from "./tools";
 import { findAction, actionStatusLabel, type WorkspaceAction } from "./actions";
 import { recordAgentRun } from "./agent-activity";
+import { recordToolCall } from "../mcp/ledger";
 import { wrapUntrusted, UNTRUSTED_DATA_DIRECTIVE } from "../prompt-safety";
 
 // A state-changing action the model has proposed and the user must confirm
@@ -353,6 +354,7 @@ export async function runWorkspaceAgent(opts: {
         }
 
         // --- Read tool OR non-sensitive action → execute inline -----------
+        const callStarted = Date.now();
         try {
           let text: string;
           if (tool) {
@@ -364,6 +366,18 @@ export async function runWorkspaceAgent(opts: {
             text = result.resultText;
             citations.push(...result.citations);
           }
+          // Shared AI tool-call ledger (same table the MCP gateway writes).
+          recordToolCall({
+            organizationId,
+            userId: userId ?? 0,
+            source: "workspace",
+            tool: call.name,
+            args: parsed,
+            permissionOk: true,
+            success: true,
+            resultChars: text.length,
+            durationMs: Date.now() - callStarted,
+          });
           convo.push({
             role: "tool",
             tool_call_id: call.id,
@@ -373,6 +387,17 @@ export async function runWorkspaceAgent(opts: {
             ),
           });
         } catch (err) {
+          recordToolCall({
+            organizationId,
+            userId: userId ?? 0,
+            source: "workspace",
+            tool: call.name,
+            args: parsed,
+            permissionOk: true,
+            success: false,
+            errorText: err instanceof Error ? err.message : String(err),
+            durationMs: Date.now() - callStarted,
+          });
           logger.warn({ err, tool: call.name }, "workspace tool execution failed");
           convo.push({
             role: "tool",

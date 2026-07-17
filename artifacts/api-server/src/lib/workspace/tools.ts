@@ -879,7 +879,7 @@ const searchRecalls: WorkspaceTool = {
 };
 
 // The full registry. Order is roughly by likely usefulness (shown to the model).
-const ALL_TOOLS: WorkspaceTool[] = [
+export const ALL_TOOLS: WorkspaceTool[] = [
   searchPackages,
   getPackageDetails,
   searchFindings,

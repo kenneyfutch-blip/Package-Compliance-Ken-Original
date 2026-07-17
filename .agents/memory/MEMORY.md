@@ -58,4 +58,5 @@
 - [Storage orphan cleanup](storage-orphan-cleanup.md) — purge deletes files AFTER commit, reference-counted across all object-bearing tables; never delete inside the txn.
 - [Session-expiry banner](session-expiry-banner.md) — 401s broadcast "api:unauthorized"; non-navigating banner + Clerk modal preserves unsaved work; auth probes must check status, not refetchQueries success.
 - [Graceful shutdown & health](graceful-shutdown-health.md) — SIGTERM awaits HTTP drain + ALL worker ticks (pokes too) under a hard deadline; /healthz static, /healthz/deep gated by DB only.
+- [MCP gateway](mcp-gateway.md) — external MCP endpoint reuses the workspace tool registry as the single security boundary; read-only phase 1; two-layer rate limit; shared tool-call ledger.
 - [Brand green token](brand-green-token.md) — --brand pinned to Tailwind green-600 to match the New Package button; do NOT re-darken for WCAG (deliberate ~3.3:1 tradeoff the user chose).

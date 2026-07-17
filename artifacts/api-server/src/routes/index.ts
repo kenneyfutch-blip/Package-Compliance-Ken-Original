@@ -37,13 +37,19 @@ import workloadRouter from "./workload";
 import assistantRouter from "./assistant";
 import workspaceRouter from "./workspace";
 import workspaceDashboardRouter from "./workspace-dashboard";
+import mcpRouter from "./mcp";
+import mcpTokensRouter from "./mcp-tokens";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
 // Health check stays public; everything below requires a signed-in Dollar Tree user.
 router.use(healthRouter);
+// MCP gateway authenticates with its own bearer tokens (not Clerk sessions),
+// so it mounts before requireAuth. It enforces auth internally on every call.
+router.use(mcpRouter);
 router.use(requireAuth);
+router.use(mcpTokensRouter);
 router.use(meRouter);
 router.use(dashboardRouter);
 router.use(packagesRouter);

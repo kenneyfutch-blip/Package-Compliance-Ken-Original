@@ -2973,6 +2973,46 @@ export interface SupportRequestUpdate {
   adminResponse?: string;
 }
 
+export interface McpToken {
+  id: number;
+  name: string;
+  tokenPrefix: string;
+  lastUsedAt?: string | null;
+  revokedAt?: string | null;
+  createdAt: string;
+}
+
+export interface McpTokenInput {
+  name: string;
+}
+
+export interface McpTokenCreated {
+  id: number;
+  name: string;
+  tokenPrefix: string;
+  createdAt: string;
+  /** The full plaintext token. Shown exactly once; only a hash is stored. */
+  token: string;
+}
+
+export type McpToolCallArgs = { [key: string]: unknown };
+
+export interface McpToolCall {
+  id: number;
+  userId: number;
+  userName: string;
+  /** mcp (external gateway) or workspace (in-app AI) */
+  source: string;
+  tool: string;
+  args?: McpToolCallArgs;
+  permissionOk: boolean;
+  success: boolean;
+  resultChars?: number | null;
+  errorText?: string | null;
+  durationMs?: number | null;
+  createdAt: string;
+}
+
 export type ListSpecialistsParams = {
 status?: string;
 departmentId?: number;
@@ -3201,5 +3241,13 @@ export type GetAllSupportRequestsParams = {
  * Filter by status (open, in_progress, resolved, closed).
  */
 status?: string;
+};
+
+export type RevokeMcpToken200 = {
+  ok?: boolean;
+};
+
+export type ListMcpToolCallsParams = {
+limit?: number;
 };
 

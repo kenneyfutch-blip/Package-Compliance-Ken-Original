@@ -346,6 +346,22 @@ export async function provisionUser(
   return ctx;
 }
 
+// Resolve an existing user's authorization context by database user id. Used by
+// the MCP gateway, where a personal access token maps to a user row directly
+// (no Clerk session). Read-only: never creates or mutates user rows. Returns
+// null for missing or deactivated users so a revoked teammate's token dies
+// with their account.
+export async function contextForUserId(
+  userId: number,
+): Promise<AuthContext | null> {
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+  if (!user || !user.active || user.organizationId == null) return null;
+  return buildContext(user);
+}
+
 // Dev-only: resolve an existing seeded user's authorization context by email for
 // the load-test harness. Read-only — it never creates, links, or mutates user
 // rows, so running the harness cannot alter real data. Whether this may be used

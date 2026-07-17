@@ -7141,3 +7141,69 @@ export const UpdateSupportRequestResponse = zod.object({
 })
 
 
+/**
+ * @summary List the caller's MCP access tokens (metadata only, never the secret)
+ */
+export const ListMcpTokensResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "tokenPrefix": zod.string(),
+  "lastUsedAt": zod.string().nullish(),
+  "revokedAt": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListMcpTokensResponse = zod.array(ListMcpTokensResponseItem)
+
+
+/**
+ * @summary Mint a new MCP access token (plaintext returned exactly once)
+ */
+export const CreateMcpTokenBody = zod.object({
+  "name": zod.string()
+})
+
+export const CreateMcpTokenResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "tokenPrefix": zod.string(),
+  "createdAt": zod.string(),
+  "token": zod.string().describe('The full plaintext token. Shown exactly once; only a hash is stored.')
+})
+
+
+/**
+ * @summary Revoke one of the caller's MCP access tokens
+ */
+export const RevokeMcpTokenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RevokeMcpTokenResponse = zod.object({
+  "ok": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Admin view of the org's AI tool-call audit ledger
+ */
+export const ListMcpToolCallsQueryParams = zod.object({
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListMcpToolCallsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "source": zod.string().describe('mcp (external gateway) or workspace (in-app AI)'),
+  "tool": zod.string(),
+  "args": zod.record(zod.string(), zod.unknown()).optional(),
+  "permissionOk": zod.boolean(),
+  "success": zod.boolean(),
+  "resultChars": zod.number().nullish(),
+  "errorText": zod.string().nullish(),
+  "durationMs": zod.number().nullish(),
+  "createdAt": zod.string()
+})
+export const ListMcpToolCallsResponse = zod.array(ListMcpToolCallsResponseItem)
+
+
