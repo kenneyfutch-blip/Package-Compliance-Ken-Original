@@ -59,7 +59,7 @@ export function BuilderBadge() {
                   Kenneth Futch
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Builder, Packaging Compliance AI
+                  AI &amp; Organic Growth Leader · Head of SEO, Dollar Tree
                 </p>
               </div>
             </div>
@@ -71,23 +71,31 @@ export function BuilderBadge() {
               <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary" />
-                  Packaging &amp; labeling compliance
+                  Enterprise SEO &amp; Generative Engine Optimization (GEO)
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary" />
-                  Retail product review operations
+                  AI product development &amp; agentic workflows
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary" />
-                  AI-assisted compliance workflows
+                  Compliance technology &amp; operational intelligence
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-primary" />
+                  Data analytics &amp; business intelligence
                 </li>
               </ul>
             </div>
 
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Kenneth built this tool to help compliance teams catch packaging
-              and labeling issues before products hit the shelf — pairing AI
-              review with real regulatory workflows.
+              Kenneth is an enterprise growth leader with 15+ years driving
+              organic growth for brands like Johnson &amp; Johnson, Grammarly,
+              Chick-fil-A, and NAPA Auto Parts. He pairs executive SEO
+              leadership with hands-on AI product development — building this
+              Packaging Compliance platform to automate regulatory analysis,
+              supplier collaboration, and executive reporting. Recognized as a
+              Top 10% Replit Builder.
             </p>
 
             <div className="mt-4 flex items-center justify-between">
