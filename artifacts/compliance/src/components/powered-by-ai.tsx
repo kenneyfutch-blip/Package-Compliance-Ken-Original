@@ -1,9 +1,10 @@
-import { useListAiProviders } from "@workspace/api-client-react"
+import { useListAiProviders, getListAiProvidersQueryKey } from "@workspace/api-client-react"
 import { Sparkles } from "lucide-react"
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { usePermissions } from "@/lib/access"
 
 const TYPE_LABEL: Record<string, string> = {
   openai: "OpenAI",
@@ -18,7 +19,12 @@ const TYPE_LABEL: Record<string, string> = {
  * otherwise it falls back to the product's headline model label.
  */
 export function PoweredByAi({ className }: { className?: string }) {
-  const { data: providers = [] } = useListAiProviders()
+  // Only readable by admins (ai_providers:read); everyone else gets the
+  // headline fallback label without firing a request that would 403.
+  const { has } = usePermissions()
+  const { data: providers = [] } = useListAiProviders({
+    query: { queryKey: getListAiProvidersQueryKey(), enabled: has("ai_providers:read") },
+  })
   const active = providers.find((p) => p.active)
   const label = active ? (TYPE_LABEL[active.providerType] ?? "OpenAI") : "OpenAI"
   const model = active?.model ?? "gpt-5.5"
