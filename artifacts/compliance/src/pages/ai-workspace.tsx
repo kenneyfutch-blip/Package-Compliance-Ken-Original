@@ -725,7 +725,26 @@ export default function AiWorkspacePage() {
   const goTo = (href: string) => navigate(href)
 
   const linkedLabel = detail?.linkedRecordLabel ?? null
-  const hasContext = Boolean(linkedLabel || pageContext?.title || pageContext?.summary)
+  // Entities the assistant actually read while answering in THIS conversation
+  // (packages, proofs, reports, tasks…), deduped, most recent turn first. This
+  // is what makes the Context panel reflect the chat — not just the open page.
+  const citedEntities = React.useMemo(() => {
+    const seen = new Set<string>()
+    const out: WorkspaceCitation[] = []
+    for (let i = liveMessages.length - 1; i >= 0; i--) {
+      for (const c of liveMessages[i]?.citations ?? []) {
+        const key = `${c.type}:${c.id}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push(c)
+      }
+    }
+    return out.slice(0, 8)
+  }, [liveMessages])
+
+  const hasContext = Boolean(
+    linkedLabel || pageContext?.title || pageContext?.summary || citedEntities.length > 0,
+  )
 
   const isOverlay = mode === "fullscreen" || mode === "split"
 
@@ -870,10 +889,42 @@ export default function AiWorkspacePage() {
                 </p>
               </div>
             )}
+            {citedEntities.length > 0 && (
+              <div>
+                <p className="text-xs font-medium uppercase text-muted-foreground">
+                  From this conversation
+                </p>
+                <div className="mt-1.5 space-y-1.5">
+                  {citedEntities.map((c) => (
+                    <div
+                      key={`${c.type}:${c.id}`}
+                      className="flex items-center justify-between gap-2 rounded-md border bg-card px-2.5 py-1.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{c.label}</p>
+                        <p className="text-[11px] capitalize text-muted-foreground">
+                          {c.type.replace(/_/g, " ")}
+                        </p>
+                      </div>
+                      {c.href && (
+                        <button
+                          type="button"
+                          onClick={() => goTo(c.href!)}
+                          className="inline-flex shrink-0 items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          Open <ArrowRight className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {!hasContext && (
               <p className="text-muted-foreground">
-                Open a package, report, or task and the workspace will show its
-                details here for context-aware answers.
+                Ask about a package, proof, or report and whatever the
+                assistant looks up will appear here. Opening a package, report,
+                or task also shows its details here.
               </p>
             )}
 
