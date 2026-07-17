@@ -5,6 +5,7 @@ import {
   packagesTable,
   violationsTable,
   reviewTasksTable,
+  annotationsTable,
   reportsTable,
   specialistProfilesTable,
   packageVersionsTable,
@@ -475,6 +476,66 @@ const createTask: WorkspaceAction = {
   },
 };
 
+const createComment: WorkspaceAction = {
+  name: "create_comment",
+  sensitive: true,
+  supplierSafe: false,
+  requiredPerms: ["proofs:write"],
+  description:
+    "Add a written comment to a package's review discussion (visible in the proofing/annotation panel). Use to record an observation or note for the review team.",
+  parameters: {
+    type: "object",
+    properties: {
+      packageId: { type: "integer", description: "The package to comment on." },
+      text: { type: "string", description: "The comment text." },
+      priority: { type: "string", description: "low | medium | high | critical (default medium)." },
+    },
+    required: ["packageId", "text"],
+    additionalProperties: false,
+  },
+  async summarize(req, args) {
+    const pkg = await loadAccessiblePackage(req, Number(args["packageId"]));
+    if (!pkg) return { error: "That package was not found or is not accessible to you." };
+    const text = str(args["text"]);
+    if (!text) return { error: "Comment text is required." };
+    return {
+      summary: `Add a ${normalizePriority(args["priority"])}-priority comment to "${pkg.name}" (SKU ${pkg.sku}): "${text.length > 120 ? `${text.slice(0, 120)}…` : text}"`,
+    };
+  },
+  async execute(req, args) {
+    const pkg = await loadAccessiblePackage(req, Number(args["packageId"]));
+    if (!pkg) throw new Error("Package not accessible.");
+    const text = str(args["text"]);
+    if (!text) throw new Error("Comment text is required.");
+    const [annotation] = await db
+      .insert(annotationsTable)
+      .values({
+        packageId: pkg.id,
+        type: "text",
+        page: 0,
+        author: getAuthContext(req).name,
+        text,
+        priority: normalizePriority(args["priority"]),
+        status: "open",
+        source: "human",
+      })
+      .returning({ id: annotationsTable.id });
+    await writeAudit(req, {
+      action: "Comment added via AI Workspace",
+      entityType: "annotation",
+      entityId: annotation?.id ?? null,
+      packageId: pkg.id,
+      detail: `Comment on "${pkg.name}": ${text.slice(0, 80)}`,
+    });
+    const ref = packageCitation(pkg);
+    return {
+      resultText: `Added the comment to "${pkg.name}".`,
+      citations: [ref],
+      recordRef: { ...ref, kind: "package" },
+    };
+  },
+};
+
 const generateReport: WorkspaceAction = {
   name: "generate_report",
   sensitive: true,
@@ -759,6 +820,7 @@ const ALL_ACTIONS: WorkspaceAction[] = [
   assignReviewer,
   escalateReview,
   createTask,
+  createComment,
   generateReport,
   // non-sensitive
   summarizeFindings,
@@ -798,6 +860,7 @@ export function actionStatusLabel(name: string): string {
     assign_reviewer: "Preparing an assignment",
     escalate_review: "Preparing an escalation",
     create_task: "Preparing a task",
+    create_comment: "Preparing a comment",
     generate_report: "Preparing a report",
     summarize_findings: "Summarizing findings",
     draft_approval_notes: "Drafting approval notes",

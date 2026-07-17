@@ -225,3 +225,79 @@ test("token creation denies suppliers", async () => {
   }
   assert.equal(res.state.status, 403);
 });
+
+// --- Phase 2: action registry + confirmation-token contract -----------------
+import { availableActionsFor } from "../../lib/workspace/actions";
+import {
+  issueConfirmationToken,
+  verifyConfirmationToken,
+} from "../../lib/mcp/confirmations";
+
+const ACTION_FORBIDDEN_PATTERNS: RegExp[] = [
+  /delete/i, /remove/i, /drop/i, /purge/i, /truncate/i, /sql/i,
+  /secret/i, /credential/i, /api_key/i, /apikey/i, /token/i,
+  /env/i, /config/i, /(^|_)exec(ute)?(_|$)/i, /shell/i, /role/i, /permission/i, /admin/i,
+];
+
+test("action registry contains no forbidden capabilities and all actions are gated", () => {
+  // Offer every permission so the full registry is visible.
+  const allPerms = new Set([
+    "packages:read", "packages:write", "reports:write", "reports:read",
+    "violations:read", "proofs:write", "suppliers:read",
+  ]);
+  const actions = availableActionsFor(makeReq(ctxWith({ permissions: allPerms })));
+  assert.ok(actions.length > 0);
+  for (const a of actions) {
+    for (const pattern of ACTION_FORBIDDEN_PATTERNS) {
+      assert.ok(
+        !pattern.test(a.name),
+        `Action "${a.name}" matches forbidden pattern ${pattern}.`,
+      );
+    }
+    assert.ok(a.requiredPerms.length > 0, `Action "${a.name}" has no requiredPerms.`);
+  }
+});
+
+test("suppliers are never offered state-changing actions", () => {
+  const allPerms = new Set(["packages:write", "proofs:write", "reports:write", "packages:read", "violations:read"]);
+  const offered = availableActionsFor(
+    makeReq(ctxWith({ roleKey: "supplier_user", supplierId: 7, permissions: allPerms })),
+  );
+  for (const a of offered) {
+    assert.equal(a.sensitive, false, `supplier offered sensitive action ${a.name}`);
+    assert.equal(a.supplierSafe, true);
+  }
+});
+
+test("confirmation tokens: bound to user, action, and exact args; expire", () => {
+  process.env["SESSION_SECRET"] = process.env["SESSION_SECRET"] || "test-secret";
+  const args = { packageId: 41, title: "check label" };
+  const tok = issueConfirmationToken(40, "create_task", args);
+
+  // Valid: same user/action/args (key order and confirmationToken ignored).
+  assert.ok(verifyConfirmationToken(tok, 40, "create_task", { title: "check label", packageId: 41, confirmationToken: tok }));
+  // Wrong user.
+  assert.ok(!verifyConfirmationToken(tok, 41, "create_task", args));
+  // Wrong action.
+  assert.ok(!verifyConfirmationToken(tok, 40, "create_comment", args));
+  // Changed args (bait-and-switch).
+  assert.ok(!verifyConfirmationToken(tok, 40, "create_task", { packageId: 42, title: "check label" }));
+  // Garbage tokens.
+  assert.ok(!verifyConfirmationToken("confirm_123_deadbeef", 40, "create_task", args));
+  assert.ok(!verifyConfirmationToken(undefined, 40, "create_task", args));
+  // Expired.
+  const old = issueConfirmationToken(40, "create_task", args, Date.now() - 11 * 60 * 1000);
+  assert.ok(!verifyConfirmationToken(old, 40, "create_task", args));
+});
+
+// canonicalArgs must be deep-order-independent so nested-argument actions
+// don't suffer brittle token mismatches.
+import { canonicalArgs } from "../../lib/mcp/confirmations";
+
+test("canonicalArgs: deep key-order independence, confirmationToken excluded", () => {
+  const a = canonicalArgs({ b: { y: 2, x: 1 }, a: [{ q: 1, p: 2 }], confirmationToken: "t1" });
+  const b = canonicalArgs({ a: [{ p: 2, q: 1 }], confirmationToken: "t2", b: { x: 1, y: 2 } });
+  assert.equal(a, b);
+  const c = canonicalArgs({ a: [{ p: 3, q: 1 }], b: { x: 1, y: 2 } });
+  assert.notEqual(a, c);
+});

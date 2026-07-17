@@ -91,8 +91,9 @@ export default function McpGateway() {
           <Plug2 className="w-7 h-7 text-primary" /> AI Gateway (MCP)
         </h1>
         <p className="text-muted-foreground mt-1">
-          Secure gateway for external AI agents. Every connection acts as a specific user,
-          sees only read-only tools, and inherits that user's permissions and organization scope.
+          Secure gateway for external AI agents. Every connection acts as a specific user and
+          inherits that user's permissions and organization scope. Reads run directly; any
+          state-changing action requires explicit human confirmation first.
         </p>
       </div>
 
@@ -101,8 +102,8 @@ export default function McpGateway() {
           <CardContent className="pt-6 flex items-center gap-3">
             <ShieldCheck className="w-8 h-8 text-success" />
             <div>
-              <div className="font-semibold">Read-only</div>
-              <div className="text-sm text-muted-foreground">No writes, deletes, secrets, or configuration are ever exposed.</div>
+              <div className="font-semibold">Confirmed actions only</div>
+              <div className="text-sm text-muted-foreground">Reads run freely; any change (task, comment, assignment, report) requires explicit human confirmation. No deletes, secrets, or configuration.</div>
             </div>
           </CardContent>
         </Card>

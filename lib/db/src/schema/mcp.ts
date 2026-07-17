@@ -44,6 +44,29 @@ export const mcpTokensTable = pgTable(
   ],
 );
 
+// Consumed confirmation tokens for sensitive MCP actions. A confirmation
+// token is single-use: execution atomically inserts its hash here (unique
+// index), and a second attempt with the same token conflicts and is refused.
+// Rows are prunable once past expiry; DB-backed so the guarantee survives
+// restarts and holds across multiple server instances.
+export const mcpConfirmationsUsedTable = pgTable(
+  "mcp_confirmations_used",
+  {
+    id: serial("id").primaryKey(),
+    tokenHash: text("token_hash").notNull(),
+    userId: integer("user_id").notNull(),
+    action: text("action").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("uq_mcp_confirmations_hash").on(t.tokenHash),
+    index("idx_mcp_confirmations_expires").on(t.expiresAt),
+  ],
+);
+
 // Per-tool-call audit ledger for AI tool access — every tool invocation from
 // the MCP gateway AND the in-app AI Workspace is recorded here: who, which
 // tool, which tenant, the inputs, whether permission checks passed, and the
