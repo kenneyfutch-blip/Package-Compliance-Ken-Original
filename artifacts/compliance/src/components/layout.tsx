@@ -86,6 +86,7 @@ import { PresenceStrip } from "@/components/presence-indicators"
 import { useFavorites } from "@/lib/favorites"
 import { requiredPermFor } from "@/lib/permissions"
 import { OnboardingTour } from "@/components/training/onboarding-tour"
+import { BuilderBadge } from "@/components/builder-badge"
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> }
 /** A labeled, collapsible cluster of items rendered inside a section. */
@@ -1291,6 +1292,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <OnboardingTour />
+      <BuilderBadge />
       </div>
       <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </div>
