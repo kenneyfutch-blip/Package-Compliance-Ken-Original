@@ -9,13 +9,37 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { downloadProof } from "@/lib/proof-utils"
+import { downloadProof, servingUrl, fileTypeFromName } from "@/lib/proof-utils"
+import { FileText } from "lucide-react"
 import {
   Search, Loader2, BrainCircuit, Eye, CheckCircle, ShieldCheck, XCircle,
   UserPlus, FileDown, Languages,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { BulkAssignDialog } from "@/components/bulk-assign-dialog"
+
+// Mini artwork thumbnail for fast visual scanning of the queue. Same source
+// rules as the package cards: direct image → object/serving URL, PDFs/.ai →
+// server-rendered cached thumbnail, .indd/broken → typed file placeholder.
+function MiniThumb({ id, url, name }: { id: number; url: string | null | undefined; name: string }) {
+  const [broken, setBroken] = useState(false)
+  const src = servingUrl(url)
+  const type = url ? fileTypeFromName(url) : "other"
+  const isImage = type === "png" || type === "jpg"
+  const showImage = Boolean(src) && isImage && !broken
+  const showThumb = Boolean(url) && !isImage && type !== "indd" && !broken
+  return (
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-white">
+      {showImage ? (
+        <img src={src!} alt={`${name} artwork`} loading="lazy" className="h-full w-full object-contain" onError={() => setBroken(true)} />
+      ) : showThumb ? (
+        <img src={`/api/packages/${id}/thumbnail`} alt={`${name} artwork`} loading="lazy" className="h-full w-full object-contain" onError={() => setBroken(true)} />
+      ) : (
+        <FileText className="h-4 w-4 text-muted-foreground" />
+      )}
+    </div>
+  )
+}
 
 const APPROVAL_STYLE: Record<string, string> = {
   Approved: "bg-success/10 text-success border-success/20",
@@ -131,8 +155,13 @@ export default function BulkQueuePage() {
                 <TableRow key={pkg.id} className="group" data-state={selectedIds.has(pkg.id) ? "selected" : undefined}>
                   <TableCell><Checkbox checked={selectedIds.has(pkg.id)} onCheckedChange={() => toggleSelect(pkg.id)} /></TableCell>
                   <TableCell>
-                    <div className="font-medium text-foreground">{pkg.sku}</div>
-                    <div className="text-xs text-muted-foreground max-w-[220px] truncate" title={pkg.name}>{pkg.name}</div>
+                    <div className="flex items-center gap-3">
+                      <MiniThumb id={pkg.id} url={pkg.artworkUrl} name={pkg.name} />
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground">{pkg.sku}</div>
+                        <div className="text-xs text-muted-foreground max-w-[220px] truncate" title={pkg.name}>{pkg.name}</div>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">{pkg.vendor}</div>
