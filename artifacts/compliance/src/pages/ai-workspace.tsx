@@ -463,6 +463,9 @@ export default function AiWorkspacePage() {
     // dropped instead of populating chips in this fresh conversation.
     followupSeqRef.current++
     setFollowups([])
+    // Fresh conversation = fresh context panel: clear cited-entity state
+    // (liveMessages already reset above) and collapse the live snapshot.
+    setLiveOpen(false)
     navigate(`/ai-workspace/${conv.id}`)
     invalidateList()
   }
