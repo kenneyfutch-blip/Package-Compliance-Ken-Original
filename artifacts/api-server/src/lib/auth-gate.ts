@@ -16,11 +16,23 @@ const ALLOWED_DOMAINS = (process.env.ALLOWED_EMAIL_DOMAINS ?? "dollartree.com")
   .map((d) => d.trim().toLowerCase())
   .filter(Boolean);
 
+// Exact-email exceptions for external collaborators who have no company email.
+// Currently: Eric Blanchette (Legal Reviewer / final decision) only has a
+// ritomints.com address. Extend via a comma-separated ALLOWED_EMAILS env var.
+const ALLOWED_EMAILS = (
+  process.env.ALLOWED_EMAILS ?? "eric.blanchette@ritomints.com"
+)
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 export function isEmailAllowed(email: string | null | undefined): boolean {
   if (!email) return false;
-  const at = email.lastIndexOf("@");
+  const normalized = email.trim().toLowerCase();
+  if (ALLOWED_EMAILS.includes(normalized)) return true;
+  const at = normalized.lastIndexOf("@");
   if (at === -1) return false;
-  const domain = email.slice(at + 1).toLowerCase();
+  const domain = normalized.slice(at + 1);
   return ALLOWED_DOMAINS.some((d) => domain === d);
 }
 

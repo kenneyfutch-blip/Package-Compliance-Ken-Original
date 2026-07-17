@@ -10,6 +10,10 @@ layered because **Replit-managed Clerk exposes no sign-up domain allowlist/restr
 (no Clerk dashboard access; confirmed absent in Replit docs + the clerk-auth setup
 reference). So account *creation* cannot be blocked at the identity-provider level.
 
+**Exact-email exceptions:** `ALLOWED_EMAILS` (comma-separated env; default includes
+`eric.blanchette@ritomints.com` — external Legal Reviewer with no company email, user-approved
+exception). Checked before the domain match in `isEmailAllowed()`.
+
 Layers (server is authoritative):
 1. **Server 403 gate** — `auth-gate.ts` `isEmailAllowed()` (exact domain match, case-
    insensitive; overridable via `ALLOWED_EMAIL_DOMAINS`). `requireAuth` returns 403 for
