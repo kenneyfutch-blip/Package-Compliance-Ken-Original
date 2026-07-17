@@ -73,6 +73,7 @@ import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
 import { packageConds, canAccessPackage, canAccessObjectOwner } from "../lib/rbac/scope";
 import { resolveObjectOwner } from "./storage";
 import { writeAudit } from "../lib/audit";
+import { generateCompliancePdf } from "../lib/compliancePdf";
 import { autoAssignReview, completeReview } from "../lib/reviews/engine";
 import { matchTeamName } from "../lib/reviews/routing";
 import { enqueuePackageAnalysis } from "../lib/packageAnalysis";
@@ -1082,6 +1083,66 @@ router.post(
     }
     const pkg = await loadOwnedPackage(req, res, id);
     if (!pkg) return;
+
+    // Generate the actual report document from the package's real AI analysis
+    // results (findings), upload it to object storage, and store its path so
+    // the Reports page Download button always works. A report without a file
+    // is worthless, so a failed generation fails the request loudly.
+    const findings = await db
+      .select()
+      .from(violationsTable)
+      .where(eq(violationsTable.packageId, id))
+      .orderBy(desc(violationsTable.createdAt));
+    let objectPath: string;
+    try {
+      const auth = getAuthContext(req);
+      const pdfBytes = await generateCompliancePdf({
+        title: parsed.data.title,
+        generatedBy: auth.name || auth.email || "Unknown",
+        generatedAt: new Date(),
+        pkg: {
+          name: pkg.name,
+          sku: pkg.sku,
+          brand: pkg.brand,
+          vendor: pkg.vendor,
+          category: pkg.category,
+          grade: pkg.grade,
+          riskScore: pkg.riskScore,
+          complianceStatus: pkg.complianceStatus,
+          approvalStatus: pkg.approvalStatus,
+          summary: pkg.summary,
+        },
+        findings: findings.map((v) => ({
+          title: v.title,
+          description: v.description,
+          severity: v.severity,
+          engine: v.engine,
+          status: v.status,
+          regulationRef: v.regulationRef,
+          recommendation: v.recommendation,
+          suggestedText: v.suggestedText,
+          detectedText: v.detectedText,
+          confidence: v.confidence,
+          humanReviewRecommended: v.humanReviewRecommended,
+          disclaimer: v.disclaimer,
+        })),
+      });
+      const uploadURL = await objectStorage.getObjectEntityUploadURL();
+      const putResponse = await fetch(uploadURL, {
+        method: "PUT",
+        body: Buffer.from(pdfBytes),
+        headers: { "Content-Type": "application/pdf" },
+      });
+      if (!putResponse.ok) {
+        throw new Error(`Upload failed: ${putResponse.status}`);
+      }
+      objectPath = objectStorage.normalizeObjectEntityPath(uploadURL);
+    } catch (err) {
+      logger.error({ err, packageId: id }, "Compliance report generation failed");
+      res.status(502).json({ error: "Report generation failed. Please retry." });
+      return;
+    }
+
     const [report] = await db
       .insert(reportsTable)
       .values({
@@ -1090,9 +1151,10 @@ router.post(
         title: parsed.data.title,
         type: parsed.data.type ?? "Compliance",
         format: parsed.data.format ?? "PDF",
+        objectPath,
         summary:
           pkg.summary ??
-          `Compliance report for ${pkg.name} (grade ${pkg.grade ?? "N/A"}).`,
+          `Compliance report for ${pkg.name} with ${findings.length} finding(s) (grade ${pkg.grade ?? "N/A"}).`,
       })
       .returning();
 
