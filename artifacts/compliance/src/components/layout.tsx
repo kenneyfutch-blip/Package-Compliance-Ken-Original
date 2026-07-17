@@ -938,14 +938,77 @@ function TopNavMenus() {
 }
 
 // Suggested "quick finds" surfaced under the global search when it is focused.
-// Each runs a search against the packages list (always a valid destination).
+// Each navigates straight to the real destination page (never a filtered
+// package search that might come back empty).
 const QUICK_FINDS = [
-  { label: "Critical violations", term: "critical", icon: Activity },
-  { label: "Pending review", term: "pending", icon: Compass },
-  { label: "Passed packages", term: "passed", icon: Star },
-  { label: "High-risk items", term: "high risk", icon: TrendingUp },
-  { label: "Recent submissions", term: "recent", icon: ScrollText },
+  { label: "Critical violations", href: "/ai/violations", icon: Activity },
+  { label: "Pending review", href: "/packages/needs-review", icon: Compass },
+  { label: "Approved packages", href: "/packages/approved", icon: Star },
+  { label: "High risk queue", href: "/queue/high-risk", icon: TrendingUp },
+  { label: "All packages", href: "/packages", icon: ScrollText },
 ] as const
+
+// Extra search keywords per destination, so natural terms ("critical",
+// "chart", "graph", "sla", ...) surface the right tool even when the word
+// isn't in its name or description. Lowercase, space-separated.
+const NAV_KEYWORDS: Record<string, string> = {
+  "/ai/violations": "critical severity findings issues errors",
+  "/ai/claims": "claims audit marketing",
+  "/ai/language": "copy text wording labels",
+  "/ai/fixes": "corrections remediation suggestions",
+  "/ai/heatmaps": "chart graph visual clusters",
+  "/ai/memory": "history past learnings",
+  "/queue/high-risk": "critical risky urgent priority",
+  "/reports": "compliance documents exports pdf",
+  "/reports/executive": "summary leadership chart graph",
+  "/reports/trends": "chart graph analytics trends over time",
+  "/suppliers/scorecards": "vendor ratings chart graph performance",
+  "/operations/workload": "sla capacity chart graph",
+  "/operations/specialist-workload": "sla capacity balance",
+  "/admin/usage": "analytics metrics chart graph",
+  "/admin/ai-usage": "cost spend tokens billing chart",
+  "/admin/activity": "logs monitor live events",
+  "/operations/audit": "audit trail history log",
+  "/packages/needs-review": "pending waiting queue",
+  "/packages/approved": "passed compliant done",
+  "/packages/rejected": "failed non-compliant",
+  "/regulations": "cfr fda usda ftc law rules",
+  "/regulatory/recalls": "fda recall alerts safety",
+  "/resources/glossary": "approved language terms wording",
+  "/training/glossary": "definitions terms platform",
+}
+
+// Global tool search: match every nav destination the user can access by name,
+// section label, and plain-language description, so typing "critical",
+// "chart", "trend", a tool name, etc. surfaces the right page directly.
+function useToolMatches(query: string) {
+  const { has } = usePermissions()
+  return React.useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (q.length < 2) return []
+    const terms = q.split(/\s+/).filter(Boolean)
+    const results: { item: NavItem; section: string; score: number }[] = []
+    const seen = new Set<string>()
+    for (const section of SECTIONS) {
+      for (const item of flattenEntries(section.items)) {
+        if (seen.has(item.href)) continue
+        const perm = requiredPermFor(item.href)
+        if (perm !== null && !has(perm)) continue
+        const name = item.name.toLowerCase()
+        const desc = (NAV_DESC[item.href] ?? "").toLowerCase()
+        const sectionLabel = section.label.toLowerCase()
+        const haystack = `${name} ${desc} ${sectionLabel} ${NAV_KEYWORDS[item.href] ?? ""}`
+        if (!terms.every((t) => haystack.includes(t))) continue
+        seen.add(item.href)
+        // Rank: name prefix > name substring > description/section match.
+        const score = name.startsWith(q) ? 0 : name.includes(q) ? 1 : 2
+        results.push({ item, section: section.label, score })
+      }
+    }
+    results.sort((a, b) => a.score - b.score || a.item.name.localeCompare(b.item.name))
+    return results.slice(0, 7)
+  }, [query, has])
+}
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme()
@@ -998,6 +1061,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     },
   )
   const suggestions = searchMatches.slice(0, 6)
+  const toolMatches = useToolMatches(debouncedQ)
 
   const runSearch = (term: string) => {
     setQ(term)
@@ -1084,6 +1148,37 @@ export function Shell({ children }: { children: React.ReactNode }) {
                       </span>
                     </button>
                   )}
+                  {q.trim() && toolMatches.length > 0 && (
+                    // Tools, charts, and pages whose name or description match.
+                    <div className="py-1 border-b border-border">
+                      <p className="px-3.5 pt-1.5 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Tools & Pages
+                      </p>
+                      {toolMatches.map(({ item, section }) => {
+                        const Icon = item.icon
+                        return (
+                          <button
+                            key={item.href}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              setSearchOpen(false)
+                              navigate(item.href)
+                            }}
+                            className="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-left hover:bg-accent"
+                          >
+                            <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
+                            <span className="flex min-w-0 flex-col leading-tight">
+                              <span className="truncate font-medium">{item.name}</span>
+                              <span className="truncate text-xs text-muted-foreground">
+                                {NAV_DESC[item.href] ?? section}
+                              </span>
+                            </span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
                   {q.trim() ? (
                     // Live autocomplete: matching packages as you type.
                     suggestions.length > 0 ? (
@@ -1112,9 +1207,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
                         ))}
                       </div>
                     ) : debouncedQ.length >= 2 && !searchFetching ? (
-                      <p className="px-3.5 py-3 text-sm text-muted-foreground">
-                        No packages match "{q.trim()}"
-                      </p>
+                      toolMatches.length === 0 ? (
+                        <p className="px-3.5 py-3 text-sm text-muted-foreground">
+                          No tools or packages match "{q.trim()}"
+                        </p>
+                      ) : null
                     ) : (
                       <p className="px-3.5 py-3 text-sm text-muted-foreground">Searching…</p>
                     )
@@ -1132,7 +1229,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
                               type="button"
                               onMouseDown={(e) => {
                                 e.preventDefault()
-                                runSearch(f.term)
+                                setSearchOpen(false)
+                                navigate(f.href)
                               }}
                               className="flex w-full items-center gap-2.5 px-3.5 py-2 text-sm text-left hover:bg-accent"
                             >
