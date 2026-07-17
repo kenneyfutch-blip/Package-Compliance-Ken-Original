@@ -7,8 +7,9 @@ import {
   suppliersTable,
   teamsTable,
   teamMembersTable,
+  specialistProfilesTable,
 } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull, sql } from "drizzle-orm";
 import type { AuthContext } from "./context";
 import {
   getRoleDef,
@@ -167,6 +168,53 @@ async function buildContext(
   };
 }
 
+// Self-healing directory linkage: if the Specialist Directory has a profile
+// whose email matches this user and it isn't linked to any account yet, link
+// it. This is what makes a specialist appear in the review-assignment picker,
+// so a new teammate becomes assignable the moment they first sign in — no
+// manual linking step. Never re-links a profile already tied to a user.
+async function linkSpecialistProfile(
+  user: typeof usersTable.$inferSelect,
+): Promise<void> {
+  if (!user.email || user.organizationId == null || user.supplierId != null)
+    return;
+  try {
+    // Resolve candidates first and link exactly one, deterministically (oldest
+    // profile id), so a duplicate-email data problem can never cause one
+    // sign-in to claim multiple directory identities.
+    const candidates = await db
+      .select({ id: specialistProfilesTable.id })
+      .from(specialistProfilesTable)
+      .where(
+        and(
+          eq(specialistProfilesTable.organizationId, user.organizationId),
+          isNull(specialistProfilesTable.userId),
+          sql`lower(${specialistProfilesTable.email}) = lower(${user.email})`,
+        ),
+      )
+      .orderBy(specialistProfilesTable.id);
+    if (candidates.length === 0) return;
+    if (candidates.length > 1) {
+      logger.warn(
+        { email: user.email, profileIds: candidates.map((c) => c.id) },
+        "Multiple unlinked specialist profiles share this email; linking only the oldest",
+      );
+    }
+    await db
+      .update(specialistProfilesTable)
+      .set({ userId: user.id, updatedAt: new Date() })
+      .where(
+        and(
+          eq(specialistProfilesTable.id, candidates[0]!.id),
+          isNull(specialistProfilesTable.userId),
+        ),
+      );
+  } catch (err) {
+    // Linkage is a convenience, never a login blocker.
+    logger.warn({ err }, "Failed to auto-link specialist profile");
+  }
+}
+
 // Upserts the authenticated caller into the users table (linking their Clerk id,
 // organization, and role) and returns their resolved authorization context.
 // Results are cached briefly to avoid a DB round-trip on every request.
@@ -291,6 +339,7 @@ export async function provisionUser(
   }
 
   await ensureTeamMembership(user.id, user.organizationId!);
+  await linkSpecialistProfile(user);
 
   const ctx = await buildContext(user);
   cache.set(clerkUserId, { ctx, expires: Date.now() + CACHE_TTL_MS });
