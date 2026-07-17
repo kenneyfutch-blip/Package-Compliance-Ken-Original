@@ -89,7 +89,7 @@ export function BuilderBadge() {
             </div>
 
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Enterprise growth leader with 15+ years across brands like
+              Enterprise growth leader with 10+ years across brands like
               Johnson &amp; Johnson, Grammarly, and Chick-fil-A. Built this
               platform end to end. Top 10% Replit Builder.
             </p>
