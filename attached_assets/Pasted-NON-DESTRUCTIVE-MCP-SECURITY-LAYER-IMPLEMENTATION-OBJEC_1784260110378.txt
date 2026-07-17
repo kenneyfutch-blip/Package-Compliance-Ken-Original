@@ -1,0 +1,317 @@
+NON-DESTRUCTIVE MCP SECURITY LAYER IMPLEMENTATION
+
+OBJECTIVE
+
+Implement an MCP (Model Context Protocol) security and governance layer on top of the existing Compliance AI platform.
+
+IMPORTANT
+
+This is an enhancement to an already functioning production-ready platform.
+
+DO NOT:
+
+- Replace existing architecture
+- Refactor working systems
+- Remove existing API integrations
+- Modify working OpenAI workflows
+- Break Packaging Reviews
+- Break Compliance Reviews
+- Break Asset Management
+- Break AI Workspace
+- Break Authentication
+- Break Multi-Tenant Architecture
+
+The MCP layer must be additive only.
+
+The platform should continue working exactly as it does today.
+
+The MCP layer should become a secure gateway between AI systems and platform functionality.
+
+====================================================
+PHASE 1 - CURRENT STATE ANALYSIS
+====================================================
+
+First audit the current architecture.
+
+Identify:
+
+- Existing AI Assistant
+- AI Workspace
+- OpenAI integrations
+- Compliance Reviews
+- Packaging Asset Hub
+- Specialist Directory
+- Routing Engine
+- Existing APIs
+- Existing Permissions
+- Existing RBAC
+- Existing Multi-Tenant Controls
+
+Identify any risks of introducing MCP.
+
+Provide recommendations before implementing.
+
+====================================================
+MCP OBJECTIVE
+====================================================
+
+Create a secure AI Tool Layer.
+
+Current Architecture:
+
+AI
+↓
+Direct Platform Access
+
+Future Architecture:
+
+AI
+↓
+MCP Layer
+↓
+Authorized Tools
+↓
+Platform Services
+
+The MCP layer becomes the ONLY method future AI agents use to interact with application data.
+
+====================================================
+READ-ONLY MCP TOOLS
+====================================================
+
+Create secure read-only tools.
+
+Examples:
+
+get_package()
+
+get_review()
+
+get_finding()
+
+get_report()
+
+get_task()
+
+get_specialist()
+
+get_version_history()
+
+get_compliance_history()
+
+search_assets()
+
+search_findings()
+
+search_regulations()
+
+Rules:
+
+- Respect RBAC
+- Respect Tenant Isolation
+- Respect User Permissions
+- Return only authorized data
+
+====================================================
+RESTRICTED MCP TOOLS
+====================================================
+
+Create controlled write-capable tools.
+
+Examples:
+
+create_task()
+
+assign_reviewer()
+
+generate_report()
+
+create_review()
+
+create_comment()
+
+Requirements:
+
+- Permission validation
+- Audit logging
+- User authorization
+- Confirmed actions
+
+No background or silent execution.
+
+====================================================
+FORBIDDEN MCP TOOLS
+====================================================
+
+Do NOT create tools that expose:
+
+- API Keys
+- Environment Variables
+- Secrets
+- Source Code
+- Infrastructure
+- Database Credentials
+- Internal Configuration
+- System Prompts
+- Agent Prompts
+
+Prohibited Examples:
+
+get_api_keys()
+
+get_environment_variables()
+
+run_sql()
+
+run_server_command()
+
+view_source_code()
+
+modify_roles()
+
+create_admin()
+
+modify_security_settings()
+
+These capabilities must never be available through MCP.
+
+====================================================
+AI WORKSPACE INTEGRATION
+====================================================
+
+Integrate MCP into:
+
+- AI Assistant
+- AI Workspace
+- AI Specialists
+- Future Claude Agents
+
+The AI should retrieve data through MCP tools only.
+
+Never through direct database access.
+
+====================================================
+SPECIALIST DIRECTORY INTEGRATION
+====================================================
+
+Expose only safe specialist functions.
+
+Allow:
+
+get_specialists()
+
+get_workload()
+
+get_availability()
+
+get_expertise()
+
+get_approval_authority()
+
+Allow future Routing Agent to use these tools.
+
+Do NOT allow:
+
+change_specialist_permissions()
+
+change_roles()
+
+change_approval_levels()
+
+====================================================
+FUTURE CLAUDE AGENT SUPPORT
+====================================================
+
+Prepare infrastructure for future routing agents.
+
+Future workflow:
+
+Package Uploaded
+↓
+OpenAI Analysis
+↓
+Risk Assessment
+↓
+Claude Routing Agent
+↓
+MCP Layer
+↓
+Specialist Directory
+↓
+Routing Decision
+↓
+Task Assignment
+
+Claude never directly accesses databases.
+
+Claude must use MCP tools.
+
+====================================================
+SECURITY REQUIREMENTS
+====================================================
+
+Verify MCP enforces:
+
+RBAC
+
+Tenant Isolation
+
+User Permissions
+
+Audit Trail Logging
+
+Rate Limiting
+
+Request Validation
+
+Input Sanitization
+
+Prompt Injection Protection
+
+====================================================
+AUDIT LOGGING
+====================================================
+
+Every MCP request must log:
+
+- User
+- Tool
+- Timestamp
+- Tenant
+- Inputs
+- Outputs
+- Permission Validation
+- Success/Failure
+
+Provide complete traceability.
+
+====================================================
+DATA SAFETY
+====================================================
+
+AI may NEVER:
+
+- Delete Assets
+- Delete Reviews
+- Delete Findings
+- Delete Audit Logs
+- Delete Approvals
+- Delete Packages
+- Delete Reports
+
+Implement protection layers.
+
+Destructive operations should require:
+
+- Explicit authorization
+- Elevated permissions
+- Audit logging
+
+====================================================
+BACKWARD COMPATIBILITY
+====================================================
+
+Verify:
+
+- Existing OpenAI integrations remain functional
+- Existing AI Workspace remains 
