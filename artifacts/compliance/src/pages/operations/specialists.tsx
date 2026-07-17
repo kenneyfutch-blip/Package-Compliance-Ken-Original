@@ -37,6 +37,42 @@ const STATUSES = ["active", "disabled", "archived"]
 
 const toList = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean)
 
+// Headshot for a directory member: photo when set (served from the app's
+// public/ under the base path), initials chip otherwise.
+function MemberPhoto({ name, photoUrl }: { name: string; photoUrl?: string | null }) {
+  const [broken, setBroken] = React.useState(false)
+  React.useEffect(() => setBroken(false), [photoUrl])
+  const src = photoUrl
+    ? photoUrl.startsWith("http")
+      ? photoUrl
+      : `${import.meta.env.BASE_URL}${photoUrl.replace(/^\//, "")}`
+    : null
+  if (src && !broken) {
+    return (
+      <img
+        src={src}
+        alt={name}
+        width={36}
+        height={36}
+        loading="lazy"
+        onError={() => setBroken(true)}
+        className="h-9 w-9 rounded-full object-cover ring-1 ring-border"
+      />
+    )
+  }
+  const initials = name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]!.toUpperCase())
+    .join("")
+  return (
+    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-semibold ring-1 ring-border">
+      {initials || "?"}
+    </span>
+  )
+}
+
 type FormState = {
   name: string
   jobTitle: string
@@ -229,7 +265,8 @@ export default function SpecialistsDirectory() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Specialist</TableHead>
+                  <TableHead className="w-12" />
+                  <TableHead>Team</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead>Expertise</TableHead>
                   <TableHead className="text-center">Approval</TableHead>
@@ -242,6 +279,9 @@ export default function SpecialistsDirectory() {
               <TableBody>
                 {filtered.map((s) => (
                   <TableRow key={s.id}>
+                    <TableCell className="pr-0">
+                      <MemberPhoto name={s.name} photoUrl={s.photoUrl} />
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium">{s.name}</div>
                       <div className="text-xs text-muted-foreground">{s.jobTitle || s.role}</div>
