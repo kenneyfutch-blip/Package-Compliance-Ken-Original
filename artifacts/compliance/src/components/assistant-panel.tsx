@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils"
 import { useAssistantExtract } from "@workspace/api-client-react"
 import type { AssistantToolSuggestion } from "@workspace/api-client-react"
 import { streamAssistantChat } from "@/lib/assistant-stream"
+import { fetchWorkspaceFollowups } from "@/lib/workspace-stream"
+import { ChatMarkdown } from "@/components/chat-markdown"
 import { X, ArrowUp, Plus, ArrowRight, FileText, Loader2, Maximize2 } from "lucide-react"
 import {
   extractAttachmentText,
@@ -50,6 +52,11 @@ export function AssistantPanel({
   const [attaching, setAttaching] = React.useState(false)
 
   const [streaming, setStreaming] = React.useState(false)
+  // Suggested follow-up questions for the latest Q&A (same UX as the AI
+  // Workspace). Sequence counter drops stale responses when the user has
+  // already sent another message.
+  const [followups, setFollowups] = React.useState<string[]>([])
+  const followupSeqRef = React.useRef(0)
   // Abort function for the in-flight stream, so closing the panel or
   // unmounting never leaves a dangling reader.
   const abortRef = React.useRef<(() => void) | null>(null)
@@ -134,6 +141,8 @@ export function AssistantPanel({
       // Stream the answer token-by-token into a placeholder assistant turn
       // (same live-typing behavior as the AI Workspace).
       setStreaming(true)
+      setFollowups([])
+      const followupSeq = ++followupSeqRef.current
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: "", streaming: true },
@@ -163,6 +172,19 @@ export function AssistantPanel({
             patchLast({ streaming: false })
             setStreaming(false)
             abortRef.current = null
+            // Best-effort follow-up chips for the finished Q&A; drop the
+            // result if the user already sent another message.
+            setMessages((prev) => {
+              const answer = prev[prev.length - 1]
+              if (answer?.role === "assistant" && answer.content) {
+                void fetchWorkspaceFollowups(display, answer.content).then(
+                  (qs) => {
+                    if (followupSeqRef.current === followupSeq) setFollowups(qs)
+                  },
+                )
+              }
+              return prev
+            })
           },
           onError: (message) => {
             patchLast((m) => ({
@@ -297,7 +319,11 @@ export function AssistantPanel({
                         : "bg-white/10 text-white/90 rounded-bl-sm",
                     )}
                   >
-                    <p className="whitespace-pre-wrap">{m.content}</p>
+                    {m.role === "user" ? (
+                      <p className="whitespace-pre-wrap">{m.content}</p>
+                    ) : (
+                      <ChatMarkdown content={m.content} onNavigate={goTo} />
+                    )}
                     {m.attachments && m.attachments.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
                         {m.attachments.map((n, j) => (
@@ -353,6 +379,20 @@ export function AssistantPanel({
 
         {/* Composer — styled after the reference "Ask anything" box */}
         <div className="shrink-0 p-3">
+          {!streaming && followups.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5 px-1">
+              {followups.map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => send(q)}
+                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-left text-xs text-white/80 transition-colors hover:border-green-500/40 hover:bg-green-500/10 hover:text-green-300"
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
           {attachError && (
             <p className="mb-2 px-1 text-xs text-red-400">{attachError}</p>
           )}

@@ -920,10 +920,10 @@ Guidance:
 - If the user describes a goal or task, recommend the 1-3 most relevant tools as suggestions, each with the exact href from the catalog and a one-line reason.
 - Never invent hrefs or tools that are not in the catalog.
 - If you are not certain about a specific regulation or citation, say so plainly rather than guessing, and point the user to the Regulatory Library for the authoritative text. Never state an uncertain requirement as if it were definitive.
-- Keep the answer under 150 words. Do not use emojis.
+- Keep the answer under 180 words. Do not use emojis.
 
 Output format (STRICT):
-First write the answer as plain text only (no JSON, no code fences).
+First write the answer in well-structured markdown: short paragraphs (2-3 sentences each, separated by blank lines), a bulleted list ("- ") whenever you enumerate requirements, warnings, steps, or options, and **bold** for key terms or agency names. Never produce one long unbroken paragraph. No code fences, no JSON in the answer.
 Then, on a new line, write exactly ${ASSISTANT_SUGGESTIONS_SENTINEL} followed on the next line by a minified JSON array of suggestions: [{"label":string,"href":string,"reason":string}] (or [] if none). Nothing after the array.
 
 ${UNTRUSTED_DATA_DIRECTIVE}`;
