@@ -45,3 +45,6 @@ reseeds accumulate stale rows / hit FK errors.
 
 ## FORCE_DEMO_RESEED wipes user-uploaded data too
 The demo reseed guard exists because clearDemo() truncates ALL tenant tables — including packages the user uploaded themselves, not just seeded demo rows. **Why:** July 2026 incident — reseeding to rename demo users deleted the user's real uploaded packages; recovery required a checkpoint rollback. **How to apply:** never pass FORCE_DEMO_RESEED=1 without explicit user consent when the DB may hold user-created rows. To change seeded identities (users/specialists), prefer targeted SQL UPDATEs over a reseed. Also: clearDemo must delete ai/workspace child tables (workspace_action_proposals → ai_conversation_messages → ai_conversations) before organizations.
+
+## HARD RULE: no destructive DB resets in this project (user directive, July 2026)
+The owner explicitly ordered: never wipe data again. No seed:demo, no FORCE_DEMO_RESEED, no clearDemo, no truncate/delete-all — ever. Roster/data changes are done with in-place SQL only. Also recorded in replit.md User preferences.
