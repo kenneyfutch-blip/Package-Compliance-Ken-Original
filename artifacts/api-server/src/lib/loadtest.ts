@@ -23,10 +23,12 @@ import { logger } from "./logger";
 const MIN_SECRET_LEN = 16;
 
 function readSecret(): string {
+  // Never read a load-test secret in production — neither from the environment
+  // nor from disk. This guarantees the bypass secret is unset even if
+  // LOADTEST_AUTH_SECRET is accidentally configured in a production deployment.
+  if (process.env.NODE_ENV === "production") return "";
   const fromEnv = process.env.LOADTEST_AUTH_SECRET;
   if (fromEnv && fromEnv.trim()) return fromEnv.trim();
-  // Never read an on-disk secret in production.
-  if (process.env.NODE_ENV === "production") return "";
   const candidates = [path.resolve(process.cwd(), "loadtest/.secret")];
   try {
     const here = path.dirname(fileURLToPath(import.meta.url));
