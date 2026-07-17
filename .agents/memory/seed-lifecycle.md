@@ -42,3 +42,6 @@ demo seed.
 or `seed:demo`. When adding a table that the demo seed writes to, also add it to `clearDemo()`
 (the notification_states / notification_preferences overlay tables are already covered) or
 reseeds accumulate stale rows / hit FK errors.
+
+## FORCE_DEMO_RESEED wipes user-uploaded data too
+The demo reseed guard exists because clearDemo() truncates ALL tenant tables — including packages the user uploaded themselves, not just seeded demo rows. **Why:** July 2026 incident — reseeding to rename demo users deleted the user's real uploaded packages; recovery required a checkpoint rollback. **How to apply:** never pass FORCE_DEMO_RESEED=1 without explicit user consent when the DB may hold user-created rows. To change seeded identities (users/specialists), prefer targeted SQL UPDATEs over a reseed. Also: clearDemo must delete ai/workspace child tables (workspace_action_proposals → ai_conversation_messages → ai_conversations) before organizations.
