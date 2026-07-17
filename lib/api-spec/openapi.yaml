@@ -2505,6 +2505,14 @@ paths:
       operationId: listReports
       tags: [reports]
       summary: List generated compliance reports
+      parameters:
+        - name: view
+          in: query
+          required: false
+          description: Which lifecycle bucket to list (defaults to active).
+          schema:
+            type: string
+            enum: [active, archived, trash]
       responses:
         "200":
           description: Reports
@@ -2514,6 +2522,81 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Report"
+
+  /reports/{id}/archive:
+    post:
+      operationId: archiveReport
+      tags: [reports]
+      summary: Archive a report (hidden from the active list, restorable)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Archived report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /reports/{id}/restore:
+    post:
+      operationId: restoreReport
+      tags: [reports]
+      summary: Restore a report from archive or trash back to the active list
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Restored report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /reports/{id}:
+    delete:
+      operationId: deleteReport
+      tags: [reports]
+      summary: Move a report to trash (soft delete, restorable)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trashed report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Report"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 
   /me:
     get:
@@ -8508,6 +8591,12 @@ components:
           type: ["string", "null"]
         objectPath:
           type: ["string", "null"]
+        archivedAt:
+          type: ["string", "null"]
+          format: date-time
+        deletedAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time

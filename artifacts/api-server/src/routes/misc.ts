@@ -8,13 +8,14 @@ import {
   reportsTable,
   packagesTable,
 } from "@workspace/db";
-import { and, desc, eq, gte, ilike, isNull, lte, notInArray, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNotNull, isNull, lte, notInArray, or, type SQL } from "drizzle-orm";
 import {
   mapAuditEvent,
   mapNotification,
   mapReport,
 } from "../lib/mappers";
 import { requirePermission, orgId, getAuthContext } from "../lib/rbac/context";
+import { writeAudit } from "../lib/audit";
 
 const router: IRouter = Router();
 
@@ -333,12 +334,122 @@ router.get(
   "/reports",
   requirePermission("reports:read"),
   async (req: Request, res: Response): Promise<void> => {
+    // Lifecycle buckets: active (default) = not archived, not trashed;
+    // archived = archivedAt set, not trashed; trash = deletedAt set.
+    const view = str((req.query as Record<string, string | string[] | undefined>)["view"]) ?? "active";
+    if (!["active", "archived", "trash"].includes(view)) {
+      res.status(400).json({ error: "Invalid view; expected active, archived, or trash" });
+      return;
+    }
+    const orgCond = eq(reportsTable.organizationId, orgId(req));
+    const cond =
+      view === "trash"
+        ? and(orgCond, isNotNull(reportsTable.deletedAt))
+        : view === "archived"
+          ? and(orgCond, isNotNull(reportsTable.archivedAt), isNull(reportsTable.deletedAt))
+          : and(orgCond, isNull(reportsTable.archivedAt), isNull(reportsTable.deletedAt));
     const rows = await db
       .select()
       .from(reportsTable)
-      .where(eq(reportsTable.organizationId, orgId(req)))
+      .where(cond)
       .orderBy(desc(reportsTable.createdAt));
     res.json(rows.map(mapReport));
+  },
+);
+
+// Loads a report scoped to the caller's org; 404s (and responds) when absent.
+async function loadOwnedReport(req: Request, res: Response, id: number) {
+  const [row] = await db
+    .select()
+    .from(reportsTable)
+    .where(and(eq(reportsTable.id, id), eq(reportsTable.organizationId, orgId(req))))
+    .limit(1);
+  if (!row) res.status(404).json({ error: "Report not found" });
+  return row ?? null;
+}
+
+// POST /reports/:id/archive — hide from the active list, restorable.
+router.post(
+  "/reports/:id/archive",
+  requirePermission("reports:write"),
+  async (req: Request, res: Response): Promise<void> => {
+    const id = parseId(req.params["id"]);
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const existing = await loadOwnedReport(req, res, id);
+    if (!existing) return;
+    const [updated] = await db
+      .update(reportsTable)
+      .set({ archivedAt: existing.archivedAt ?? new Date() })
+      .where(eq(reportsTable.id, existing.id))
+      .returning();
+    await writeAudit(req, {
+      action: "Report archived",
+      entityType: "report",
+      entityId: existing.id,
+      packageId: existing.packageId ?? undefined,
+      detail: existing.title,
+    });
+    res.json(mapReport(updated!));
+  },
+);
+
+// POST /reports/:id/restore — bring back from archive or trash.
+router.post(
+  "/reports/:id/restore",
+  requirePermission("reports:write"),
+  async (req: Request, res: Response): Promise<void> => {
+    const id = parseId(req.params["id"]);
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const existing = await loadOwnedReport(req, res, id);
+    if (!existing) return;
+    const [updated] = await db
+      .update(reportsTable)
+      .set({ archivedAt: null, deletedAt: null })
+      .where(eq(reportsTable.id, existing.id))
+      .returning();
+    await writeAudit(req, {
+      action: "Report restored",
+      entityType: "report",
+      entityId: existing.id,
+      packageId: existing.packageId ?? undefined,
+      detail: `${existing.title} (restored from ${existing.deletedAt ? "trash" : "archive"}).`,
+    });
+    res.json(mapReport(updated!));
+  },
+);
+
+// DELETE /reports/:id — soft delete to trash. The generated file in object
+// storage is intentionally kept so a restore brings the download back too.
+router.delete(
+  "/reports/:id",
+  requirePermission("reports:write"),
+  async (req: Request, res: Response): Promise<void> => {
+    const id = parseId(req.params["id"]);
+    if (!Number.isInteger(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+    const existing = await loadOwnedReport(req, res, id);
+    if (!existing) return;
+    const [updated] = await db
+      .update(reportsTable)
+      .set({ deletedAt: existing.deletedAt ?? new Date() })
+      .where(eq(reportsTable.id, existing.id))
+      .returning();
+    await writeAudit(req, {
+      action: "Report moved to trash",
+      entityType: "report",
+      entityId: existing.id,
+      packageId: existing.packageId ?? undefined,
+      detail: existing.title,
+    });
+    res.json(mapReport(updated!));
   },
 );
 

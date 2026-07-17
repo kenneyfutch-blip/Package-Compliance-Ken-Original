@@ -11,6 +11,11 @@ export const reportsTable = pgTable("reports", {
   // Object-storage path (/objects/...) of a generated artifact (e.g. an exported
   // annotated proof PDF), used to authorize downloads back to the owning package.
   objectPath: text("object_path"),
+  // Lifecycle: NULL/NULL = active; archivedAt set = archived (hidden from the
+  // default list, restorable); deletedAt set = in trash (restorable). Rows are
+  // never hard-deleted here so generated documents stay recoverable.
+  archivedAt: timestamp("archived_at", { withTimezone: true }),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

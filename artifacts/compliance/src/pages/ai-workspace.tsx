@@ -120,7 +120,7 @@ export default function AiWorkspacePage() {
   const liveTrends = useGetComplianceTrends({
     query: { enabled: liveOpen, queryKey: getGetComplianceTrendsQueryKey() },
   })
-  const liveReports = useListReports({
+  const liveReports = useListReports(undefined, {
     query: { enabled: liveOpen, queryKey: getListReportsQueryKey() },
   })
   const liveLoading =

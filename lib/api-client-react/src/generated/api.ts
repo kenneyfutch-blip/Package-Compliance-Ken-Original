@@ -96,6 +96,7 @@ import type {
   ListPackagesParams,
   ListPoliciesParams,
   ListRegulationsParams,
+  ListReportsParams,
   ListReviewAssignmentsParams,
   ListSopDocumentsParams,
   ListSpecialistsParams,
@@ -7948,20 +7949,27 @@ export const useDeleteNotification = <TError = ErrorType<ApiError>,
       return useMutation(getDeleteNotificationMutationOptions(options));
     }
 
-export const getListReportsUrl = () => {
+export const getListReportsUrl = (params?: ListReportsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/reports`
+  return stringifiedParams.length > 0 ? `/api/reports?${stringifiedParams}` : `/api/reports`
 }
 
 /**
  * @summary List generated compliance reports
  */
-export const listReports = async ( options?: RequestInit): Promise<Report[]> => {
+export const listReports = async (params?: ListReportsParams, options?: RequestInit): Promise<Report[]> => {
 
-  return customFetch<Report[]>(getListReportsUrl(),
+  return customFetch<Report[]>(getListReportsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -7974,23 +7982,23 @@ export const listReports = async ( options?: RequestInit): Promise<Report[]> => 
 
 
 
-export const getListReportsQueryKey = () => {
+export const getListReportsQueryKey = (params?: ListReportsParams,) => {
     return [
-    `/api/reports`
+    `/api/reports`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListReportsQueryOptions = <TData = Awaited<ReturnType<typeof listReports>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListReportsQueryOptions = <TData = Awaited<ReturnType<typeof listReports>>, TError = ErrorType<unknown>>(params?: ListReportsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListReportsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListReportsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReports>>> = ({ signal }) => listReports({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReports>>> = ({ signal }) => listReports(params, { signal, ...requestOptions });
 
 
 
@@ -8008,11 +8016,11 @@ export type ListReportsQueryError = ErrorType<unknown>
  */
 
 export function useListReports<TData = Awaited<ReturnType<typeof listReports>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListReportsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListReportsQueryOptions(options)
+  const queryOptions = getListReportsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -8024,6 +8032,219 @@ export function useListReports<TData = Awaited<ReturnType<typeof listReports>>, 
 
 
 
+
+export const getArchiveReportUrl = (id: number,) => {
+
+
+
+
+  return `/api/reports/${id}/archive`
+}
+
+/**
+ * @summary Archive a report (hidden from the active list, restorable)
+ */
+export const archiveReport = async (id: number, options?: RequestInit): Promise<Report> => {
+
+  return customFetch<Report>(getArchiveReportUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getArchiveReportMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveReport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof archiveReport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['archiveReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof archiveReport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  archiveReport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ArchiveReportMutationResult = NonNullable<Awaited<ReturnType<typeof archiveReport>>>
+
+    export type ArchiveReportMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Archive a report (hidden from the active list, restorable)
+ */
+export const useArchiveReport = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof archiveReport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof archiveReport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getArchiveReportMutationOptions(options));
+    }
+
+export const getRestoreReportUrl = (id: number,) => {
+
+
+
+
+  return `/api/reports/${id}/restore`
+}
+
+/**
+ * @summary Restore a report from archive or trash back to the active list
+ */
+export const restoreReport = async (id: number, options?: RequestInit): Promise<Report> => {
+
+  return customFetch<Report>(getRestoreReportUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRestoreReportMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreReport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreReport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['restoreReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreReport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  restoreReport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreReportMutationResult = NonNullable<Awaited<ReturnType<typeof restoreReport>>>
+
+    export type RestoreReportMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Restore a report from archive or trash back to the active list
+ */
+export const useRestoreReport = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreReport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreReport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRestoreReportMutationOptions(options));
+    }
+
+export const getDeleteReportUrl = (id: number,) => {
+
+
+
+
+  return `/api/reports/${id}`
+}
+
+/**
+ * @summary Move a report to trash (soft delete, restorable)
+ */
+export const deleteReport = async (id: number, options?: RequestInit): Promise<Report> => {
+
+  return customFetch<Report>(getDeleteReportUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteReportMutationOptions = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteReport>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteReport>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteReport(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteReportMutationResult = NonNullable<Awaited<ReturnType<typeof deleteReport>>>
+
+    export type DeleteReportMutationError = ErrorType<ApiError>
+
+    /**
+ * @summary Move a report to trash (soft delete, restorable)
+ */
+export const useDeleteReport = <TError = ErrorType<ApiError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteReport>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteReport>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteReportMutationOptions(options));
+    }
 
 export const getGetMeUrl = () => {
 

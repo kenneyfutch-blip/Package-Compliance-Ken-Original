@@ -2862,6 +2862,8 @@ export const GenerateReportResponse = zod.object({
   "format": zod.string(),
   "summary": zod.string().nullish(),
   "objectPath": zod.string().nullish(),
+  "archivedAt": zod.coerce.date().nullish(),
+  "deletedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -4116,6 +4118,10 @@ export const DeleteNotificationResponse = zod.object({
 /**
  * @summary List generated compliance reports
  */
+export const ListReportsQueryParams = zod.object({
+  "view": zod.enum(['active', 'archived', 'trash']).optional().describe('Which lifecycle bucket to list (defaults to active).')
+})
+
 export const ListReportsResponseItem = zod.object({
   "id": zod.number(),
   "packageId": zod.number().nullish(),
@@ -4124,9 +4130,74 @@ export const ListReportsResponseItem = zod.object({
   "format": zod.string(),
   "summary": zod.string().nullish(),
   "objectPath": zod.string().nullish(),
+  "archivedAt": zod.coerce.date().nullish(),
+  "deletedAt": zod.coerce.date().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListReportsResponse = zod.array(ListReportsResponseItem)
+
+
+/**
+ * @summary Archive a report (hidden from the active list, restorable)
+ */
+export const ArchiveReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiveReportResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number().nullish(),
+  "title": zod.string(),
+  "type": zod.string(),
+  "format": zod.string(),
+  "summary": zod.string().nullish(),
+  "objectPath": zod.string().nullish(),
+  "archivedAt": zod.coerce.date().nullish(),
+  "deletedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Restore a report from archive or trash back to the active list
+ */
+export const RestoreReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RestoreReportResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number().nullish(),
+  "title": zod.string(),
+  "type": zod.string(),
+  "format": zod.string(),
+  "summary": zod.string().nullish(),
+  "objectPath": zod.string().nullish(),
+  "archivedAt": zod.coerce.date().nullish(),
+  "deletedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Move a report to trash (soft delete, restorable)
+ */
+export const DeleteReportParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteReportResponse = zod.object({
+  "id": zod.number(),
+  "packageId": zod.number().nullish(),
+  "title": zod.string(),
+  "type": zod.string(),
+  "format": zod.string(),
+  "summary": zod.string().nullish(),
+  "objectPath": zod.string().nullish(),
+  "archivedAt": zod.coerce.date().nullish(),
+  "deletedAt": zod.coerce.date().nullish(),
+  "createdAt": zod.coerce.date()
+})
 
 
 /**

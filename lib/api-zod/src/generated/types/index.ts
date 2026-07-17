@@ -128,6 +128,8 @@ export * from './listLanguageReviewsParams';
 export * from './listPackagesParams';
 export * from './listPoliciesParams';
 export * from './listRegulationsParams';
+export * from './listReportsParams';
+export * from './listReportsView';
 export * from './listReviewAssignmentsParams';
 export * from './listSopDocumentsParams';
 export * from './listSpecialistsParams';

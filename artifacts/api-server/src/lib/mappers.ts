@@ -537,6 +537,8 @@ export function mapReport(r: ReportRow) {
     // Object-storage path of the generated file, if any. The client turns this
     // into an authorized download URL; null means nothing is downloadable yet.
     objectPath: r.objectPath,
+    archivedAt: iso(r.archivedAt),
+    deletedAt: iso(r.deletedAt),
     createdAt: iso(r.createdAt)!,
   };
 }

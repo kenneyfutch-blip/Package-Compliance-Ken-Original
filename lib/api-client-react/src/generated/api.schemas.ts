@@ -2322,6 +2322,10 @@ export interface Report {
   summary?: string | null;
   /** @nullable */
   objectPath?: string | null;
+  /** @nullable */
+  archivedAt?: string | null;
+  /** @nullable */
+  deletedAt?: string | null;
   createdAt: string;
 }
 
@@ -3126,6 +3130,22 @@ from?: string;
 to?: string;
 limit?: number;
 };
+
+export type ListReportsParams = {
+/**
+ * Which lifecycle bucket to list (defaults to active).
+ */
+view?: ListReportsView;
+};
+
+export type ListReportsView = typeof ListReportsView[keyof typeof ListReportsView];
+
+
+export const ListReportsView = {
+  active: 'active',
+  archived: 'archived',
+  trash: 'trash',
+} as const;
 
 export type ListReviewAssignmentsParams = {
 status?: string;
