@@ -120,6 +120,7 @@ function CitationSnapshot({
   name: string
 }) {
   const [broken, setBroken] = React.useState(false)
+  const [loaded, setLoaded] = React.useState(false)
   const src = servingUrl(url ?? null)
   const type = url ? fileTypeFromName(url) : "other"
   const isImage = type === "png" || type === "jpg"
@@ -127,12 +128,33 @@ function CitationSnapshot({
   const showThumb = !showImage && type !== "indd" && !broken
   if (!showImage && !showThumb) return null
   return (
-    <div className="aspect-[16/9] w-full overflow-hidden border-b bg-white">
+    <div className="relative aspect-[16/9] w-full overflow-hidden border-b bg-muted">
+      {/* Generative-style loading state (à la OpenAI image gen): soft animated
+          gradient shimmer + label until the artwork finishes loading, then the
+          image fades/blurs in instead of popping abruptly. */}
+      {!loaded && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 overflow-hidden">
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-primary/10 via-muted to-primary/5" />
+          <div
+            className="absolute inset-y-0 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+            style={{ animation: "pba-shimmer 1.6s ease-in-out infinite" }}
+          />
+          <Loader2 className="relative h-4 w-4 animate-spin text-muted-foreground" />
+          <span className="relative text-[11px] text-muted-foreground">
+            Loading artwork…
+          </span>
+          <style>{`@keyframes pba-shimmer { 0% { left: -60%; } 100% { left: 110%; } }`}</style>
+        </div>
+      )}
       <img
         src={showImage ? src! : `/api/packages/${id}/thumbnail`}
         alt={`${name} artwork`}
         loading="lazy"
-        className="h-full w-full object-contain"
+        className={cn(
+          "h-full w-full bg-white object-contain transition-all duration-700",
+          loaded ? "scale-100 opacity-100 blur-0" : "scale-105 opacity-0 blur-md",
+        )}
+        onLoad={() => setLoaded(true)}
         onError={() => setBroken(true)}
       />
     </div>
