@@ -1294,7 +1294,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <OnboardingTour />
-      <BuilderBadge />
+      {/* Hidden while the assistant panel is open — the badge sits over the
+          panel's send button otherwise. */}
+      {!assistantOpen && <BuilderBadge />}
       </div>
       <AssistantPanel open={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </div>
