@@ -64,7 +64,7 @@ export const SPECIALIST_PROFILES: Record<string, SpecialistProfile> = {
     fallbackClass: "bg-primary/10 text-primary ring-primary/15",
   },
   agent_router: {
-    name: "Ava Torres",
+    name: "Priya Nair",
     title: "Workspace Router",
     photo: photo("agent-router.jpg"),
     fallbackClass: "bg-primary/10 text-primary ring-primary/15",

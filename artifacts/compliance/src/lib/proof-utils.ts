@@ -20,19 +20,18 @@ export function downloadProof(url: string, filename: string): void {
 }
 
 export const CURRENT_USER = {
-  name: "Megan Everding",
-  role: "Manager, PVT Label Brand and Creative Design",
+  name: "Eleanor Shellstrop",
+  role: "Compliance Manager",
 };
 
 export const REVIEWERS = [
-  "Megan Everding",
-  "Gwen Crisp",
-  "Laura Bolt",
-  "Benjamin Kusik",
-  "Emily Dodge",
-  "Jennifer Chinea",
-  "Kateri Talley",
-  "Leah Smith",
+  "Dana Whitfield",
+  "Marcus Lee",
+  "Priya Nair",
+  "Sofia Alvarez",
+  "Tom Becker",
+  "Rachel Kim",
+  "James Okafor",
 ];
 
 export type FindingClass = "issue" | "warning" | "passed" | "recommendation";

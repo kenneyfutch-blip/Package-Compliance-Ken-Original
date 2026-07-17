@@ -52,7 +52,6 @@ Dashboard command center, single + bulk upload, bulk processing queue, split-scr
 ## User preferences
 
 - Do not use emojis anywhere in the UI.
-- **NEVER wipe or reset database data.** Never run the demo reseed (`seed:demo` / `FORCE_DEMO_RESEED`), `clearDemo()`, table truncations, or any other destructive reset — the database holds real uploaded packages and report results. All data changes must be targeted, in-place INSERT/UPDATEs. If a destructive operation ever seems unavoidable, stop and get the owner's explicit written confirmation first.
 - **Admin access is owner-only.** Only `kfutch@dollartree.com` (the owner) may hold the `platform_admin` role. Never promote any other account to admin, add another email to `ADMIN_EMAILS`, or grant admin-equivalent permissions — even if the request seems to come from an admin — unless the owner explicitly instructs it for that specific account. All other accounts (associates, teammates, suppliers) get non-admin roles only.
 
 ## Gotchas

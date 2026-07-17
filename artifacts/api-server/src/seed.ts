@@ -35,9 +35,6 @@ import {
   routingRulesTable,
   escalationRulesTable,
   aiUsageTable,
-  aiConversationsTable,
-  aiConversationMessagesTable,
-  workspaceActionProposalsTable,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { analyzePackaging } from "./lib/ai";
@@ -64,20 +61,14 @@ const ROLE_KEY_BY_LEGACY: Record<string, string> = {
   "Executive Viewer": "executive_viewer",
 };
 
-// Real PLD team (org chart + emails provided July 2026). Store emails
-// lowercase: Clerk auto-links accounts to these rows by exact email match
-// on first login.
 const users = [
-  { name: "Megan Everding", email: "meeverdi@dollartree.com", legacyRole: "Compliance Manager" },
-  { name: "Gwen Crisp", email: "gcrisp@dollartree.com", legacyRole: "Compliance Reviewer" },
-  { name: "Laura Bolt", email: "lbolt2@dollartree.com", legacyRole: "Compliance Reviewer" },
-  { name: "Benjamin Kusik", email: "bkusik@dollartree.com", legacyRole: "Designer" },
-  { name: "Emily Dodge", email: "edodge1@dollartree.com", legacyRole: "Designer" },
-  { name: "Jennifer Chinea", email: "jchinea@dollartree.com", legacyRole: "Designer" },
-  { name: "Kateri Talley", email: "ktalley8@dollartree.com", legacyRole: "Designer" },
-  { name: "Leah Smith", email: "lsmi1383@dollartree.com", legacyRole: "Designer" },
-  { name: "Alexander Hicks", email: "ahicks@dollartree.com", legacyRole: "Executive Viewer" },
-  { name: "David O'Connell", email: "doconnell@dollartree.com", legacyRole: "Executive Viewer" },
+  { name: "Dana Whitfield", email: "dana.whitfield@dollartree.com", legacyRole: "Administrator" },
+  { name: "Marcus Lee", email: "marcus.lee@dollartree.com", legacyRole: "Compliance Manager" },
+  { name: "Priya Nair", email: "priya.nair@dollartree.com", legacyRole: "Compliance Reviewer" },
+  { name: "Sofia Alvarez", email: "sofia.alvarez@dollartree.com", legacyRole: "Packaging Manager" },
+  { name: "Tom Becker", email: "tom.becker@dollartree.com", legacyRole: "Designer" },
+  { name: "Rachel Kim", email: "rachel.kim@dollartree.com", legacyRole: "Auditor" },
+  { name: "James Okafor", email: "james.okafor@dollartree.com", legacyRole: "Executive Viewer" },
 ];
 
 const teams = [
@@ -132,27 +123,27 @@ type SeedPackage = {
 
 const seedPackages: SeedPackage[] = [
   {
-    sku: "DT-SNK-2201", upc: "071912004417", name: "Cheddar Cheese Crackers", brand: "Snack Time", vendor: "Golden Harvest Foods", category: "Food & Beverage", country: "USA", netWeight: "6 oz (170g)", dimensions: "8 x 5 x 2 in", packageType: "Flexible Film Bag", productType: "Baked Snack", manufacturingRegion: "China", reviewer: "Laura Bolt", artworkUrl: "/artwork/pkg-1.png",
+    sku: "DT-SNK-2201", upc: "071912004417", name: "Cheddar Cheese Crackers", brand: "Snack Time", vendor: "Golden Harvest Foods", category: "Food & Beverage", country: "USA", netWeight: "6 oz (170g)", dimensions: "8 x 5 x 2 in", packageType: "Flexible Film Bag", productType: "Baked Snack", manufacturingRegion: "China", reviewer: "Priya Nair", artworkUrl: "/artwork/pkg-1.png",
     extractedText: `SNACK TIME CHEDDAR CHEESE CRACKERS\nNOW WITH 100% REAL CHEESE!\nNet Wt 6oz\nIngredients: Enriched flour, vegetable oil, cheddar cheese, salt, whey, spices, natural flavor.\nManufactured for Snack Time Brands, distributed by Golden Harvest Foods.\nBest by date printed on back.\nMade in China`,
   },
   {
-    sku: "DT-CLN-4471", upc: "071912044718", name: "Ultra Power Disinfectant Spray", brand: "CleanCo", vendor: "CleanCo Household", category: "Household Chemicals", country: "USA", netWeight: "12 fl oz (355 mL)", dimensions: "9 x 3 x 3 in", packageType: "Aerosol Can", productType: "Antimicrobial Spray", manufacturingRegion: "USA", reviewer: "Gwen Crisp", artworkUrl: "/artwork/pkg-2.png",
+    sku: "DT-CLN-4471", upc: "071912044718", name: "Ultra Power Disinfectant Spray", brand: "CleanCo", vendor: "CleanCo Household", category: "Household Chemicals", country: "USA", netWeight: "12 fl oz (355 mL)", dimensions: "9 x 3 x 3 in", packageType: "Aerosol Can", productType: "Antimicrobial Spray", manufacturingRegion: "USA", reviewer: "Marcus Lee", artworkUrl: "/artwork/pkg-2.png",
     extractedText: `CLEANCO ULTRA POWER DISINFECTANT SPRAY\nKILLS 99.9% OF GERMS INSTANTLY\nAll natural and completely safe for kids and pets!\nDirections: Spray on surface and wipe.\nContents: 12 fl oz\nDistributed by CleanCo Household, USA`,
   },
   {
-    sku: "DT-TOY-8890", upc: "071912088905", name: "Mini Building Blocks Set", brand: "PlayWorks", vendor: "PlayWorks Toys", category: "Toys & Children", country: "USA", netWeight: "0.5 lb", dimensions: "10 x 7 x 2 in", packageType: "Blister Card", productType: "Construction Toy", manufacturingRegion: "Vietnam", reviewer: "Kateri Talley", artworkUrl: "/artwork/pkg-3.png",
+    sku: "DT-TOY-8890", upc: "071912088905", name: "Mini Building Blocks Set", brand: "PlayWorks", vendor: "PlayWorks Toys", category: "Toys & Children", country: "USA", netWeight: "0.5 lb", dimensions: "10 x 7 x 2 in", packageType: "Blister Card", productType: "Construction Toy", manufacturingRegion: "Vietnam", reviewer: "Sofia Alvarez", artworkUrl: "/artwork/pkg-3.png",
     extractedText: `PLAYWORKS MINI BUILDING BLOCKS\n120 Pieces of Creative Fun!\nGreat for ages 3+\nBuild houses, cars, animals and more.\nColors may vary.\nDistributed by PlayWorks Toys\nMade in Vietnam`,
   },
   {
-    sku: "DT-COS-3312", upc: "071912033127", name: "Hydrating Face Cream", brand: "PureGlow", vendor: "PureGlow Cosmetics", category: "Cosmetics & Personal Care", country: "USA", netWeight: "1.7 oz (50g)", dimensions: "3 x 3 x 3 in", packageType: "Plastic Jar", productType: "Skin Moisturizer", manufacturingRegion: "USA", reviewer: "Laura Bolt", artworkUrl: "/artwork/pkg-4.png",
+    sku: "DT-COS-3312", upc: "071912033127", name: "Hydrating Face Cream", brand: "PureGlow", vendor: "PureGlow Cosmetics", category: "Cosmetics & Personal Care", country: "USA", netWeight: "1.7 oz (50g)", dimensions: "3 x 3 x 3 in", packageType: "Plastic Jar", productType: "Skin Moisturizer", manufacturingRegion: "USA", reviewer: "Priya Nair", artworkUrl: "/artwork/pkg-4.png",
     extractedText: `PUREGLOW HYDRATING FACE CREAM\nClinically proven to reverse aging in 7 days!\nReduces wrinkles 100%.\nApply daily to clean skin.\nIngredients: Water, glycerin, shea butter, fragrance, tocopherol.\n1.7 oz\nMade in USA`,
   },
   {
-    sku: "DT-BEV-5540", upc: "071912055401", name: "Tropical Fruit Punch Drink Mix", brand: "Sunrise", vendor: "Sunrise Packaging Co.", category: "Food & Beverage", country: "USA", netWeight: "4.2 oz (119g)", dimensions: "6 x 4 x 1 in", packageType: "Carton", productType: "Powdered Drink Mix", manufacturingRegion: "USA", reviewer: "Megan Everding", artworkUrl: "/artwork/pkg-5.png",
+    sku: "DT-BEV-5540", upc: "071912055401", name: "Tropical Fruit Punch Drink Mix", brand: "Sunrise", vendor: "Sunrise Packaging Co.", category: "Food & Beverage", country: "USA", netWeight: "4.2 oz (119g)", dimensions: "6 x 4 x 1 in", packageType: "Carton", productType: "Powdered Drink Mix", manufacturingRegion: "USA", reviewer: "Rachel Kim", artworkUrl: "/artwork/pkg-5.png",
     extractedText: `SUNRISE TROPICAL FRUIT PUNCH DRINK MIX\nMakes 8 quarts\nNutrition Facts: Serving size 1 scoop (8g), Calories 30, Total Sugars 7g, Sodium 15mg.\nIngredients: Sugar, citric acid, natural and artificial flavors, red 40, blue 1.\nContains: no major allergens.\nManufactured by Sunrise Packaging Co., Springfield, IL, USA.\nNet Wt 4.2 oz (119g)`,
   },
   {
-    sku: "DT-SNK-2208", upc: "071912022084", name: "Milk Chocolate Peanut Bar", brand: "Snack Time", vendor: "Golden Harvest Foods", category: "Food & Beverage", country: "USA", netWeight: "1.5 oz (43g)", dimensions: "5 x 2 x 0.5 in", packageType: "Flexible Film Wrap", productType: "Confection", manufacturingRegion: "China", reviewer: "Laura Bolt", artworkUrl: "/artwork/pkg-6.png",
+    sku: "DT-SNK-2208", upc: "071912022084", name: "Milk Chocolate Peanut Bar", brand: "Snack Time", vendor: "Golden Harvest Foods", category: "Food & Beverage", country: "USA", netWeight: "1.5 oz (43g)", dimensions: "5 x 2 x 0.5 in", packageType: "Flexible Film Wrap", productType: "Confection", manufacturingRegion: "China", reviewer: "Priya Nair", artworkUrl: "/artwork/pkg-6.png",
     extractedText: `SNACK TIME MILK CHOCOLATE PEANUT BAR\nDeliciously smooth!\nIngredients: Milk chocolate (sugar, cocoa butter, milk, chocolate liquor), peanuts, sugar.\nNet Wt 1.5 oz\nManufactured for Snack Time Brands.\nMade in China`,
   },
 ];
@@ -198,10 +189,6 @@ async function clearDemo() {
   await db.delete(notificationsTable);
   // ai_usage has a non-cascade org FK, so it must be cleared before the org row.
   await db.delete(aiUsageTable);
-  // AI Workspace conversations also carry a non-cascade org FK (child → parent).
-  await db.delete(workspaceActionProposalsTable);
-  await db.delete(aiConversationMessagesTable);
-  await db.delete(aiConversationsTable);
   await db.delete(usersTable);
   await db.delete(organizationsTable);
 }
@@ -244,19 +231,19 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
         x: 0.5,
         y: 0.42,
         color: "#3b82f6",
-        author: "Gwen Crisp",
+        author: "Marcus Lee",
         authorRole: "Compliance Manager",
-        text: "The 'all natural and completely safe for kids and pets' claim conflicts with EPA antimicrobial labeling. @Laura Bolt please confirm precautionary statements are added.",
+        text: "The 'all natural and completely safe for kids and pets' claim conflicts with EPA antimicrobial labeling. @Priya Nair please confirm precautionary statements are added.",
         priority: "high",
         status: "open",
         source: "human",
-        mentions: ["Laura Bolt"],
+        mentions: ["Priya Nair"],
       })
       .returning();
     if (ann) {
       await db.insert(commentRepliesTable).values({
         annotationId: ann.id,
-        author: "Laura Bolt",
+        author: "Priya Nair",
         authorRole: "Compliance Reviewer",
         text: "Agreed — we need the EPA registration number and signal word before this can move forward.",
         source: "human",
@@ -270,7 +257,7 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
       description:
         "Antimicrobial spray must display EPA reg number, signal word, and precautionary statements per 40 CFR 156.10.",
       assignedRole: "EPA Specialist",
-      assignee: "Gwen Crisp",
+      assignee: "Marcus Lee",
       priority: "high",
       status: "open",
       source: "manual",
@@ -279,8 +266,8 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
       packageId: cleanId,
       versionId: vId,
       decision: "needs_revision",
-      reviewer: "Gwen Crisp",
-      reviewerRole: "Manager, PVT Label Brand and Creative Design",
+      reviewer: "Marcus Lee",
+      reviewerRole: "Compliance Manager",
       note: "Blocking EPA labeling issues must be resolved before approval.",
     });
     await db
@@ -289,7 +276,7 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
       .where(eq(packagesTable.id, cleanId));
     await db.insert(auditEventsTable).values({
       packageId: cleanId,
-      actor: "Gwen Crisp",
+      actor: "Marcus Lee",
       action: "Decision: Needs revision",
       detail: "Blocking EPA labeling issues must be resolved before approval.",
     });
@@ -311,19 +298,19 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
         w: 0.6,
         h: 0.08,
         color: "#3b82f6",
-        author: "Laura Bolt",
+        author: "Priya Nair",
         authorRole: "Compliance Reviewer",
-        text: "'Clinically proven to reverse aging in 7 days' and 'Reduces wrinkles 100%' are unsubstantiated drug claims. @Gwen Crisp flagging for Legal review.",
+        text: "'Clinically proven to reverse aging in 7 days' and 'Reduces wrinkles 100%' are unsubstantiated drug claims. @Marcus Lee flagging for Legal review.",
         priority: "critical",
         status: "open",
         source: "human",
-        mentions: ["Gwen Crisp"],
+        mentions: ["Marcus Lee"],
       })
       .returning();
     if (ann) {
       await db.insert(commentRepliesTable).values({
         annotationId: ann.id,
-        author: "Gwen Crisp",
+        author: "Marcus Lee",
         authorRole: "Compliance Manager",
         text: "Confirmed. These claims cross into drug territory (FDA). Rejecting until Marketing revises.",
         source: "human",
@@ -334,8 +321,8 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
       packageId: cosId,
       versionId: vId,
       decision: "reject",
-      reviewer: "Gwen Crisp",
-      reviewerRole: "Manager, PVT Label Brand and Creative Design",
+      reviewer: "Marcus Lee",
+      reviewerRole: "Compliance Manager",
       note: "Unsubstantiated anti-aging drug claims.",
     });
     await db
@@ -344,7 +331,7 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
       .where(eq(packagesTable.id, cosId));
     await db.insert(auditEventsTable).values({
       packageId: cosId,
-      actor: "Gwen Crisp",
+      actor: "Marcus Lee",
       action: "Decision: Rejected",
       detail: "Unsubstantiated anti-aging drug claims.",
     });
@@ -376,7 +363,7 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
           extractedText: revisedText,
           notes: "Added allergen Contains statement, Nutrition Facts, corrected origin wording.",
           isCurrent: true,
-          createdBy: "Benjamin Kusik",
+          createdBy: "Tom Becker",
         })
         .returning();
       await db
@@ -385,7 +372,7 @@ async function seedCollaboration(regs: Parameters<typeof analyzePackaging>[1]) {
         .where(eq(packagesTable.id, snackId));
       await db.insert(auditEventsTable).values({
         packageId: snackId,
-        actor: "Benjamin Kusik",
+        actor: "Tom Becker",
         action: "Version added",
         detail: "Version 2 (revised copy) uploaded with allergen and nutrition corrections.",
       });
@@ -560,17 +547,17 @@ export async function seedDemo() {
   // Assign a few users to teams as a starting point.
   const teamMemberRows: { teamId: number; userId: number }[] = [];
   if (insertedTeams[0]) {
-    for (const email of ["gcrisp@dollartree.com", "meeverdi@dollartree.com", "lbolt2@dollartree.com"]) {
+    for (const email of ["marcus.lee@dollartree.com", "priya.nair@dollartree.com", "rachel.kim@dollartree.com"]) {
       const u = insertedUsers.find((x) => x.email === email);
       if (u) teamMemberRows.push({ teamId: insertedTeams[0].id, userId: u.id });
     }
   }
   if (insertedTeams[1]) {
-    const u = insertedUsers.find((x) => x.email === "gcrisp@dollartree.com");
+    const u = insertedUsers.find((x) => x.email === "marcus.lee@dollartree.com");
     if (u) teamMemberRows.push({ teamId: insertedTeams[1].id, userId: u.id });
   }
   if (insertedTeams[2]) {
-    const u = insertedUsers.find((x) => x.email === "ktalley8@dollartree.com");
+    const u = insertedUsers.find((x) => x.email === "sofia.alvarez@dollartree.com");
     if (u) teamMemberRows.push({ teamId: insertedTeams[2].id, userId: u.id });
   }
   if (teamMemberRows.length) {
@@ -588,29 +575,29 @@ export async function seedDemo() {
         organizationId: orgId,
         name: "Compliance",
         description: "Owns packaging compliance review and final approvals.",
-        leaderUserId: userByEmail("gcrisp@dollartree.com")?.id ?? null,
-        escalationOwnerUserId: userByEmail("meeverdi@dollartree.com")?.id ?? null,
+        leaderUserId: userByEmail("marcus.lee@dollartree.com")?.id ?? null,
+        escalationOwnerUserId: userByEmail("dana.whitfield@dollartree.com")?.id ?? null,
       },
       {
         organizationId: orgId,
         name: "Packaging",
         description: "Artwork, dieline, and barcode verification for packaging.",
-        leaderUserId: userByEmail("ktalley8@dollartree.com")?.id ?? null,
-        escalationOwnerUserId: userByEmail("gcrisp@dollartree.com")?.id ?? null,
+        leaderUserId: userByEmail("sofia.alvarez@dollartree.com")?.id ?? null,
+        escalationOwnerUserId: userByEmail("marcus.lee@dollartree.com")?.id ?? null,
       },
       {
         organizationId: orgId,
         name: "Regulatory Affairs",
         description: "FDA, USDA, and federal labeling regulation specialists.",
-        leaderUserId: userByEmail("lbolt2@dollartree.com")?.id ?? null,
-        escalationOwnerUserId: userByEmail("meeverdi@dollartree.com")?.id ?? null,
+        leaderUserId: userByEmail("rachel.kim@dollartree.com")?.id ?? null,
+        escalationOwnerUserId: userByEmail("dana.whitfield@dollartree.com")?.id ?? null,
       },
       {
         organizationId: orgId,
         name: "Legal",
         description: "Marketing claims and legal review of packaging language.",
-        leaderUserId: userByEmail("meeverdi@dollartree.com")?.id ?? null,
-        escalationOwnerUserId: userByEmail("meeverdi@dollartree.com")?.id ?? null,
+        leaderUserId: userByEmail("dana.whitfield@dollartree.com")?.id ?? null,
+        escalationOwnerUserId: userByEmail("dana.whitfield@dollartree.com")?.id ?? null,
       },
     ])
     .returning();
@@ -623,11 +610,11 @@ export async function seedDemo() {
     .values([
       {
         organizationId: orgId,
-        name: "Megan Everding",
-        jobTitle: "Manager, PVT Label Brand and Creative Design",
+        name: "Shantel Woody",
+        jobTitle: "Manager, Packaging Compliance",
         role: "Compliance Reviewer & Approver",
         departmentId: deptId("Compliance"),
-        managerName: "Alexander Hicks",
+        managerName: "Dana Whitfield",
         location: "Chesapeake, VA",
         status: "active",
         activeReviewer: true,
@@ -645,10 +632,10 @@ export async function seedDemo() {
       {
         organizationId: orgId,
         name: "Laura Bolt",
-        jobTitle: "Coordinator, Graphic Production",
+        jobTitle: "Senior Regulatory Specialist",
         role: "Regulatory Reviewer & Approver",
         departmentId: deptId("Regulatory Affairs"),
-        managerName: "Megan Everding",
+        managerName: "Rachel Kim",
         location: "Chesapeake, VA",
         status: "active",
         activeReviewer: true,
@@ -665,11 +652,11 @@ export async function seedDemo() {
       },
       {
         organizationId: orgId,
-        name: "Gwen Crisp",
-        jobTitle: "Graphic Production Coordinator",
+        name: "Alice Rees",
+        jobTitle: "Packaging Compliance Analyst",
         role: "Reviewer",
         departmentId: deptId("Packaging"),
-        managerName: "Megan Everding",
+        managerName: "Sofia Alvarez",
         location: "Remote",
         status: "active",
         activeReviewer: true,
@@ -686,11 +673,11 @@ export async function seedDemo() {
       },
       {
         organizationId: orgId,
-        name: "Kateri Talley",
-        jobTitle: "Package Designer",
+        name: "Eric Blanchette",
+        jobTitle: "Legal & Claims Reviewer",
         role: "Legal Reviewer & Approver",
         departmentId: deptId("Legal"),
-        managerName: "Megan Everding",
+        managerName: "Dana Whitfield",
         location: "Chesapeake, VA",
         status: "active",
         activeReviewer: true,
@@ -707,11 +694,11 @@ export async function seedDemo() {
       },
       {
         organizationId: orgId,
-        name: "Emily Dodge",
-        jobTitle: "Package Designer",
+        name: "Megan Everding",
+        jobTitle: "Compliance Specialist",
         role: "Reviewer",
         departmentId: deptId("Compliance"),
-        managerName: "Megan Everding",
+        managerName: "Marcus Lee",
         location: "Remote",
         status: "active",
         activeReviewer: true,
@@ -731,7 +718,7 @@ export async function seedDemo() {
   const specId = (name: string) =>
     insertedSpecialists.find((s) => s.name === name)?.id ?? null;
 
-  const shantelId = specId("Megan Everding");
+  const shantelId = specId("Shantel Woody");
   const lauraId = specId("Laura Bolt");
   await db.insert(specialistCertificationsTable).values([
     ...(shantelId
@@ -767,8 +754,8 @@ export async function seedDemo() {
   // Routing rules — first match (lowest priority number) wins.
   await db.insert(routingRulesTable).values([
     { organizationId: orgId, name: "Food & Beverage → Regulatory Affairs", description: "Food labeling requires FDA regulatory review.", priority: 10, conditions: [{ field: "category", operator: "equals", value: "Food & Beverage" }], actionType: "department", actionDepartmentId: deptId("Regulatory Affairs") },
-    { organizationId: orgId, name: "Household Chemicals → Emily Dodge", description: "EPA-regulated household chemicals route to the chemicals specialist.", priority: 20, conditions: [{ field: "category", operator: "equals", value: "Household Chemicals" }], actionType: "specialist", actionSpecialistId: specId("Emily Dodge") },
-    { organizationId: orgId, name: "Marketing claims → Legal", description: "Packages with marketing claims need legal review.", priority: 30, conditions: [{ field: "hasClaims", operator: "equals", value: "true" }], actionType: "specialist", actionSpecialistId: specId("Kateri Talley") },
+    { organizationId: orgId, name: "Household Chemicals → Megan Everding", description: "EPA-regulated household chemicals route to the chemicals specialist.", priority: 20, conditions: [{ field: "category", operator: "equals", value: "Household Chemicals" }], actionType: "specialist", actionSpecialistId: specId("Megan Everding") },
+    { organizationId: orgId, name: "Marketing claims → Legal", description: "Packages with marketing claims need legal review.", priority: 30, conditions: [{ field: "hasClaims", operator: "equals", value: "true" }], actionType: "specialist", actionSpecialistId: specId("Eric Blanchette") },
     { organizationId: orgId, name: "Default → Compliance", description: "Catch-all: unmatched work goes to Compliance.", priority: 100, conditions: [], actionType: "department", actionDepartmentId: deptId("Compliance") },
   ]);
 
