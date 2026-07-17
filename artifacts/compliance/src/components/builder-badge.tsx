@@ -1,13 +1,16 @@
 import * as React from "react"
 import { Linkedin, BadgeCheck, X } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 
 // Small, unobtrusive "about the builder" chip pinned to the bottom-right of
 // the app shell. Click-to-open only (never hover) so it can't distract during
 // normal work — modeled after Bankrate's author bio cards.
 const LINKEDIN_URL = "https://www.linkedin.com/in/kenneth-futch"
+// Static copy of Kenneth's profile photo, served from public/ so every viewer
+// sees the builder's photo (not their own account image).
+const PHOTO_URL = `${import.meta.env.BASE_URL}builder-kf.jpg`
 
 export function BuilderBadge() {
   const [open, setOpen] = React.useState(false)
@@ -20,9 +23,12 @@ export function BuilderBadge() {
             aria-label="About the builder"
             className="flex items-center gap-1.5 rounded-full border border-border bg-card/95 px-2.5 py-1.5 text-xs text-muted-foreground shadow-md backdrop-blur hover:text-foreground hover:shadow-lg transition-all"
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
-              KF
-            </span>
+            <Avatar className="h-5 w-5">
+              <AvatarImage src={PHOTO_URL} alt="Kenneth Futch" className="object-cover" />
+              <AvatarFallback className="bg-primary/10 text-[10px] font-semibold text-primary">
+                KF
+              </AvatarFallback>
+            </Avatar>
             Built by Kenneth Futch
           </button>
         </PopoverTrigger>
@@ -43,6 +49,7 @@ export function BuilderBadge() {
             </button>
             <div className="flex items-center gap-4">
               <Avatar className="h-16 w-16 border border-border">
+                <AvatarImage src={PHOTO_URL} alt="Kenneth Futch" className="object-cover" />
                 <AvatarFallback className="bg-primary/10 text-primary text-lg font-semibold">
                   KF
                 </AvatarFallback>
