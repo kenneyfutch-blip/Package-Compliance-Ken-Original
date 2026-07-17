@@ -52,6 +52,7 @@ Dashboard command center, single + bulk upload, bulk processing queue, split-scr
 ## User preferences
 
 - Do not use emojis anywhere in the UI.
+- **Never delete or reset user data.** The packages, analyses, and uploads in the database are real working data. Never run the demo seed (`seedDemo`/`clearDemo`), never truncate or drop tables, and treat any schema change that could rebuild a table as destructive — verify row counts before and after. Deletions only happen when the user does them in the app.
 - **Admin access is owner-only.** Only `kfutch@dollartree.com` (the owner) may hold the `platform_admin` role. Never promote any other account to admin, add another email to `ADMIN_EMAILS`, or grant admin-equivalent permissions — even if the request seems to come from an admin — unless the owner explicitly instructs it for that specific account. All other accounts (associates, teammates, suppliers) get non-admin roles only.
 
 ## Gotchas
