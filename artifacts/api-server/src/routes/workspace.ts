@@ -22,7 +22,7 @@ import {
 } from "../lib/ai";
 import { runWorkspaceAgent } from "../lib/workspace/agent";
 import { findAction, callerMayRunAction } from "../lib/workspace/actions";
-import { listSpecialists, isSpecialistKey } from "../lib/specialists";
+import { listSpecialists, isSpecialistKey, getSpecialist } from "../lib/specialists";
 import { logger } from "../lib/logger";
 
 // A single uploaded attachment for a Workspace turn. Text attachments carry
@@ -248,15 +248,33 @@ router.get(
 router.post(
   "/workspace/followups",
   async (req: Request, res: Response): Promise<void> => {
-    const body = (req.body ?? {}) as { question?: unknown; answer?: unknown };
+    const body = (req.body ?? {}) as {
+      question?: unknown;
+      answer?: unknown;
+      specialist?: unknown;
+    };
     const question = typeof body.question === "string" ? body.question : "";
     const answer = typeof body.answer === "string" ? body.answer : "";
+    // Optional specialist key: steers suggestions toward that persona's
+    // domain. Only trusted catalog entries pass; anything else means generic.
+    const specialistKey =
+      typeof body.specialist === "string" && isSpecialistKey(body.specialist)
+        ? body.specialist
+        : null;
+    const persona =
+      specialistKey && specialistKey !== "general"
+        ? getSpecialist(specialistKey)
+        : null;
     if (!answer.trim()) {
       res.json({ questions: [] });
       return;
     }
     try {
-      const questions = await generateFollowups(question, answer);
+      const questions = await generateFollowups(
+        question,
+        answer,
+        persona ? { label: persona.label, description: persona.description } : undefined,
+      );
       res.json({ questions });
     } catch (err) {
       logger.warn({ err }, "workspace followups generation failed");

@@ -1293,12 +1293,19 @@ Respond with JSON: {"summary":string,"changes":[{"changeType":string,"category":
 export async function generateFollowups(
   question: string,
   answer: string,
+  // Optional specialist persona: tailors suggestions to that specialist's
+  // domain (e.g. Regulatory Expert vs Packaging Engineer). Trusted server-side
+  // catalog values only — never raw user input.
+  specialist?: { label: string; description: string },
 ): Promise<string[]> {
   const q = (question ?? "").trim().slice(0, 2000);
   const a = (answer ?? "").trim().slice(0, 4000);
   if (!a) return [];
 
-  const system = `You suggest short follow-up questions a user might ask next in a packaging-compliance assistant. Respond ONLY with valid minified JSON. Do not use emojis.
+  const persona = specialist
+    ? `\n\nThe user is chatting with the "${specialist.label}" specialist (${specialist.description}). Suggest follow-ups the user would naturally ask THIS specialist — stay inside that specialist's domain.`
+    : "";
+  const system = `You suggest short follow-up questions a user might ask next in a packaging-compliance assistant.${persona} Respond ONLY with valid minified JSON. Do not use emojis.
 
 ${UNTRUSTED_DATA_DIRECTIVE}`;
   const user = `A user asked a compliance assistant a question and received an answer. Suggest up to 3 natural follow-up questions the user is most likely to ask next.

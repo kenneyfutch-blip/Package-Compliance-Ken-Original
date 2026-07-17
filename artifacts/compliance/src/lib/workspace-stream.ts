@@ -178,13 +178,14 @@ export function streamWorkspaceMessage(
 export async function fetchWorkspaceFollowups(
   question: string,
   answer: string,
+  specialist?: string,
 ): Promise<string[]> {
   try {
     const res = await fetch(`${API_BASE}/workspace/followups`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ question, answer }),
+      body: JSON.stringify({ question, answer, ...(specialist ? { specialist } : {}) }),
     });
     if (!res.ok) return [];
     const data = (await res.json()) as { questions?: unknown };

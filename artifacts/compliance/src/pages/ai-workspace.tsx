@@ -602,7 +602,7 @@ export default function AiWorkspacePage() {
           // the seq guard, and any failure just yields no chips.
           const answer = streamTargetRef.current
           if (answer.trim()) {
-            void fetchWorkspaceFollowups(text, answer).then((qs) => {
+            void fetchWorkspaceFollowups(text, answer, specialist).then((qs) => {
               if (followupSeqRef.current === followupSeq) setFollowups(qs)
             })
           }
