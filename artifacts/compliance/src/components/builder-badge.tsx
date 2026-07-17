@@ -89,13 +89,9 @@ export function BuilderBadge() {
             </div>
 
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Kenneth is an enterprise growth leader with 15+ years driving
-              organic growth for brands like Johnson &amp; Johnson, Grammarly,
-              Chick-fil-A, and NAPA Auto Parts. He pairs executive SEO
-              leadership with hands-on AI product development — building this
-              Packaging Compliance platform to automate regulatory analysis,
-              supplier collaboration, and executive reporting. Recognized as a
-              Top 10% Replit Builder.
+              Enterprise growth leader with 15+ years across brands like
+              Johnson &amp; Johnson, Grammarly, and Chick-fil-A. Built this
+              platform end to end. Top 10% Replit Builder.
             </p>
 
             <div className="mt-4 flex items-center justify-between">
