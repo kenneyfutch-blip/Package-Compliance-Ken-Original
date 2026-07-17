@@ -69,6 +69,7 @@ function mapSpecialist(
   departmentName: string | null,
   certs: SpecialistCertificationRow[],
   activeReviews: number,
+  accountImageUrl: string | null = null,
 ) {
   const availableCapacity = Math.max(0, s.maxActiveReviews - activeReviews);
   return {
@@ -77,7 +78,10 @@ function mapSpecialist(
     name: s.name,
     email: s.email ?? null,
     employeeId: s.employeeId ?? null,
-    photoUrl: s.photoUrl ?? null,
+    // The user's own account picture (kept fresh from their login profile) is
+    // the source of truth; the directory photoUrl is a preloaded fallback for
+    // members who haven't set one yet.
+    photoUrl: accountImageUrl ?? s.photoUrl ?? null,
     jobTitle: s.jobTitle ?? null,
     departmentId: s.departmentId ?? null,
     departmentName,
@@ -124,7 +128,10 @@ async function loadSpecialists(
     .orderBy(asc(specialistProfilesTable.name));
   if (profiles.length === 0) return [];
 
-  const [departments, certs, workload] = await Promise.all([
+  const linkedUserIds = profiles
+    .map((p) => p.userId)
+    .filter((id): id is number => id != null);
+  const [departments, certs, workload, linkedUsers] = await Promise.all([
     db
       .select({ id: departmentsTable.id, name: departmentsTable.name })
       .from(departmentsTable)
@@ -155,7 +162,21 @@ async function loadSpecialists(
         ),
       )
       .groupBy(reviewAssignmentsTable.assigneeUserId),
+    linkedUserIds.length
+      ? db
+          .select({ id: usersTable.id, imageUrl: usersTable.imageUrl })
+          .from(usersTable)
+          .where(
+            and(
+              eq(usersTable.organizationId, organizationId),
+              inArray(usersTable.id, linkedUserIds),
+            ),
+          )
+      : Promise.resolve(
+          [] as { id: number; imageUrl: string | null }[],
+        ),
   ]);
+  const imageByUser = new Map(linkedUsers.map((u) => [u.id, u.imageUrl]));
 
   const deptName = new Map(departments.map((d) => [d.id, d.name]));
   const certsByProfile = new Map<number, SpecialistCertificationRow[]>();
@@ -172,6 +193,7 @@ async function loadSpecialists(
       p.departmentId ? (deptName.get(p.departmentId) ?? null) : null,
       certsByProfile.get(p.id) ?? [],
       p.userId ? (activeByUser.get(p.userId) ?? 0) : 0,
+      p.userId ? (imageByUser.get(p.userId) ?? null) : null,
     ),
   );
 }
