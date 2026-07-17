@@ -1,8 +1,9 @@
 import * as React from "react"
 import { useLocation } from "wouter"
 import { cn } from "@/lib/utils"
-import { useAssistantChat, useAssistantExtract } from "@workspace/api-client-react"
+import { useAssistantExtract } from "@workspace/api-client-react"
 import type { AssistantToolSuggestion } from "@workspace/api-client-react"
+import { streamAssistantChat } from "@/lib/assistant-stream"
 import { X, ArrowUp, Plus, ArrowRight, FileText, Loader2, Maximize2 } from "lucide-react"
 import {
   extractAttachmentText,
@@ -13,6 +14,8 @@ import {
 type ChatMessage = {
   role: "user" | "assistant"
   content: string
+  // True while this assistant turn is still receiving streamed tokens.
+  streaming?: boolean
   // Full content actually sent to the model — may embed extracted document text
   // that we don't want to render in the user's chat bubble.
   apiContent?: string
@@ -46,7 +49,11 @@ export function AssistantPanel({
   const [attachError, setAttachError] = React.useState<string | null>(null)
   const [attaching, setAttaching] = React.useState(false)
 
-  const chat = useAssistantChat()
+  const [streaming, setStreaming] = React.useState(false)
+  // Abort function for the in-flight stream, so closing the panel or
+  // unmounting never leaves a dangling reader.
+  const abortRef = React.useRef<(() => void) | null>(null)
+  React.useEffect(() => () => abortRef.current?.(), [])
   const extract = useAssistantExtract()
 
   const runOcr: RunOcr = React.useCallback(
@@ -85,7 +92,7 @@ export function AssistantPanel({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
-  }, [messages, chat.isPending])
+  }, [messages, streaming])
 
   // Focus the composer whenever the panel opens.
   React.useEffect(() => {
@@ -95,7 +102,7 @@ export function AssistantPanel({
   const send = React.useCallback(
     (raw: string) => {
       const text = raw.trim()
-      if ((!text && attachments.length === 0) || chat.isPending || attaching)
+      if ((!text && attachments.length === 0) || streaming || attaching)
         return
 
       const display = text || "Please review the attached document."
@@ -124,40 +131,54 @@ export function AssistantPanel({
       setAttachments([])
       setAttachError(null)
 
-      chat.mutate(
+      // Stream the answer token-by-token into a placeholder assistant turn
+      // (same live-typing behavior as the AI Workspace).
+      setStreaming(true)
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "", streaming: true },
+      ])
+      const patchLast = (patch: Partial<ChatMessage> | ((m: ChatMessage) => Partial<ChatMessage>)) =>
+        setMessages((prev) => {
+          const next = [...prev]
+          const last = next[next.length - 1]
+          if (!last || last.role !== "assistant") return prev
+          next[next.length - 1] = {
+            ...last,
+            ...(typeof patch === "function" ? patch(last) : patch),
+          }
+          return next
+        })
+      abortRef.current = streamAssistantChat(
         {
-          data: {
-            messages: nextMessages.map((m) => ({
-              role: m.role,
-              content: m.apiContent ?? m.content,
-            })),
-          },
+          messages: nextMessages.map((m) => ({
+            role: m.role,
+            content: m.apiContent ?? m.content,
+          })),
         },
         {
-          onSuccess: (res) => {
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                content: res.answer,
-                suggestions: res.suggestions,
-              },
-            ])
+          onDelta: (t) => patchLast((m) => ({ content: m.content + t })),
+          onSuggestions: (suggestions) => patchLast({ suggestions }),
+          onDone: () => {
+            patchLast({ streaming: false })
+            setStreaming(false)
+            abortRef.current = null
           },
-          onError: () => {
-            setMessages((prev) => [
-              ...prev,
-              {
-                role: "assistant",
-                content:
-                  "Sorry, I ran into a problem reaching the assistant. Please try again.",
-              },
-            ])
+          onError: (message) => {
+            patchLast((m) => ({
+              streaming: false,
+              content:
+                m.content ||
+                message ||
+                "Sorry, I ran into a problem reaching the assistant. Please try again.",
+            }))
+            setStreaming(false)
+            abortRef.current = null
           },
         },
       )
     },
-    [messages, chat, attachments, attaching],
+    [messages, streaming, attachments, attaching],
   )
 
   const onSubmit = (e: React.FormEvent) => {
@@ -260,7 +281,7 @@ export function AssistantPanel({
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((m, i) => (
+              {messages.map((m, i) => m.streaming && !m.content ? null : (
                 <div
                   key={i}
                   className={cn(
@@ -315,7 +336,9 @@ export function AssistantPanel({
                   </div>
                 </div>
               ))}
-              {chat.isPending && (
+              {streaming &&
+                messages[messages.length - 1]?.role === "assistant" &&
+                !messages[messages.length - 1]?.content && (
                 <div className="flex justify-start">
                   <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm bg-white/10 px-4 py-3">
                     <Dot />
@@ -404,7 +427,7 @@ export function AssistantPanel({
                 type="submit"
                 disabled={
                   (!input.trim() && attachments.length === 0) ||
-                  chat.isPending ||
+                  streaming ||
                   attaching
                 }
                 aria-label="Send"

@@ -887,6 +887,162 @@ ${UNTRUSTED_DATA_DIRECTIVE}`;
   };
 }
 
+// Streaming variant of askAssistant used by the AI Assistant side panel, so
+// the answer renders token-by-token instead of arriving in one lump. The model
+// writes the answer as PLAIN TEXT (streamed via onDelta) and then, after a
+// sentinel line, a JSON array of tool suggestions. The sentinel and everything
+// after it are withheld from the delta stream via a small holdback buffer and
+// parsed server-side, so the client sees only clean answer text.
+const ASSISTANT_SUGGESTIONS_SENTINEL = "<<<SUGGESTIONS>>>";
+
+export async function askAssistantStream(opts: {
+  organizationId: number;
+  userId?: number | null;
+  messages: AssistantChatMessage[];
+  onDelta: (text: string) => void;
+  signal?: AbortSignal;
+}): Promise<{ answer: string; suggestions: AssistantToolSuggestionOut[] }> {
+  const { organizationId, userId, messages, onDelta, signal } = opts;
+  const catalog = ASSISTANT_TOOL_CATALOG.map(
+    (t) => `- ${t.label} [${t.href}]: ${t.desc}`,
+  ).join("\n");
+
+  const system = `You are the AI compliance assistant for a packaging compliance review platform used by retail compliance specialists. You do two things:
+1. Answer questions about packaging, labeling and regulatory compliance (e.g. FDA / FTC / CPSC / Prop 65 requirements, required warnings and disclosures, claim substantiation, net-quantity statements, ingredient/allergen labeling). Give accurate, practical guidance.
+2. Help users find the RIGHT tool in the app for what they are trying to do.
+Be warm, concise and practical.
+
+You can ONLY recommend tools from this catalog (use the exact href):
+${catalog}
+
+Guidance:
+- If the user asks a compliance or regulatory question, answer it directly and clearly. If a tool in the app would help them act on it, also add it as a suggestion (e.g. the Regulatory Library for authoritative text, Claim Reviews for claims).
+- If the user describes a goal or task, recommend the 1-3 most relevant tools as suggestions, each with the exact href from the catalog and a one-line reason.
+- Never invent hrefs or tools that are not in the catalog.
+- If you are not certain about a specific regulation or citation, say so plainly rather than guessing, and point the user to the Regulatory Library for the authoritative text. Never state an uncertain requirement as if it were definitive.
+- Keep the answer under 150 words. Do not use emojis.
+
+Output format (STRICT):
+First write the answer as plain text only (no JSON, no code fences).
+Then, on a new line, write exactly ${ASSISTANT_SUGGESTIONS_SENTINEL} followed on the next line by a minified JSON array of suggestions: [{"label":string,"href":string,"reason":string}] (or [] if none). Nothing after the array.
+
+${UNTRUSTED_DATA_DIRECTIVE}`;
+
+  const trimmed = messages.slice(-10).map((m) => ({
+    role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+    content: String(m.content ?? "").slice(0, 4000),
+  }));
+
+  const { client, model } = await resolveAiClientForTier("standard");
+  const start = Date.now();
+  let full = "";
+  let usage: unknown = null;
+  // Holdback so a sentinel split across chunks never leaks to the client:
+  // we keep the last sentinel-length characters buffered until more arrive.
+  let emitted = 0;
+  let sentinelHit = false;
+
+  const emitSafe = () => {
+    if (sentinelHit) return;
+    const idx = full.indexOf(ASSISTANT_SUGGESTIONS_SENTINEL);
+    if (idx !== -1) {
+      sentinelHit = true;
+      if (idx > emitted) onDelta(full.slice(emitted, idx));
+      emitted = idx;
+      return;
+    }
+    const safeEnd = Math.max(
+      emitted,
+      full.length - ASSISTANT_SUGGESTIONS_SENTINEL.length,
+    );
+    if (safeEnd > emitted) {
+      onDelta(full.slice(emitted, safeEnd));
+      emitted = safeEnd;
+    }
+  };
+
+  try {
+    const stream = await client.chat.completions.create(
+      {
+        model,
+        messages: [{ role: "system", content: system }, ...trimmed],
+        max_completion_tokens: 1024,
+        stream: true,
+        stream_options: { include_usage: true },
+      },
+      signal ? { signal } : undefined,
+    );
+    for await (const chunk of stream) {
+      const delta = chunk.choices?.[0]?.delta?.content ?? "";
+      if (delta) {
+        full += delta;
+        emitSafe();
+      }
+      if (chunk.usage) usage = chunk.usage;
+    }
+    // Flush any held-back tail (no sentinel ever arrived).
+    if (!sentinelHit && full.length > emitted) {
+      onDelta(full.slice(emitted));
+      emitted = full.length;
+    }
+
+    const u = readUsage(usage);
+    recordAiUsage({
+      workload: "copilot",
+      model,
+      tier: "standard",
+      reviewType: WORKLOAD_LABELS.copilot,
+      organizationId,
+      userId: userId ?? null,
+      promptTokens: u.promptTokens,
+      completionTokens: u.completionTokens,
+      totalTokens: u.totalTokens,
+      durationMs: Date.now() - start,
+      success: true,
+    });
+  } catch (err) {
+    recordAiUsage({
+      workload: "copilot",
+      model,
+      tier: "standard",
+      reviewType: WORKLOAD_LABELS.copilot,
+      organizationId,
+      userId: userId ?? null,
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+      durationMs: Date.now() - start,
+      success: false,
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
+
+  const sentinelIdx = full.indexOf(ASSISTANT_SUGGESTIONS_SENTINEL);
+  const answer = (sentinelIdx === -1 ? full : full.slice(0, sentinelIdx)).trim();
+  let suggestions: AssistantToolSuggestionOut[] = [];
+  if (sentinelIdx !== -1) {
+    const tail = full.slice(sentinelIdx + ASSISTANT_SUGGESTIONS_SENTINEL.length);
+    const arrStart = tail.indexOf("[");
+    const arrEnd = tail.lastIndexOf("]");
+    if (arrStart !== -1 && arrEnd > arrStart) {
+      const parsed = safeParse(tail.slice(arrStart, arrEnd + 1));
+      const allowed = new Set(ASSISTANT_TOOL_CATALOG.map((t) => t.href));
+      if (Array.isArray(parsed)) {
+        suggestions = parsed
+          .map((s: any) => ({
+            label: String(s?.label ?? ""),
+            href: String(s?.href ?? ""),
+            reason: String(s?.reason ?? ""),
+          }))
+          .filter((s) => allowed.has(s.href) && s.label)
+          .slice(0, 3);
+      }
+    }
+  }
+  return { answer, suggestions };
+}
+
 // ---------------------------------------------------------------------------
 // AI Workspace — streaming chat (enhancement layered on askAssistant)
 // ---------------------------------------------------------------------------
