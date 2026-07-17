@@ -923,7 +923,7 @@ export function toolStatusLabel(name: string): string {
     search_regulations: "Searching regulations",
     search_federal_regulations: "Searching federal eCFR",
     search_compliance_memory: "Recalling Compliance Memory",
-    list_specialists: "Checking the specialist directory",
+    list_specialists: "Checking the team directory",
     search_tasks: "Searching review tasks",
     list_suppliers: "Looking up suppliers",
     list_reports: "Looking up reports",

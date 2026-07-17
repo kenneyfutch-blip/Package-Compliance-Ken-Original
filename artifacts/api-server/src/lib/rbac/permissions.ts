@@ -42,7 +42,7 @@ export const PERMISSIONS: PermissionDef[] = [
   { key: "users:write", category: "administration", description: "Manage users and role assignments" },
   { key: "teams:read", category: "administration", description: "View teams" },
   { key: "teams:write", category: "administration", description: "Manage teams" },
-  { key: "specialists:read", category: "team_management", description: "View the specialist directory, departments, and workload" },
+  { key: "specialists:read", category: "team_management", description: "View the team directory, departments, and workload" },
   { key: "specialists:write", category: "team_management", description: "Create, edit, disable, and archive specialists and departments" },
   { key: "routing:read", category: "team_management", description: "View routing rules, review stages, and the escalation matrix" },
   { key: "routing:write", category: "team_management", description: "Configure routing rules, review stages, and the escalation matrix" },

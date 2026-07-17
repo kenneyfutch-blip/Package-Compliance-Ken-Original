@@ -236,7 +236,7 @@ const SECTIONS: NavSection[] = [
       { name: "Team Dashboard", href: "/operations/teams", icon: UsersRound },
       { name: "Assignments", href: "/admin/queue", icon: ClipboardList },
       { name: "Workload & SLA", href: "/operations/workload", icon: Gauge },
-      { name: "Specialist Directory", href: "/operations/specialists", icon: UserRound },
+      { name: "Team Directory", href: "/operations/specialists", icon: UserRound },
       { name: "Departments", href: "/operations/departments", icon: Building2 },
       { name: "Routing Rules", href: "/operations/routing-rules", icon: Network },
       { name: "Escalation Matrix", href: "/operations/escalation", icon: TrendingUp },

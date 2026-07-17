@@ -263,14 +263,14 @@ const assignReviewer: WorkspaceAction = {
   supplierSafe: false,
   requiredPerms: ["packages:write"],
   description:
-    "Assign a specific specialist (from the specialist directory) as the reviewer for a package. Call list_specialists first to get the specialistId. Restarts the SLA clock for the new owner.",
+    "Assign a specific specialist (from the team directory) as the reviewer for a package. Call list_specialists first to get the specialistId. Restarts the SLA clock for the new owner.",
   parameters: {
     type: "object",
     properties: {
       packageId: { type: "integer", description: "The package to assign." },
       specialistId: {
         type: "integer",
-        description: "The specialist directory id (from list_specialists) to assign as reviewer.",
+        description: "The team directory id (from list_specialists) to assign as reviewer.",
       },
       priority: { type: "string", description: "low | normal | high | urgent (optional)." },
     },
