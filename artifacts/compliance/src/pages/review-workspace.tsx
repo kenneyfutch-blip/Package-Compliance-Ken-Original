@@ -446,9 +446,9 @@ export default function ReviewWorkspace() {
             </Select>
           )}
           {activeVersion?.fileUrl && servingUrl(activeVersion.fileUrl) && (
-            <Button asChild variant="outline" className="gap-2 h-9" title="Download this version's file">
+            <Button asChild variant="outline" className="gap-2 h-9" title="Download the original uploaded file as-is (no findings, no report entry)">
               <a href={servingUrl(activeVersion.fileUrl)!} download={activeVersion.fileName ?? true}>
-                <Download className="w-4 h-4" /> Download
+                <Download className="w-4 h-4" /> Download Original
               </a>
             </Button>
           )}
@@ -483,7 +483,7 @@ export default function ReviewWorkspace() {
               onSuccess: (r) => { if (r?.url) downloadProof(r.url, r.filename) },
             })}>
             {exportProof.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
-            Export Proof
+            Export Annotated Proof
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>

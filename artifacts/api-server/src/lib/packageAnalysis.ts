@@ -1,5 +1,15 @@
-import { db, packagesTable, type PackageRow, type JobRow } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import {
+  db,
+  packagesTable,
+  reportsTable,
+  violationsTable,
+  type PackageRow,
+  type JobRow,
+} from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
+import { generateCompliancePdf } from "./compliancePdf";
+import { ObjectStorageService } from "./objectStorage";
+import { writeSystemAudit } from "./audit";
 import {
   loadRegulations,
   ensureInitialVersion,
@@ -251,11 +261,110 @@ export async function runPackageAnalysis(
     logger.error({ err, packageId: pkg.id }, "Background language review failed");
   }
 
+  // Auto-file a compliance report the moment analysis finishes, so EVERY
+  // upload shows up on the Reports page with a downloadable document — no one
+  // has to remember to export. Non-fatal by design: the analysis already
+  // succeeded, so a report hiccup must never fail the job (which would re-run
+  // the whole — and billable — AI analysis).
+  try {
+    await autoGenerateComplianceReport(pkg.id, p.organizationId);
+  } catch (err) {
+    logger.error(
+      { err, packageId: pkg.id },
+      "Auto report generation after analysis failed",
+    );
+  }
+
   return {
     analyzed: true,
     complianceStatus: result.complianceStatus,
     riskScore: result.riskScore,
   };
+}
+
+// Build the same PDF the manual "Generate Report" flow produces, from the
+// package's freshly-persisted analysis results, upload it to object storage,
+// and file it on the Reports page. Req-free (runs inside the background job).
+async function autoGenerateComplianceReport(
+  packageId: number,
+  organizationId: number,
+): Promise<void> {
+  // Re-read the package: applyAnalysis just updated grade/risk/summary and the
+  // in-memory row predates that.
+  const [pkg] = await db
+    .select()
+    .from(packagesTable)
+    .where(eq(packagesTable.id, packageId));
+  if (!pkg) return;
+  const findings = await db
+    .select()
+    .from(violationsTable)
+    .where(eq(violationsTable.packageId, packageId))
+    .orderBy(desc(violationsTable.createdAt));
+  const title = `Compliance Report - ${pkg.name}`;
+  const pdfBytes = await generateCompliancePdf({
+    title,
+    generatedBy: "System (auto, post-analysis)",
+    generatedAt: new Date(),
+    pkg: {
+      name: pkg.name,
+      sku: pkg.sku,
+      brand: pkg.brand,
+      vendor: pkg.vendor,
+      category: pkg.category,
+      grade: pkg.grade,
+      riskScore: pkg.riskScore,
+      complianceStatus: pkg.complianceStatus,
+      approvalStatus: pkg.approvalStatus,
+      summary: pkg.summary,
+    },
+    findings: findings.map((v) => ({
+      title: v.title,
+      description: v.description,
+      severity: v.severity,
+      engine: v.engine,
+      status: v.status,
+      regulationRef: v.regulationRef,
+      recommendation: v.recommendation,
+      suggestedText: v.suggestedText,
+      detectedText: v.detectedText,
+      confidence: v.confidence,
+      humanReviewRecommended: v.humanReviewRecommended,
+      disclaimer: v.disclaimer,
+    })),
+  });
+  const objectStorage = new ObjectStorageService();
+  const uploadURL = await objectStorage.getObjectEntityUploadURL();
+  const putResponse = await fetch(uploadURL, {
+    method: "PUT",
+    body: Buffer.from(pdfBytes),
+    headers: { "Content-Type": "application/pdf" },
+  });
+  if (!putResponse.ok) {
+    throw new Error(`Report upload failed: ${putResponse.status}`);
+  }
+  const objectPath = objectStorage.normalizeObjectEntityPath(uploadURL);
+  const [report] = await db
+    .insert(reportsTable)
+    .values({
+      organizationId,
+      packageId,
+      title,
+      type: "Compliance",
+      format: "PDF",
+      objectPath,
+      summary:
+        pkg.summary ??
+        `Compliance report for ${pkg.name} with ${findings.length} finding(s) (grade ${pkg.grade ?? "N/A"}).`,
+    })
+    .returning();
+  await writeSystemAudit(organizationId, {
+    action: "Report generated",
+    entityType: "report",
+    entityId: report!.id,
+    packageId,
+    detail: `${title} (auto-generated after AI analysis).`,
+  });
 }
 
 // Enqueue a durable background analysis job and wake the worker so it starts
