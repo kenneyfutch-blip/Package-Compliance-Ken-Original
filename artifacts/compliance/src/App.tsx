@@ -70,6 +70,7 @@ import UsageAnalytics from "@/pages/admin/usage-analytics"
 import AiUsageDashboard from "@/pages/admin/ai-usage"
 import IntegrationsPage from "@/pages/admin/integrations"
 import McpGatewayPage from "@/pages/admin/mcp-gateway"
+import SecurityPosturePage from "@/pages/security-posture"
 import PolicyManagement from "@/pages/admin/policy-management"
 import PolicyRepository from "@/pages/resources/policy-repository"
 import ResourceCenter from "@/pages/resources/resource-center"
@@ -344,6 +345,7 @@ function AppRoutes() {
         <Route path="/admin/ai-usage" component={AiUsageDashboard} />
         <Route path="/admin/integrations" component={IntegrationsPage} />
         <Route path="/admin/mcp" component={McpGatewayPage} />
+        <Route path="/admin/security" component={SecurityPosturePage} />
         <Route path="/admin/policies" component={PolicyManagement} />
 
         {/* Resources */}

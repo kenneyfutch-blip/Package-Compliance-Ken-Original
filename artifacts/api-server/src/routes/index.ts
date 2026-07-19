@@ -39,6 +39,7 @@ import workspaceRouter from "./workspace";
 import workspaceDashboardRouter from "./workspace-dashboard";
 import mcpRouter from "./mcp";
 import mcpTokensRouter from "./mcp-tokens";
+import securityRouter from "./security";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -50,6 +51,7 @@ router.use(healthRouter);
 router.use(mcpRouter);
 router.use(requireAuth);
 router.use(mcpTokensRouter);
+router.use(securityRouter);
 router.use(meRouter);
 router.use(dashboardRouter);
 router.use(packagesRouter);

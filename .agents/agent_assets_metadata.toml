@@ -42,3 +42,9 @@ id = "bjN2g5K_ew5hCrLUxAjM7"
 uri = "file://attached_assets/Packaging%20Compliance%20AI%20-%20How%20We%20Work%20(Specialist%20Process%20Guide).pdf"
 type = "pdf"
 title = "How We Work — Specialist Process Guide (optimized layout)"
+
+[[outputs]]
+id = "J2tGauRaGr9fQDr1VpdON"
+uri = "file://attached_assets/security-audit-report.pdf"
+type = "pdf"
+title = "Security Audit & Posture Report (PDF)"
