@@ -138,8 +138,11 @@ export function AssistantPanel({
       setAttachments([])
       setAttachError(null)
 
-      // Stream the answer token-by-token into a placeholder assistant turn
-      // (same live-typing behavior as the AI Workspace).
+      // Stream the answer into a placeholder assistant turn, but pace the
+      // display: raw model tokens arrive in bursts and feel "dumped", so
+      // deltas land in a buffer that a timer drains at a readable typing
+      // speed (speeding up only when far behind, so we never lag the model
+      // by more than a few seconds).
       setStreaming(true)
       setFollowups([])
       const followupSeq = ++followupSeqRef.current
@@ -158,7 +161,58 @@ export function AssistantPanel({
           }
           return next
         })
-      abortRef.current = streamAssistantChat(
+      // --- Paced typing drain -------------------------------------------
+      let buffer = "" // text received from the model but not yet shown
+      let finished = false // model stream ended; finish once buffer empties
+      let timer: ReturnType<typeof setInterval> | null = null
+
+      const finalize = () => {
+        patchLast({ streaming: false })
+        setStreaming(false)
+        abortRef.current = null
+        // Best-effort follow-up chips for the finished Q&A; drop the
+        // result if the user already sent another message.
+        setMessages((prev) => {
+          const answer = prev[prev.length - 1]
+          if (answer?.role === "assistant" && answer.content) {
+            void fetchWorkspaceFollowups(display, answer.content).then(
+              (qs) => {
+                if (followupSeqRef.current === followupSeq) setFollowups(qs)
+              },
+            )
+          }
+          return prev
+        })
+      }
+
+      const stopTimer = () => {
+        if (timer) {
+          clearInterval(timer)
+          timer = null
+        }
+      }
+
+      const startTimer = () => {
+        if (timer) return
+        timer = setInterval(() => {
+          if (buffer.length === 0) {
+            if (finished) {
+              stopTimer()
+              finalize()
+            }
+            return
+          }
+          // Readable typing pace (~65 chars/sec baseline); catch-up is
+          // gentle and hard-capped so long answers never dump all at once
+          // (same tuning as the AI Workspace typewriter).
+          const n = Math.min(Math.max(2, Math.ceil(buffer.length / 150)), 24)
+          const chunk = buffer.slice(0, n)
+          buffer = buffer.slice(n)
+          patchLast((m) => ({ content: m.content + chunk }))
+        }, 36)
+      }
+
+      const rawAbort = streamAssistantChat(
         {
           messages: nextMessages.map((m) => ({
             role: m.role,
@@ -166,31 +220,24 @@ export function AssistantPanel({
           })),
         },
         {
-          onDelta: (t) => patchLast((m) => ({ content: m.content + t })),
+          onDelta: (t) => {
+            buffer += t
+            startTimer()
+          },
           onSuggestions: (suggestions) => patchLast({ suggestions }),
           onDone: () => {
-            patchLast({ streaming: false })
-            setStreaming(false)
-            abortRef.current = null
-            // Best-effort follow-up chips for the finished Q&A; drop the
-            // result if the user already sent another message.
-            setMessages((prev) => {
-              const answer = prev[prev.length - 1]
-              if (answer?.role === "assistant" && answer.content) {
-                void fetchWorkspaceFollowups(display, answer.content).then(
-                  (qs) => {
-                    if (followupSeqRef.current === followupSeq) setFollowups(qs)
-                  },
-                )
-              }
-              return prev
-            })
+            finished = true
+            startTimer() // ensure the remaining buffer drains, then finalize
           },
           onError: (message) => {
+            // Show everything we have immediately — errors shouldn't type.
+            stopTimer()
+            const rest = buffer
+            buffer = ""
             patchLast((m) => ({
               streaming: false,
               content:
-                m.content ||
+                m.content + rest ||
                 message ||
                 "Sorry, I ran into a problem reaching the assistant. Please try again.",
             }))
@@ -199,6 +246,11 @@ export function AssistantPanel({
           },
         },
       )
+      // Aborting (panel closed / unmount) must also stop the drain timer.
+      abortRef.current = () => {
+        stopTimer()
+        rawAbort?.()
+      }
     },
     [messages, streaming, attachments, attaching],
   )
