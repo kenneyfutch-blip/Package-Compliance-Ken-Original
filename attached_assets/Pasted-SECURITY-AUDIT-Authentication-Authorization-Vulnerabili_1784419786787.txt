@@ -1,0 +1,144 @@
+SECURITY AUDIT: Authentication & Authorization Vulnerabilities
+
+Perform a full security audit of this codebase focused on authentication 
+and authorization vulnerabilities. Fix every issue found. Do not skip any 
+file.
+
+═══════════════════════════════════════
+PHASE 1 — SCAN (read-only, no changes yet)
+═══════════════════════════════════════
+
+Search every file in the project and build a findings report before 
+touching any code. Look for ALL of the following:
+
+1. IDOR (Insecure Direct Object Reference)
+   - Any DB query that uses an ID from req.params or req.body WITHOUT 
+     also filtering by the authenticated userId
+   - Example of vulnerable pattern:
+     db.findFirst({ where: eq(table.id, req.params.id) })
+   - Must become:
+     db.findFirst({ where: and(eq(table.id, req.params.id), eq(table.ownerId, clerkUserId)) })
+
+2. MISSING BACKEND AUTH MIDDLEWARE
+   - Any Express route under /api that does NOT have clerkMiddleware() 
+     applied (either per-route or via a global app.use('/api', ...) guard)
+   - Frontend auth guards (useAuth, <SignedIn>, <RedirectToSignIn>) do NOT 
+     count — only backend middleware counts
+
+3. TOKEN / SESSION DATA IN URLS
+   - Any token, session ID, or auth credential passed as a URL query param
+     (e.g. ?token=xyz, ?session=abc, ?auth=...)
+   - Any place where window.location or router navigation includes auth state
+
+4. TOKENS IN localStorage OR sessionStorage
+   - Any call to localStorage.setItem or sessionStorage.setItem that stores 
+     a Clerk token, JWT, or session value
+   - Clerk tokens must live in httpOnly cookies or in-memory only
+
+5. USERID TRUSTED FROM CLIENT
+   - Any route that reads userId, ownerId, or tenantId from req.body or 
+     req.query and uses it directly in a DB query without cross-checking 
+     against the verified Clerk session
+   - The only trusted userId source is: getAuth(req).userId from Clerk
+
+6. MISSING OWNERSHIP CHECK ON MUTATIONS
+   - Any PUT, PATCH, or DELETE route that does not verify the requesting 
+     user owns the resource before modifying it
+
+7. SEQUENTIAL INTEGER IDs EXPOSED IN URLS
+   - Any resource URL using auto-increment integer IDs instead of UUIDs
+     (integers are trivially enumerable: /resource/1, /resource/2...)
+
+8. UNAUTHENTICATED ROUTES THAT SHOULD BE PROTECTED
+   - Any route returning user-specific data that lacks an auth check
+
+═══════════════════════════════════════
+PHASE 2 — REPORT
+═══════════════════════════════════════
+
+Before making any changes, output a structured findings report:
+
+FINDINGS REPORT
+───────────────
+[CRITICAL] <file>:<line> — <vulnerability type> — <one line description>
+[HIGH]     <file>:<line> — <vulnerability type> — <one line description>
+[NONE]     No issues found in <file>
+
+Then state: "Found X critical issues, Y high issues. Proceeding to fix."
+
+If zero issues are found across all files, state that clearly and stop.
+
+═══════════════════════════════════════
+PHASE 3 — FIX (only after Phase 2 is complete)
+═══════════════════════════════════════
+
+Fix every issue found. For each fix:
+
+FOR MISSING BACKEND AUTH:
+- Add a global auth guard in the main Express app file:
+
+  import { clerkMiddleware, getAuth } from '@clerk/express'
+
+  app.use('/api', clerkMiddleware(), (req, res, next) => {
+    const { userId } = getAuth(req)
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+    req.userId = userId  // attach for downstream use
+    next()
+  })
+
+- Remove redundant per-route auth checks that are now covered globally
+- Keep per-route checks only where role/permission logic differs
+
+FOR IDOR FIXES:
+- Every SELECT query on a user-owned resource must add the ownership filter:
+  and(eq(table.id, req.params.id), eq(table.ownerId, req.userId))
+- Every PUT/PATCH/DELETE must verify ownership before executing the mutation:
+  const record = await db.findFirst({ where: and(...) })
+  if (!record) return res.status(404).json({ error: 'Not found' })
+  // then proceed with update/delete
+
+FOR localStorage TOKEN STORAGE:
+- Remove the offending setItem call
+- If a token needs to persist, use Clerk's built-in session management only
+
+FOR CLIENT-TRUSTED userId:
+- Remove the req.body.userId or req.query.userId reference
+- Replace with req.userId (set by the global middleware from the Clerk JWT)
+
+FOR SEQUENTIAL IDs:
+- If the schema uses serial/integer PKs on user-facing resources, add a 
+  separate uuid column for external references and use that in all routes
+
+═══════════════════════════════════════
+PHASE 4 — VERIFICATION
+═══════════════════════════════════════
+
+After all fixes are applied:
+
+1. Re-scan every file using the same checklist from Phase 1
+2. Confirm each original finding is resolved
+3. Output a final report:
+
+VERIFICATION REPORT
+───────────────────
+✓ FIXED  <file>:<line> — <what was changed>
+✗ UNABLE <file>:<line> — <reason, and what manual step is needed>
+
+4. If any routes were modified, list them so I can manually test them:
+
+ROUTES CHANGED
+──────────────
+<METHOD> <path> — <what changed>
+
+═══════════════════════════════════════
+CONSTRAINTS
+═══════════════════════════════════════
+
+- Do NOT change any business logic, UI, or non-auth-related code
+- Do NOT rename variables or refactor unrelated code
+- Do NOT remove any routes — only add/fix auth checks on existing ones
+- If a fix requires a schema migration (e.g. adding a UUID column), 
+  generate the migration file but do NOT run it — flag it for my review
+- Preserve all existing Drizzle query structure, only add WHERE clauses
+- This codebase uses: React 19, Vite, Clerk, Express 5, Drizzle ORM, 
+  PostgreSQL, Zod v4 — use only APIs from these libraries
