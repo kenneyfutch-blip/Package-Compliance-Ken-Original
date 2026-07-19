@@ -18,6 +18,12 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   ArchitectureDiagram,
   RequestPipelineDiagram,
 } from "@/components/security-architecture-diagram"
@@ -63,15 +69,31 @@ function LiveCheck({
   value,
   good,
   warn,
+  info,
 }: {
   label: string
   value: string
   good: boolean
   warn?: boolean
+  info: string
 }) {
   const Icon = good ? CircleCheck : warn ? CircleHelp : CircleAlert
   return (
-    <div className="flex items-center gap-3 rounded-lg border p-3">
+    <div className="relative flex items-center gap-3 rounded-lg border p-3">
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={`What does the ${label} check mean?`}
+              className="absolute right-2 top-2 flex h-4 w-4 cursor-help items-center justify-center rounded-full border bg-background text-[10px] font-bold text-muted-foreground"
+            >
+              !
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-64 text-xs leading-relaxed">{info}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <Icon
         className={cn(
           "h-5 w-5 shrink-0",
@@ -151,19 +173,28 @@ export default function SecurityPosturePage() {
             label="Backend auth guard"
             value={data.live.authGuard}
             good={data.live.authGuard === "active"}
+            info="Confirms the server-side sign-in check is running. This page's own data comes through that guard, so 'active' means every API request is being identity-verified right now."
           />
           <LiveCheck
             label="Database"
             value={data.live.database}
             good={data.live.database === "connected"}
+            info="A live ping to PostgreSQL, where all application data lives. 'Connected' means the server can read and write data normally."
           />
           <LiveCheck
             label="Background worker"
             value={data.live.backgroundWorker}
             good={data.live.backgroundWorker === "active"}
             warn={data.live.backgroundWorker !== "active"}
+            info="The behind-the-scenes processor for AI analysis, review routing, escalations, and cleanup. 'Active' means it handled work in the last 15 minutes; 'idle' just means nothing has needed processing recently — not an error."
           />
-          <LiveCheck label="Environment" value={data.live.environment} good warn={false} />
+          <LiveCheck
+            label="Environment"
+            value={data.live.environment}
+            good
+            warn={false}
+            info="Which copy of the app you're looking at. 'Development' is the workspace build; 'production' is the published app your team uses. Dev-only conveniences (like test bypasses) are hard-disabled in production."
+          />
         </CardContent>
       </Card>
 
