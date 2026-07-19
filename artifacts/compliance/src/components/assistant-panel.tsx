@@ -166,8 +166,13 @@ export function AssistantPanel({
       let finished = false // model stream ended; finish once buffer empties
       let timer: ReturnType<typeof setInterval> | null = null
 
+      // Tool suggestion cards arrive from the server before the text finishes
+      // typing out; hold them here and attach them only at finalize, so they
+      // appear after the full answer instead of ahead of it.
+      let pendingSuggestions: ChatMessage["suggestions"] | undefined
+
       const finalize = () => {
-        patchLast({ streaming: false })
+        patchLast({ streaming: false, suggestions: pendingSuggestions })
         setStreaming(false)
         abortRef.current = null
         // Best-effort follow-up chips for the finished Q&A; drop the
@@ -224,7 +229,9 @@ export function AssistantPanel({
             buffer += t
             startTimer()
           },
-          onSuggestions: (suggestions) => patchLast({ suggestions }),
+          onSuggestions: (suggestions) => {
+            pendingSuggestions = suggestions
+          },
           onDone: () => {
             finished = true
             startTimer() // ensure the remaining buffer drains, then finalize
