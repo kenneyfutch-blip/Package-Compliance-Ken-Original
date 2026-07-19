@@ -251,18 +251,43 @@ const SECTIONS: NavSection[] = [
     // System administration; collapsed by default.
     defaultOpen: false,
     items: [
-      { name: "Admin Overview", href: "/admin/dashboard", icon: LayoutDashboard },
-      { name: "Activity Monitor", href: "/admin/activity", icon: Activity },
-      { name: "Usage Analytics", href: "/admin/usage", icon: LineChart },
-      { name: "AI Cost & Usage", href: "/admin/ai-usage", icon: DollarSign },
-      { name: "Integrations", href: "/admin/integrations", icon: Plug },
-      { name: "AI Gateway (MCP)", href: "/admin/mcp", icon: Plug },
-      { name: "Security Posture", href: "/admin/security", icon: ShieldCheck },
-      { name: "Policy Management", href: "/admin/policies", icon: ScrollText },
-      { name: "User Management", href: "/operations/users", icon: Users },
-      { name: "Roles & Permissions", href: "/operations/roles", icon: ShieldCheck },
-      { name: "Audit Center", href: "/operations/audit", icon: History },
-      { name: "Queue & Health", href: "/operations/system", icon: Activity },
+      {
+        group: "Monitoring",
+        items: [
+          { name: "Admin Overview", href: "/admin/dashboard", icon: LayoutDashboard },
+          { name: "Activity Monitor", href: "/admin/activity", icon: Activity },
+          { name: "Queue & Health", href: "/operations/system", icon: Activity },
+        ],
+      },
+      {
+        group: "Analytics",
+        items: [
+          { name: "Usage Analytics", href: "/admin/usage", icon: LineChart },
+          { name: "AI Cost & Usage", href: "/admin/ai-usage", icon: DollarSign },
+        ],
+      },
+      {
+        group: "AI & Integrations",
+        items: [
+          { name: "Integrations", href: "/admin/integrations", icon: Plug },
+          { name: "AI Gateway (MCP)", href: "/admin/mcp", icon: Plug },
+        ],
+      },
+      {
+        group: "Security & Governance",
+        items: [
+          { name: "Security Posture", href: "/admin/security", icon: ShieldCheck },
+          { name: "Policy Management", href: "/admin/policies", icon: ScrollText },
+          { name: "Audit Center", href: "/operations/audit", icon: History },
+        ],
+      },
+      {
+        group: "People & Access",
+        items: [
+          { name: "User Management", href: "/operations/users", icon: Users },
+          { name: "Roles & Permissions", href: "/operations/roles", icon: ShieldCheck },
+        ],
+      },
       { name: "Settings", href: "/admin", icon: Settings },
     ],
   },
@@ -891,9 +916,15 @@ function TopNavMenus() {
       .map((s) => ({
         id: s.id,
         label: s.label,
-        items: flattenEntries(s.items).filter((i) => canSee(i.href)),
+        // Preserve sub-groups so large menus render as scannable categories
+        // with dividers instead of one long flat list.
+        entries: s.items
+          .map((e) =>
+            isGroup(e) ? { ...e, items: e.items.filter((i) => canSee(i.href)) } : e,
+          )
+          .filter((e) => (isGroup(e) ? e.items.length > 0 : canSee(e.href))),
       }))
-      .filter((s) => s.items.length > 0)
+      .filter((s) => flattenEntries(s.entries).length > 0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [has])
 
@@ -902,7 +933,25 @@ function TopNavMenus() {
   return (
     <nav className="hidden md:flex items-center gap-1" aria-label="Sections">
       {sections.map((section) => {
-        const active = section.items.some((i) => isItemActive(location, i.href))
+        const active = flattenEntries(section.entries).some((i) =>
+          isItemActive(location, i.href),
+        )
+        const renderItem = (item: NavItem) => {
+          const Icon = item.icon
+          return (
+            <DropdownMenuItem
+              key={item.href}
+              onSelect={() => navigate(item.href)}
+              className={cn(
+                "gap-2 cursor-pointer",
+                isItemActive(location, item.href) && "text-primary font-medium",
+              )}
+            >
+              <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">{item.name}</span>
+            </DropdownMenuItem>
+          )
+        }
         return (
           <DropdownMenu key={section.id}>
             <DropdownMenuTrigger asChild>
@@ -918,22 +967,22 @@ function TopNavMenus() {
             <DropdownMenuContent align="start" className="w-60">
               <DropdownMenuLabel>{section.label}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {section.items.map((item) => {
-                const Icon = item.icon
-                return (
-                  <DropdownMenuItem
-                    key={item.href}
-                    onSelect={() => navigate(item.href)}
-                    className={cn(
-                      "gap-2 cursor-pointer",
-                      isItemActive(location, item.href) && "text-primary font-medium",
-                    )}
-                  >
-                    <Icon className="w-4 h-4 shrink-0 text-muted-foreground" />
-                    <span className="truncate">{item.name}</span>
-                  </DropdownMenuItem>
-                )
-              })}
+              {section.entries.map((entry, i) =>
+                isGroup(entry) ? (
+                  <React.Fragment key={entry.group}>
+                    {i > 0 && <DropdownMenuSeparator className="opacity-60" />}
+                    <div className="px-2 pt-1.5 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                      {entry.group}
+                    </div>
+                    {entry.items.map(renderItem)}
+                  </React.Fragment>
+                ) : (
+                  <React.Fragment key={entry.href}>
+                    {i > 0 && <DropdownMenuSeparator className="opacity-60" />}
+                    {renderItem(entry)}
+                  </React.Fragment>
+                ),
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )
