@@ -588,7 +588,11 @@ export default function AiWorkspacePage() {
         if (streamDoneRef.current) finalize()
         return
       }
-      const step = Math.max(2, Math.ceil((target.length - shown) / 6))
+      // Readable typing pace: ~2 chars per tick baseline (~65 chars/sec).
+      // Catch-up is deliberately gentle and hard-capped, so even a long
+      // burst reveals gradually instead of dumping the whole answer.
+      const behind = target.length - shown
+      const step = Math.min(Math.max(2, Math.ceil(behind / 150)), 24)
       const nextLen = Math.min(target.length, shown + step)
       displayedLenRef.current = nextLen
       const slice = target.slice(0, nextLen)
@@ -600,7 +604,7 @@ export default function AiWorkspacePage() {
         }
         return next
       })
-    }, 20)
+    }, 30)
 
     const ctxPayload = pageContext
       ? {
