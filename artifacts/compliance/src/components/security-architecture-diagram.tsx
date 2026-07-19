@@ -25,6 +25,7 @@ function Box({
   lines = [],
   fill = GRAY_BG,
   stroke = GRAY_BORDER,
+  info,
 }: {
   x: number
   y: number
@@ -34,10 +35,28 @@ function Box({
   lines?: string[]
   fill?: string
   stroke?: string
+  info?: string
 }) {
   return (
     <g>
       <rect x={x} y={y} width={w} height={h} rx={8} fill={fill} stroke={stroke} strokeWidth={1.5} />
+      {info && (
+        // Info badge — native SVG tooltip on hover explains what this layer does.
+        <g style={{ cursor: "help" }} tabIndex={0} role="note" aria-label={`${title}: ${info}`}>
+          <title>{info}</title>
+          <circle cx={x + w - 11} cy={y + 11} r={8} fill="#ffffff" stroke={LINE} strokeWidth={1} />
+          <text
+            x={x + w - 11}
+            y={y + 14.5}
+            textAnchor="middle"
+            fontSize={10}
+            fontWeight={700}
+            fill={MUTED}
+          >
+            !
+          </text>
+        </g>
+      )}
       <text
         x={x + w / 2}
         y={y + 20}
@@ -126,6 +145,7 @@ export function ArchitectureDiagram() {
         lines={["React 19 + Vite", "Clerk session (httpOnly cookie)", "No tokens in storage/URLs"]}
         fill={BLUE_BG}
         stroke={BLUE_BORDER}
+        info="What employees use in their browser. Sign-in state lives in a secure httpOnly cookie the page's JavaScript can never read, and no credentials are ever kept in browser storage or URLs."
       />
       <Box
         x={20}
@@ -136,6 +156,7 @@ export function ArchitectureDiagram() {
         lines={["MCP clients", "Bearer tokens (revocable)"]}
         fill={AMBER_BG}
         stroke={AMBER_BORDER}
+        info="Approved external AI tools (e.g. company copilots) that query the platform. Each holds its own revocable access token and gets the exact same permission and data-scoping rules as a signed-in user."
       />
 
       {/* API security boundary */}
@@ -143,10 +164,10 @@ export function ArchitectureDiagram() {
       <text x={400} y={40} textAnchor="middle" fontSize={11} fontWeight={600} fill={GREEN}>
         Express 5 API — security boundary
       </text>
-      <Box x={270} y={54} w={260} h={40} title="Helmet headers · Rate limiting" fill={GREEN_BG} stroke={GREEN_BORDER} />
-      <Box x={270} y={102} w={260} h={40} title="requireAuth — session verification" fill={GREEN_BG} stroke={GREEN_BORDER} />
-      <Box x={270} y={150} w={260} h={40} title="RBAC — permission gates per route" fill={GREEN_BG} stroke={GREEN_BORDER} />
-      <Box x={270} y={198} w={260} h={40} title="Tenancy scoping — org + supplier" fill={GREEN_BG} stroke={GREEN_BORDER} />
+      <Box x={270} y={54} w={260} h={40} title="Helmet headers · Rate limiting" fill={GREEN_BG} stroke={GREEN_BORDER} info="First line of defense: adds browser security headers to every response and caps how many requests each user or IP can make, blocking abuse and flooding before anything else runs." />
+      <Box x={270} y={102} w={260} h={40} title="requireAuth — session verification" fill={GREEN_BG} stroke={GREEN_BORDER} info="Confirms who is calling. Every API request must carry a valid signed-in session; anything unauthenticated is rejected with 401 before touching any data." />
+      <Box x={270} y={150} w={260} h={40} title="RBAC — permission gates per route" fill={GREEN_BG} stroke={GREEN_BORDER} info="Confirms what the caller may do. Each route requires a specific permission (e.g. packages:read, org:manage) tied to the user's role; missing it means 403." />
+      <Box x={270} y={198} w={260} h={40} title="Tenancy scoping — org + supplier" fill={GREEN_BG} stroke={GREEN_BORDER} info="Confirms whose data the caller may see. Every database query is automatically filtered to the caller's organization — and for supplier accounts, to their own supplier only — so foreign records simply don't exist from their view." />
       <Box
         x={270}
         y={246}
@@ -154,6 +175,7 @@ export function ArchitectureDiagram() {
         h={56}
         title="Route handlers"
         lines={["Ownership checks · append-only audit"]}
+        info="The business logic itself. Updates and deletes re-verify the record belongs to the caller before writing, and security-relevant actions are recorded in an append-only audit trail."
       />
       <Box
         x={270}
@@ -164,6 +186,7 @@ export function ArchitectureDiagram() {
         lines={["Own bearer auth · read-only tools", "same RBAC + tenancy scoping"]}
         fill={AMBER_BG}
         stroke={AMBER_BORDER}
+        info="The single doorway for external AI agents. It authenticates their tokens, exposes read-only tools only, logs every call to a shared ledger, and reuses the exact same permission and tenancy rules as the rest of the API."
       />
 
       {/* Backends */}
@@ -174,6 +197,7 @@ export function ArchitectureDiagram() {
         h={72}
         title="PostgreSQL"
         lines={["Org-scoped rows · Drizzle ORM", "AI keys encrypted (AES-256-GCM)"]}
+        info="Where all application data lives. Rows are tagged and filtered by organization, queries go through a typed ORM (no raw string SQL from user input), and stored AI provider keys are encrypted at rest."
       />
       <Box
         x={620}
@@ -182,6 +206,7 @@ export function ArchitectureDiagram() {
         h={72}
         title="Object Storage"
         lines={["Presigned, short-lived upload URLs", "Ownership check before serving"]}
+        info="Where uploaded artwork and documents live. Uploads use short-lived one-time URLs, files are validated against an extension allowlist, and every download re-checks the caller owns the file before any bytes are served."
       />
       <Box
         x={620}
@@ -190,6 +215,7 @@ export function ArchitectureDiagram() {
         h={72}
         title="AI Providers (LLMs)"
         lines={["SSRF-validated base URLs", "Prompt-injection fencing"]}
+        info="The AI models that analyze packaging. Admin-configured provider URLs are validated so the server can never be tricked into calling internal addresses, and all document text sent to models is fenced as untrusted so it cannot hijack the AI's instructions."
       />
       <Box
         x={620}
@@ -198,6 +224,7 @@ export function ArchitectureDiagram() {
         h={72}
         title="Background Worker"
         lines={["In-process durable job queue", "AI analysis · routing · cleanup"]}
+        info="Behind-the-scenes processing: AI package analysis, review routing, escalations, and nightly cleanup. Jobs are stored durably in the database, so nothing is lost if the server restarts."
       />
 
       {/* Flows */}

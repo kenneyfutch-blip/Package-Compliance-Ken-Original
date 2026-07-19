@@ -174,6 +174,10 @@ export default function SecurityPosturePage() {
         </CardHeader>
         <CardContent>
           <ArchitectureDiagram />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Hover the <span className="font-semibold">!</span> badge on any node for a plain-language
+            explanation of what that layer or module does.
+          </p>
         </CardContent>
       </Card>
 
