@@ -234,15 +234,35 @@ const SECTIONS: NavSection[] = [
     // Manager-facing; collapsed by default for day-to-day specialists.
     defaultOpen: false,
     items: [
-      { name: "Team Dashboard", href: "/operations/teams", icon: UsersRound },
-      { name: "Assignments", href: "/admin/queue", icon: ClipboardList },
-      { name: "Workload & SLA", href: "/operations/workload", icon: Gauge },
-      { name: "Team Directory", href: "/operations/specialists", icon: UserRound },
-      { name: "Departments", href: "/operations/departments", icon: Building2 },
-      { name: "Routing Rules", href: "/operations/routing-rules", icon: Network },
-      { name: "Escalation Matrix", href: "/operations/escalation", icon: TrendingUp },
-      { name: "Review Stages", href: "/operations/review-stages", icon: WorkflowIcon },
-      { name: "Specialist Workload", href: "/operations/specialist-workload", icon: Gauge },
+      {
+        group: "Overview",
+        items: [
+          { name: "Team Dashboard", href: "/operations/teams", icon: UsersRound },
+          { name: "Assignments", href: "/admin/queue", icon: ClipboardList },
+        ],
+      },
+      {
+        group: "Workload",
+        items: [
+          { name: "Workload & SLA", href: "/operations/workload", icon: Gauge },
+          { name: "Specialist Workload", href: "/operations/specialist-workload", icon: Gauge },
+        ],
+      },
+      {
+        group: "People & Teams",
+        items: [
+          { name: "Team Directory", href: "/operations/specialists", icon: UserRound },
+          { name: "Departments", href: "/operations/departments", icon: Building2 },
+        ],
+      },
+      {
+        group: "Review Process",
+        items: [
+          { name: "Routing Rules", href: "/operations/routing-rules", icon: Network },
+          { name: "Escalation Matrix", href: "/operations/escalation", icon: TrendingUp },
+          { name: "Review Stages", href: "/operations/review-stages", icon: WorkflowIcon },
+        ],
+      },
     ],
   },
   {
