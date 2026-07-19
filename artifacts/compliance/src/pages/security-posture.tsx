@@ -17,6 +17,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import {
+  ArchitectureDiagram,
+  RequestPipelineDiagram,
+} from "@/components/security-architecture-diagram"
 
 type SecurityControl = {
   id: string
@@ -160,6 +164,30 @@ export default function SecurityPosturePage() {
             warn={data.live.backgroundWorker !== "active"}
           />
           <LiveCheck label="Environment" value={data.live.environment} good warn={false} />
+        </CardContent>
+      </Card>
+
+      {/* Architecture diagram */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Technical architecture</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ArchitectureDiagram />
+        </CardContent>
+      </Card>
+
+      {/* Request pipeline */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Request security pipeline</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RequestPipelineDiagram />
+          <p className="mt-2 text-xs text-muted-foreground">
+            Every API request passes each layer in order; a failure at any layer stops the request
+            before it reaches data.
+          </p>
         </CardContent>
       </Card>
 
