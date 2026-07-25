@@ -19,7 +19,7 @@ import { PresenceProvider } from "@/lib/presence"
 import { PageContextProvider } from "@/lib/workspace-context"
 import { requiredPermFor } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
-import { ShieldCheck, Loader2, Lock } from "lucide-react"
+import { ShieldCheck, Loader2 } from "lucide-react"
 import NotFound from "@/pages/not-found"
 import Dashboard from "@/pages/dashboard"
 import Landing from "@/pages/landing"
@@ -100,14 +100,6 @@ const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "")
 
-// Only Dollar Tree associates may use the app. Server enforces this too.
-const ALLOWED_DOMAINS = ["dollartree.com"]
-function emailAllowed(email: string | null | undefined): boolean {
-  if (!email) return false
-  const at = email.lastIndexOf("@")
-  if (at === -1) return false
-  return ALLOWED_DOMAINS.includes(email.slice(at + 1).toLowerCase())
-}
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path
@@ -189,35 +181,6 @@ function FullScreenLoader() {
   )
 }
 
-function AccessRestricted({ email, onSignOut }: { email: string | null; onSignOut: () => void }) {
-  return (
-    <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-background px-4 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-        <Lock className="h-7 w-7" />
-      </div>
-      <h1 className="mt-6 text-2xl font-bold text-foreground">Access restricted</h1>
-      <p className="mt-2 max-w-md text-muted-foreground">
-        Packaging Compliance AI is available only to Dollar Tree associates. The account
-        {email ? ` ${email}` : ""} is not a Dollar Tree email address.
-      </p>
-      <Button className="mt-6" onClick={onSignOut}>
-        Sign out
-      </Button>
-    </div>
-  )
-}
-
-// Client-side gate for UX. The API server independently enforces the same rule.
-function DomainGate({ children }: { children: React.ReactNode }) {
-  const { user, isLoaded } = useUser()
-  const { signOut } = useClerk()
-  if (!isLoaded) return <FullScreenLoader />
-  const email = user?.primaryEmailAddress?.emailAddress ?? null
-  if (!emailAllowed(email)) {
-    return <AccessRestricted email={email} onSignOut={() => signOut({ redirectUrl: basePath || "/" })} />
-  }
-  return <>{children}</>
-}
 
 const REG_LIBS: Record<string, { agency: string; title: string; subtitle: string }> = {
   fda: { agency: "FDA", title: "FDA Library", subtitle: "Food & Drug Administration labeling and safety rules." },
@@ -379,7 +342,6 @@ function ProtectedArea() {
   return (
     <>
       <Show when="signed-in">
-        <DomainGate>
           <PermissionProvider>
             <FavoritesProvider>
               <PresenceProvider>
@@ -389,7 +351,6 @@ function ProtectedArea() {
               </PresenceProvider>
             </FavoritesProvider>
           </PermissionProvider>
-        </DomainGate>
       </Show>
       <Show when="signed-out">
         <Switch>
