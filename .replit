@@ -27,4 +27,4 @@ channel = "stable-25_05"
 [userenv.development]
 
 [userenv.shared]
-ADMIN_EMAILS = "kfutch@dollartree.com"
+ADMIN_EMAILS = "kfutch@dollartree.com,kenney.futch@gmail.com"
