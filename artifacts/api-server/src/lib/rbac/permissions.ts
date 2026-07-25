@@ -206,7 +206,13 @@ export const DEFAULT_ROLE_KEY =
     : "compliance_specialist";
 
 // Emails that should always be provisioned as Platform Administrators.
-export const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "")
-  .split(",")
-  .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
+// The owner email is hardcoded as a permanent fallback so admin access
+// is never accidentally lost if the ADMIN_EMAILS env var is cleared.
+const HARDCODED_ADMIN_EMAILS = ["kenney.futch@gmail.com"];
+export const ADMIN_EMAILS = [
+  ...HARDCODED_ADMIN_EMAILS,
+  ...(process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean),
+];
